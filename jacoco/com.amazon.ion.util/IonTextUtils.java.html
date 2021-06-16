@@ -876,7 +876,7 @@ import java.math.BigDecimal;
     {
 <span class="fc" id="L877">        _Private_IonTextAppender appender =</span>
 <span class="fc" id="L878">            _Private_IonTextAppender.forAppendable(out);</span>
-<span class="fc" id="L879">        appender.printFloat(value);</span>
+<span class="fc" id="L879">        appender.printFloat(STANDARD, value);</span>
 <span class="fc" id="L880">    }</span>
 
     public static String printFloat(double value)
@@ -900,7 +900,7 @@ import java.math.BigDecimal;
     {
 <span class="fc" id="L901">        _Private_IonTextAppender appender =</span>
 <span class="fc" id="L902">            _Private_IonTextAppender.forAppendable(out);</span>
-<span class="fc" id="L903">        appender.printFloat(value);</span>
+<span class="fc" id="L903">        appender.printFloat(STANDARD, value);</span>
 <span class="fc" id="L904">    }</span>
 
     public static String printFloat(Double value)
