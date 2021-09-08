@@ -536,11 +536,11 @@ import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
 <span class="fc" id="L536">            return -1;</span>
         case 'b':
 <span class="fc bfc" id="L538" title="All 2 branches covered.">            if (len == 4) {</span>
-<span class="pc bpc" id="L539" title="1 of 2 branches missed.">                if (word.charAt(start_word+1) == 'o'</span>
-<span class="nc bnc" id="L540" title="All 2 branches missed.">                 &amp;&amp; word.charAt(start_word+2) == 'o'</span>
-<span class="nc bnc" id="L541" title="All 2 branches missed.">                 &amp;&amp; word.charAt(start_word+3) == 'l'</span>
+<span class="fc bfc" id="L539" title="All 2 branches covered.">                if (word.charAt(start_word+1) == 'o'</span>
+<span class="pc bpc" id="L540" title="1 of 2 branches missed.">                 &amp;&amp; word.charAt(start_word+2) == 'o'</span>
+<span class="pc bpc" id="L541" title="1 of 2 branches missed.">                 &amp;&amp; word.charAt(start_word+3) == 'l'</span>
                 ) {
-<span class="nc" id="L543">                    return KEYWORD_BOOL;</span>
+<span class="fc" id="L543">                    return KEYWORD_BOOL;</span>
                 }
 <span class="fc bfc" id="L545" title="All 2 branches covered.">                if (word.charAt(start_word+1) == 'l'</span>
 <span class="pc bpc" id="L546" title="1 of 2 branches missed.">                 &amp;&amp; word.charAt(start_word+2) == 'o'</span>
