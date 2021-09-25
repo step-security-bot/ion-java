@@ -873,21 +873,23 @@ import java.util.TimeZone;
      */
     public static IonStruct symtabTree(SymbolTable symtab, ValueFactory valueFactory)
     {
-        LocalSymbolTableAsStruct localSymbolTableAsStruct;
-<span class="fc bfc" id="L877" title="All 2 branches covered.">        if (symtab instanceof  LocalSymbolTableAsStruct) {</span>
-<span class="fc" id="L878">            localSymbolTableAsStruct = (LocalSymbolTableAsStruct) symtab;</span>
+        SymbolTableAsStruct localSymbolTableAsStruct;
+<span class="fc bfc" id="L877" title="All 2 branches covered.">        if (symtab instanceof SymbolTableAsStruct) {</span>
+<span class="fc" id="L878">            localSymbolTableAsStruct = (SymbolTableAsStruct) symtab;</span>
         } else {
-<span class="fc" id="L880">            localSymbolTableAsStruct = (LocalSymbolTableAsStruct) new LocalSymbolTableAsStruct.Factory(valueFactory)</span>
-<span class="fc" id="L881">                    .newLocalSymtab(symtab.getSystemSymbolTable(), symtab.getImportedTables());</span>
-<span class="fc" id="L882">            Iterator&lt;String&gt; localSymbolsIterator = symtab.iterateDeclaredSymbolNames();</span>
-<span class="fc bfc" id="L883" title="All 2 branches covered.">            while (localSymbolsIterator.hasNext()) {</span>
-<span class="fc" id="L884">                String localSymbol = localSymbolsIterator.next();</span>
-<span class="fc bfc" id="L885" title="All 2 branches covered.">                if (localSymbol != null) {</span>
-<span class="fc" id="L886">                    localSymbolTableAsStruct.intern(localSymbol);</span>
+<span class="fc" id="L880">            LocalSymbolTableAsStruct table =</span>
+                (LocalSymbolTableAsStruct) new LocalSymbolTableAsStruct.Factory(valueFactory)
+<span class="fc" id="L882">                    .newLocalSymtab(symtab.getSystemSymbolTable(), symtab.getImportedTables());</span>
+<span class="fc" id="L883">            Iterator&lt;String&gt; localSymbolsIterator = symtab.iterateDeclaredSymbolNames();</span>
+<span class="fc bfc" id="L884" title="All 2 branches covered.">            while (localSymbolsIterator.hasNext()) {</span>
+<span class="fc" id="L885">                String localSymbol = localSymbolsIterator.next();</span>
+<span class="pc bpc" id="L886" title="1 of 2 branches missed.">                if (localSymbol != null) {</span>
+<span class="fc" id="L887">                    table.intern(localSymbol);</span>
                 }
-<span class="fc" id="L888">            }</span>
+<span class="fc" id="L889">            }</span>
+<span class="fc" id="L890">            localSymbolTableAsStruct = table;</span>
         }
-<span class="fc" id="L890">        return localSymbolTableAsStruct.getIonRepresentation();</span>
+<span class="fc" id="L892">        return localSymbolTableAsStruct.getIonRepresentation(valueFactory);</span>
     }
 
     /**
@@ -899,51 +901,51 @@ import java.util.TimeZone;
      */
     private static boolean localSymtabExtends(SymbolTable superset, SymbolTable subset)
     {
-<span class="fc bfc" id="L902" title="All 2 branches covered.">        if (subset.getMaxId() &gt; superset.getMaxId())</span>
+<span class="fc bfc" id="L904" title="All 2 branches covered.">        if (subset.getMaxId() &gt; superset.getMaxId())</span>
         {
             // the subset has more symbols
-<span class="fc" id="L905">            return false;</span>
+<span class="fc" id="L907">            return false;</span>
         }
 
         // NB this API almost certainly requires cloning--symbol table's API doesn't give us a way to polymorphically
         //    get this without materializing an array
-<span class="fc" id="L910">        final SymbolTable[] supersetImports     = superset.getImportedTables();</span>
-<span class="fc" id="L911">        final SymbolTable[] subsetImports       = subset.getImportedTables();</span>
+<span class="fc" id="L912">        final SymbolTable[] supersetImports     = superset.getImportedTables();</span>
+<span class="fc" id="L913">        final SymbolTable[] subsetImports       = subset.getImportedTables();</span>
 
         // TODO this is over-strict, but not as strict as LocalSymbolTable.symtabExtends()
-<span class="pc bpc" id="L914" title="1 of 2 branches missed.">        if (supersetImports.length != subsetImports.length)</span>
+<span class="pc bpc" id="L916" title="1 of 2 branches missed.">        if (supersetImports.length != subsetImports.length)</span>
         {
-<span class="nc" id="L916">            return false;</span>
+<span class="nc" id="L918">            return false;</span>
         }
         // NB we cannot trust Arrays.equals--we don't know how an implementation will implement it...
-<span class="fc bfc" id="L919" title="All 2 branches covered.">        for (int i = 0; i &lt; supersetImports.length; i++)</span>
+<span class="fc bfc" id="L921" title="All 2 branches covered.">        for (int i = 0; i &lt; supersetImports.length; i++)</span>
         {
-<span class="fc" id="L921">            final SymbolTable supersetImport = supersetImports[i];</span>
-<span class="fc" id="L922">            final SymbolTable subsetImport = subsetImports[i];</span>
-<span class="fc bfc" id="L923" title="All 2 branches covered.">            if (!supersetImport.getName().equals(subsetImport.getName())</span>
-<span class="fc bfc" id="L924" title="All 2 branches covered.">                 || supersetImport.getVersion() != subsetImport.getVersion())</span>
+<span class="fc" id="L923">            final SymbolTable supersetImport = supersetImports[i];</span>
+<span class="fc" id="L924">            final SymbolTable subsetImport = subsetImports[i];</span>
+<span class="fc bfc" id="L925" title="All 2 branches covered.">            if (!supersetImport.getName().equals(subsetImport.getName())</span>
+<span class="fc bfc" id="L926" title="All 2 branches covered.">                 || supersetImport.getVersion() != subsetImport.getVersion())</span>
             {
                 // bad match on import
-<span class="fc" id="L927">                return false;</span>
+<span class="fc" id="L929">                return false;</span>
             }
         }
 
         // all the imports lined up, lets make sure the locals line up too
-<span class="fc" id="L932">        final Iterator&lt;String&gt; supersetIter     = superset.iterateDeclaredSymbolNames();</span>
-<span class="fc" id="L933">        final Iterator&lt;String&gt; subsetIter       = subset.iterateDeclaredSymbolNames();</span>
-<span class="fc bfc" id="L934" title="All 2 branches covered.">        while (subsetIter.hasNext())</span>
+<span class="fc" id="L934">        final Iterator&lt;String&gt; supersetIter     = superset.iterateDeclaredSymbolNames();</span>
+<span class="fc" id="L935">        final Iterator&lt;String&gt; subsetIter       = subset.iterateDeclaredSymbolNames();</span>
+<span class="fc bfc" id="L936" title="All 2 branches covered.">        while (subsetIter.hasNext())</span>
         {
-<span class="fc" id="L936">            final String nextSubsetSymbol       = subsetIter.next();</span>
-<span class="fc" id="L937">            final String nextSupersetSymbol     = supersetIter.next();</span>
-<span class="fc bfc" id="L938" title="All 2 branches covered.">            if (!nextSubsetSymbol.equals(nextSupersetSymbol))</span>
+<span class="fc" id="L938">            final String nextSubsetSymbol       = subsetIter.next();</span>
+<span class="fc" id="L939">            final String nextSupersetSymbol     = supersetIter.next();</span>
+<span class="fc bfc" id="L940" title="All 2 branches covered.">            if (!nextSubsetSymbol.equals(nextSupersetSymbol))</span>
             {
                 // local symbol mismatch
-<span class="fc" id="L941">                return false;</span>
+<span class="fc" id="L943">                return false;</span>
             }
-<span class="fc" id="L943">        }</span>
+<span class="fc" id="L945">        }</span>
 
         // we made it this far--superset is really a superset of subset
-<span class="fc" id="L946">        return true;</span>
+<span class="fc" id="L948">        return true;</span>
     }
 
     /**
@@ -963,31 +965,31 @@ import java.util.TimeZone;
      */
     public static boolean symtabExtends(SymbolTable superset, SymbolTable subset)
     {
-<span class="pc bpc" id="L966" title="2 of 6 branches missed.">        assert superset.isSystemTable() || superset.isLocalTable();</span>
-<span class="pc bpc" id="L967" title="2 of 6 branches missed.">        assert subset.isSystemTable() || subset.isLocalTable();</span>
+<span class="pc bpc" id="L968" title="2 of 6 branches missed.">        assert superset.isSystemTable() || superset.isLocalTable();</span>
+<span class="pc bpc" id="L969" title="2 of 6 branches missed.">        assert subset.isSystemTable() || subset.isLocalTable();</span>
 
         // NB: system symtab 1.0 is a singleton, hence if both symtabs
         //     are one this will be true.
-<span class="fc bfc" id="L971" title="All 2 branches covered.">        if (superset == subset) return true;</span>
+<span class="fc bfc" id="L973" title="All 2 branches covered.">        if (superset == subset) return true;</span>
 
         // If the subset's symtab is a system symtab, the superset's is always
         // an extension of the subset's as system symtab-ness is irrelevant to
         // the conditions for copy opt. to be safe.
         // TODO amzn/ion-java/issues/24 System symtab-ness ARE relevant if there's multiple
         //      versions.
-<span class="fc bfc" id="L978" title="All 2 branches covered.">        if (subset.isSystemTable()) return true;</span>
+<span class="fc bfc" id="L980" title="All 2 branches covered.">        if (subset.isSystemTable()) return true;</span>
 
         // From here on, subset is a LST because isSystemTable() is false.
 
-<span class="fc bfc" id="L982" title="All 2 branches covered.">        if (superset.isLocalTable())</span>
+<span class="fc bfc" id="L984" title="All 2 branches covered.">        if (superset.isLocalTable())</span>
         {
-<span class="pc bpc" id="L984" title="3 of 4 branches missed.">            if (superset instanceof LocalSymbolTable &amp;&amp; subset instanceof LocalSymbolTable)</span>
+<span class="pc bpc" id="L986" title="3 of 4 branches missed.">            if (superset instanceof LocalSymbolTable &amp;&amp; subset instanceof LocalSymbolTable)</span>
             {
                 // use the internal comparison
-<span class="nc" id="L987">                return ((LocalSymbolTable) superset).symtabExtends(subset);</span>
+<span class="nc" id="L989">                return ((LocalSymbolTable) superset).symtabExtends(subset);</span>
             }
             // TODO reason about symbol tables that don't extend LocalSymbolTable but are still local
-<span class="fc" id="L990">            return localSymtabExtends(superset, subset);</span>
+<span class="fc" id="L992">            return localSymtabExtends(superset, subset);</span>
         }
 
         // From here on, superset is a system symtab.
@@ -995,7 +997,7 @@ import java.util.TimeZone;
         // If LST subset has no local symbols or imports, and it's system
         // symbols are same as those of system symtab superset's, then
         // superset extends subset
-<span class="pc bpc" id="L998" title="1 of 2 branches missed.">        return subset.getMaxId() == superset.getMaxId();</span>
+<span class="pc bpc" id="L1000" title="1 of 2 branches missed.">        return subset.getMaxId() == superset.getMaxId();</span>
     }
 
 
@@ -1004,7 +1006,7 @@ import java.util.TimeZone;
      */
     public static boolean isNonSymbolScalar(IonType type)
     {
-<span class="fc bfc" id="L1007" title="All 4 branches covered.">        return ! IonType.isContainer(type) &amp;&amp; ! type.equals(IonType.SYMBOL);</span>
+<span class="fc bfc" id="L1009" title="All 4 branches covered.">        return ! IonType.isContainer(type) &amp;&amp; ! type.equals(IonType.SYMBOL);</span>
     }
 
 
@@ -1014,49 +1016,49 @@ import java.util.TimeZone;
      */
     public static final int getSidForSymbolTableField(String text)
     {
-<span class="fc" id="L1017">        final int shortestFieldNameLength = 4; // 'name'</span>
+<span class="fc" id="L1019">        final int shortestFieldNameLength = 4; // 'name'</span>
 
-<span class="pc bpc" id="L1019" title="2 of 4 branches missed.">        if (text != null &amp;&amp; text.length() &gt;= shortestFieldNameLength)</span>
+<span class="pc bpc" id="L1021" title="2 of 4 branches missed.">        if (text != null &amp;&amp; text.length() &gt;= shortestFieldNameLength)</span>
         {
-<span class="fc" id="L1021">            int c = text.charAt(0);</span>
-<span class="pc bpc" id="L1022" title="5 of 6 branches missed.">            switch (c)</span>
+<span class="fc" id="L1023">            int c = text.charAt(0);</span>
+<span class="pc bpc" id="L1024" title="5 of 6 branches missed.">            switch (c)</span>
             {
                 case 'v':
-<span class="nc bnc" id="L1025" title="All 2 branches missed.">                    if (VERSION.equals(text))</span>
+<span class="nc bnc" id="L1027" title="All 2 branches missed.">                    if (VERSION.equals(text))</span>
                     {
-<span class="nc" id="L1027">                        return VERSION_SID;</span>
+<span class="nc" id="L1029">                        return VERSION_SID;</span>
                     }
                     break;
                 case 'n':
-<span class="nc bnc" id="L1031" title="All 2 branches missed.">                    if (NAME.equals(text))</span>
+<span class="nc bnc" id="L1033" title="All 2 branches missed.">                    if (NAME.equals(text))</span>
                     {
-<span class="nc" id="L1033">                        return NAME_SID;</span>
+<span class="nc" id="L1035">                        return NAME_SID;</span>
                     }
                     break;
                 case 's':
-<span class="nc bnc" id="L1037" title="All 2 branches missed.">                    if (SYMBOLS.equals(text))</span>
+<span class="nc bnc" id="L1039" title="All 2 branches missed.">                    if (SYMBOLS.equals(text))</span>
                     {
-<span class="nc" id="L1039">                        return  SYMBOLS_SID;</span>
+<span class="nc" id="L1041">                        return  SYMBOLS_SID;</span>
                     }
                     break;
 
                 case 'i':
-<span class="nc bnc" id="L1044" title="All 2 branches missed.">                    if (IMPORTS.equals(text))</span>
+<span class="nc bnc" id="L1046" title="All 2 branches missed.">                    if (IMPORTS.equals(text))</span>
                     {
-<span class="nc" id="L1046">                        return IMPORTS_SID;</span>
+<span class="nc" id="L1048">                        return IMPORTS_SID;</span>
                     }
                     break;
                 case 'm':
-<span class="nc bnc" id="L1050" title="All 2 branches missed.">                    if (MAX_ID.equals(text))</span>
+<span class="nc bnc" id="L1052" title="All 2 branches missed.">                    if (MAX_ID.equals(text))</span>
                     {
-<span class="nc" id="L1052">                        return MAX_ID_SID;</span>
+<span class="nc" id="L1054">                        return MAX_ID_SID;</span>
                     }
                     break;
                 default:
                     break;
             }
         }
-<span class="fc" id="L1059">        return UNKNOWN_SYMBOL_ID;</span>
+<span class="fc" id="L1061">        return UNKNOWN_SYMBOL_ID;</span>
     }
 
 
@@ -1073,38 +1075,38 @@ import java.util.TimeZone;
         private int            _pos;
         private final int      _len;
 
-<span class="fc" id="L1076">        StringIterator(String[] values, int len) {</span>
-<span class="fc" id="L1077">            _values = values;</span>
-<span class="fc" id="L1078">            _len = len;</span>
-<span class="fc" id="L1079">        }</span>
+<span class="fc" id="L1078">        StringIterator(String[] values, int len) {</span>
+<span class="fc" id="L1079">            _values = values;</span>
+<span class="fc" id="L1080">            _len = len;</span>
+<span class="fc" id="L1081">        }</span>
         public boolean hasNext() {
-<span class="fc bfc" id="L1081" title="All 2 branches covered.">            return (_pos &lt; _len);</span>
+<span class="fc bfc" id="L1083" title="All 2 branches covered.">            return (_pos &lt; _len);</span>
         }
         public String next() {
-<span class="pc bpc" id="L1084" title="1 of 2 branches missed.">            if (!hasNext()) throw new NoSuchElementException();</span>
-<span class="fc" id="L1085">            return _values[_pos++];</span>
+<span class="pc bpc" id="L1086" title="1 of 2 branches missed.">            if (!hasNext()) throw new NoSuchElementException();</span>
+<span class="fc" id="L1087">            return _values[_pos++];</span>
         }
         public void remove() {
-<span class="nc" id="L1088">            throw new UnsupportedOperationException();</span>
+<span class="nc" id="L1090">            throw new UnsupportedOperationException();</span>
         }
     }
 
     public static final Iterator&lt;String&gt; stringIterator(String... values)
     {
-<span class="pc bpc" id="L1094" title="1 of 4 branches missed.">        if (values == null || values.length == 0)</span>
+<span class="pc bpc" id="L1096" title="1 of 4 branches missed.">        if (values == null || values.length == 0)</span>
         {
-<span class="fc" id="L1096">            return _Private_Utils.&lt;String&gt;emptyIterator();</span>
+<span class="fc" id="L1098">            return _Private_Utils.&lt;String&gt;emptyIterator();</span>
         }
-<span class="fc" id="L1098">        return new StringIterator(values, values.length);</span>
+<span class="fc" id="L1100">        return new StringIterator(values, values.length);</span>
     }
 
     public static final Iterator&lt;String&gt; stringIterator(String[] values, int len)
     {
-<span class="nc bnc" id="L1103" title="All 6 branches missed.">        if (values == null || values.length == 0 || len == 0)</span>
+<span class="nc bnc" id="L1105" title="All 6 branches missed.">        if (values == null || values.length == 0 || len == 0)</span>
         {
-<span class="nc" id="L1105">            return _Private_Utils.&lt;String&gt;emptyIterator();</span>
+<span class="nc" id="L1107">            return _Private_Utils.&lt;String&gt;emptyIterator();</span>
         }
-<span class="nc" id="L1107">        return new StringIterator(values, len);</span>
+<span class="nc" id="L1109">        return new StringIterator(values, len);</span>
     }
 
     /**
@@ -1118,61 +1120,61 @@ import java.util.TimeZone;
         private final int     _len;
 
         IntIterator(int[] values) {
-<span class="nc" id="L1121">            this(values, 0, values.length);</span>
-<span class="nc" id="L1122">        }</span>
-<span class="nc" id="L1123">        IntIterator(int[] values, int off, int len) {</span>
-<span class="nc" id="L1124">            _values = values;</span>
-<span class="nc" id="L1125">            _len = len;</span>
-<span class="nc" id="L1126">            _pos = off;</span>
-<span class="nc" id="L1127">        }</span>
+<span class="nc" id="L1123">            this(values, 0, values.length);</span>
+<span class="nc" id="L1124">        }</span>
+<span class="nc" id="L1125">        IntIterator(int[] values, int off, int len) {</span>
+<span class="nc" id="L1126">            _values = values;</span>
+<span class="nc" id="L1127">            _len = len;</span>
+<span class="nc" id="L1128">            _pos = off;</span>
+<span class="nc" id="L1129">        }</span>
         public boolean hasNext() {
-<span class="nc bnc" id="L1129" title="All 2 branches missed.">            return (_pos &lt; _len);</span>
+<span class="nc bnc" id="L1131" title="All 2 branches missed.">            return (_pos &lt; _len);</span>
         }
         public Integer next() {
-<span class="nc bnc" id="L1132" title="All 2 branches missed.">            if (!hasNext()) throw new NoSuchElementException();</span>
-<span class="nc" id="L1133">            int value = _values[_pos++];</span>
-<span class="nc" id="L1134">            return value;</span>
+<span class="nc bnc" id="L1134" title="All 2 branches missed.">            if (!hasNext()) throw new NoSuchElementException();</span>
+<span class="nc" id="L1135">            int value = _values[_pos++];</span>
+<span class="nc" id="L1136">            return value;</span>
         }
         public void remove() {
-<span class="nc" id="L1137">            throw new UnsupportedOperationException();</span>
+<span class="nc" id="L1139">            throw new UnsupportedOperationException();</span>
         }
     }
 
     public static final Iterator&lt;Integer&gt; intIterator(int... values)
     {
-<span class="nc bnc" id="L1143" title="All 4 branches missed.">        if (values == null || values.length == 0)</span>
+<span class="nc bnc" id="L1145" title="All 4 branches missed.">        if (values == null || values.length == 0)</span>
         {
-<span class="nc" id="L1145">            return _Private_Utils.&lt;Integer&gt;emptyIterator();</span>
+<span class="nc" id="L1147">            return _Private_Utils.&lt;Integer&gt;emptyIterator();</span>
         }
-<span class="nc" id="L1147">        return new IntIterator(values);</span>
+<span class="nc" id="L1149">        return new IntIterator(values);</span>
     }
 
     public static final Iterator&lt;Integer&gt; intIterator(int[] values, int len)
     {
-<span class="nc bnc" id="L1152" title="All 6 branches missed.">        if (values == null || values.length == 0 || len == 0)</span>
+<span class="nc bnc" id="L1154" title="All 6 branches missed.">        if (values == null || values.length == 0 || len == 0)</span>
         {
-<span class="nc" id="L1154">            return _Private_Utils.&lt;Integer&gt;emptyIterator();</span>
+<span class="nc" id="L1156">            return _Private_Utils.&lt;Integer&gt;emptyIterator();</span>
         }
-<span class="nc" id="L1156">        return new IntIterator(values, 0, len);</span>
+<span class="nc" id="L1158">        return new IntIterator(values, 0, len);</span>
     }
 
     public static void writeAsBase64(InputStream byteStream, Appendable out)
         throws IOException
     {
-<span class="fc" id="L1162">        Base64Encoder.TextStream ts = new Base64Encoder.TextStream(byteStream);</span>
+<span class="fc" id="L1164">        Base64Encoder.TextStream ts = new Base64Encoder.TextStream(byteStream);</span>
 
         for (;;) {
-<span class="fc" id="L1165">            int c = ts.read();</span>
-<span class="fc bfc" id="L1166" title="All 2 branches covered.">            if (c == -1) break;</span>
-<span class="fc" id="L1167">            out.append((char) c);</span>
-<span class="fc" id="L1168">        }</span>
-<span class="fc" id="L1169">    }</span>
+<span class="fc" id="L1167">            int c = ts.read();</span>
+<span class="fc bfc" id="L1168" title="All 2 branches covered.">            if (c == -1) break;</span>
+<span class="fc" id="L1169">            out.append((char) c);</span>
+<span class="fc" id="L1170">        }</span>
+<span class="fc" id="L1171">    }</span>
 
     public static SymbolTable newSubstituteSymtab(SymbolTable original,
                                                   int version,
                                                   int maxId)
     {
-<span class="nc" id="L1175">        return new SubstituteSymbolTable(original, version, maxId);</span>
+<span class="nc" id="L1177">        return new SubstituteSymbolTable(original, version, maxId);</span>
     }
 
 }

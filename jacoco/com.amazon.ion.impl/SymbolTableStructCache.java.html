@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SymbolTableStructCache.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.amazon.ion:ion-java</a> &gt; <a href="index.source.html" class="el_package">com.amazon.ion.impl</a> &gt; <span class="el_source">SymbolTableStructCache.java</span></div><h1>SymbolTableStructCache.java</h1><pre class="source lang-java linenums">package com.amazon.ion.impl;
+
+import com.amazon.ion.IonList;
+import com.amazon.ion.IonStruct;
+import com.amazon.ion.IonType;
+import com.amazon.ion.IonValue;
+import com.amazon.ion.SymbolTable;
+import com.amazon.ion.ValueFactory;
+
+import java.util.Iterator;
+
+import static com.amazon.ion.SystemSymbols.IMPORTS;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.MAX_ID;
+import static com.amazon.ion.SystemSymbols.NAME;
+import static com.amazon.ion.SystemSymbols.SYMBOLS;
+import static com.amazon.ion.SystemSymbols.VERSION;
+
+/**
+ * Caches the IonStruct representation of a {@link SymbolTable}.
+ */
+<span class="pc bpc" id="L22" title="1 of 2 branches missed.">class SymbolTableStructCache {</span>
+
+    private final SymbolTable symbolTable;
+    private final SymbolTable[] importedTables;
+    private final int firstLocalSid;
+
+    /**
+     * Memoized result of {@link #getIonRepresentation(ValueFactory)};
+     * Once this is created, it may be mutated as symbols are added using {@link #addSymbol(String, int)}.
+     */
+    private IonStruct image;
+
+    /**
+     * @param symbolTable the SymbolTable to represent as an IonStruct.
+     * @param importedTables the symbol table's imported shared symbol tables.
+     * @param image the IonStruct representation, if available. If null, an IonStruct will be created lazily.
+     */
+<span class="fc" id="L39">    SymbolTableStructCache(SymbolTable symbolTable, SymbolTable[] importedTables, IonStruct image) {</span>
+<span class="fc" id="L40">        this.symbolTable = symbolTable;</span>
+<span class="fc" id="L41">        this.importedTables = importedTables;</span>
+<span class="fc" id="L42">        this.firstLocalSid = symbolTable.getImportedMaxId() + 1;</span>
+<span class="fc" id="L43">        this.image = image;</span>
+<span class="fc" id="L44">    }</span>
+
+    /**
+     * Returns the IonStruct representation of the symbol table. Creates and stores a new IonStruct on the first
+     * invocation.
+     * @param factory the {@link ValueFactory} from which to construct the IonStruct.
+     * @return an IonStruct representing the symbol table.
+     */
+    public IonStruct getIonRepresentation(ValueFactory factory) {
+<span class="fc" id="L53">        synchronized (this) {</span>
+<span class="fc bfc" id="L54" title="All 2 branches covered.">            if (image == null) {</span>
+<span class="fc" id="L55">                makeIonRepresentation(factory);</span>
+            }
+<span class="fc" id="L57">            return image;</span>
+        }
+    }
+
+    /**
+     * @return true if an IonStruct has already been created for the symbol table; otherwise, false.
+     */
+    public boolean hasStruct() {
+<span class="fc bfc" id="L65" title="All 2 branches covered.">        return image != null;</span>
+    }
+
+    /**
+     * Create a new IonStruct representation of the symbol table.
+     * @param factory the {@link ValueFactory} from which to construct the IonStruct.
+     */
+    private void makeIonRepresentation(ValueFactory factory) {
+<span class="fc" id="L73">        image = factory.newEmptyStruct();</span>
+
+<span class="fc" id="L75">        image.addTypeAnnotation(ION_SYMBOL_TABLE);</span>
+
+<span class="fc bfc" id="L77" title="All 2 branches covered.">        if (importedTables.length &gt; 0) {</span>
+            // The system symbol table may be the first import. If it is, skip it.
+<span class="fc bfc" id="L79" title="All 2 branches covered.">            int i = importedTables[0].isSystemTable() ? 1 : 0;</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">            if (i &lt; importedTables.length) {</span>
+<span class="fc" id="L81">                IonList importsList = factory.newEmptyList();</span>
+<span class="fc bfc" id="L82" title="All 2 branches covered.">                while (i &lt; importedTables.length) {</span>
+<span class="fc" id="L83">                    SymbolTable importedTable = importedTables[i];</span>
+<span class="fc" id="L84">                    IonStruct importStruct = factory.newEmptyStruct();</span>
+
+<span class="fc" id="L86">                    importStruct.add(NAME,</span>
+<span class="fc" id="L87">                        factory.newString(importedTable.getName()));</span>
+<span class="fc" id="L88">                    importStruct.add(VERSION,</span>
+<span class="fc" id="L89">                        factory.newInt(importedTable.getVersion()));</span>
+<span class="fc" id="L90">                    importStruct.add(MAX_ID,</span>
+<span class="fc" id="L91">                        factory.newInt(importedTable.getMaxId()));</span>
+
+<span class="fc" id="L93">                    importsList.add(importStruct);</span>
+<span class="fc" id="L94">                    i++;</span>
+<span class="fc" id="L95">                }</span>
+<span class="fc" id="L96">                image.add(IMPORTS, importsList);</span>
+            }
+        }
+
+<span class="fc bfc" id="L100" title="All 2 branches covered.">        if (symbolTable.getMaxId() &gt; symbolTable.getImportedMaxId()) {</span>
+<span class="fc" id="L101">            Iterator&lt;String&gt; localSymbolIterator = symbolTable.iterateDeclaredSymbolNames();</span>
+<span class="fc" id="L102">            int sid = symbolTable.getImportedMaxId() + 1;</span>
+<span class="fc bfc" id="L103" title="All 2 branches covered.">            while (localSymbolIterator.hasNext()) {</span>
+<span class="fc" id="L104">                addSymbol(localSymbolIterator.next(), sid);</span>
+<span class="fc" id="L105">                sid++;</span>
+            }
+        }
+<span class="fc" id="L108">    }</span>
+
+    /**
+     * Adds a new symbol table with the given symbol ID to the IonStruct's 'symbols' list.
+     * @param symbolName can be null when there's a gap in the local symbols list.
+     * @param sid the symbol ID to assign to the new symbol.
+     */
+    void addSymbol(String symbolName, int sid) {
+<span class="pc bpc" id="L116" title="2 of 4 branches missed.">        assert sid &gt;= firstLocalSid;</span>
+
+<span class="fc" id="L118">        ValueFactory sys = image.getSystem();</span>
+
+<span class="fc" id="L120">        IonValue syms = image.get(SYMBOLS);</span>
+        // If the user has manually created a symbol table via an IonStruct, it may be malformed.
+        // The following removes any &quot;symbols&quot; fields that aren't lists, then creates a list for
+        // the symbols field if necessary.
+<span class="pc bpc" id="L124" title="1 of 4 branches missed.">        while (syms != null &amp;&amp; syms.getType() != IonType.LIST) {</span>
+<span class="nc" id="L125">            image.remove(syms);</span>
+<span class="nc" id="L126">            syms = image.get(SYMBOLS);</span>
+        }
+<span class="fc bfc" id="L128" title="All 2 branches covered.">        if (syms == null) {</span>
+<span class="fc" id="L129">            syms = sys.newEmptyList();</span>
+<span class="fc" id="L130">            image.put(SYMBOLS, syms);</span>
+        }
+
+<span class="fc" id="L133">        int thisOffset = sid - firstLocalSid;</span>
+<span class="fc" id="L134">        IonValue name = sys.newString(symbolName);</span>
+<span class="fc" id="L135">        ((IonList) syms).add(thisOffset, name);</span>
+<span class="fc" id="L136">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
