@@ -730,7 +730,7 @@ static final boolean test_with_no_version_checking = false;
     bbBlock remove(Object caller, int version, bbBlock curr, int pos, int len)
     {
 <span class="pc bpc" id="L732" title="2 of 4 branches missed.">        assert mutation_in_progress(caller, version);</span>
-<span class="fc bfc" id="L733" title="All 2 branches covered.">        if (len == 0) return curr;</span>
+<span class="pc bpc" id="L733" title="1 of 2 branches missed.">        if (len == 0) return curr;</span>
 <span class="pc bpc" id="L734" title="2 of 4 branches missed.">        if (len &lt; 0 || (pos + len) &gt; this._buf_limit) {</span>
 <span class="nc" id="L735">            throw new IllegalArgumentException();</span>
         }
@@ -743,7 +743,7 @@ static final boolean test_with_no_version_checking = false;
 <span class="pc bpc" id="L743" title="2 of 4 branches missed.">        assert (pos - curr._offset &lt;= curr._limit);</span>
 <span class="pc bpc" id="L744" title="2 of 4 branches missed.">        assert _validate();</span>
         // this is to simply eliminate a big edge case
-<span class="fc bfc" id="L746" title="All 4 branches covered.">        if (pos == 0 &amp;&amp; len == this._buf_limit) {</span>
+<span class="pc bpc" id="L746" title="1 of 4 branches missed.">        if (pos == 0 &amp;&amp; len == this._buf_limit) {</span>
 <span class="fc" id="L747">            this.clear(caller, version);</span>
 <span class="fc" id="L748">            notifyRemove(0, len);</span>
 <span class="fc" id="L749">            return null;</span>

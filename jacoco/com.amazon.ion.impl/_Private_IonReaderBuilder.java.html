@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>_Private_IonReaderBuilder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.amazon.ion:ion-java</a> &gt; <a href="index.source.html" class="el_package">com.amazon.ion.impl</a> &gt; <span class="el_source">_Private_IonReaderBuilder.java</span></div><h1>_Private_IonReaderBuilder.java</h1><pre class="source lang-java linenums">package com.amazon.ion.impl;
+
+import com.amazon.ion.IonException;
+import com.amazon.ion.IonReader;
+import com.amazon.ion.IonTextReader;
+import com.amazon.ion.IonValue;
+import com.amazon.ion.system.IonReaderBuilder;
+import com.amazon.ion.util.IonStreamUtils;
+
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
+
+import static com.amazon.ion.impl.LocalSymbolTable.DEFAULT_LST_FACTORY;
+import static com.amazon.ion.impl._Private_IonReaderFactory.makeIncrementalReader;
+import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
+
+/**
+ * {@link IonReaderBuilder} extension for internal use only.
+ */
+public class _Private_IonReaderBuilder extends IonReaderBuilder {
+
+    private _Private_LocalSymbolTableFactory lstFactory;
+
+    private _Private_IonReaderBuilder() {
+<span class="fc" id="L28">        super();</span>
+<span class="fc" id="L29">        lstFactory = DEFAULT_LST_FACTORY;</span>
+<span class="fc" id="L30">    }</span>
+
+    private _Private_IonReaderBuilder(_Private_IonReaderBuilder that) {
+<span class="fc" id="L33">        super(that);</span>
+<span class="fc" id="L34">        this.lstFactory = that.lstFactory;</span>
+<span class="fc" id="L35">    }</span>
+
+    /**
+     * Declares the {@link _Private_LocalSymbolTableFactory} to use when constructing applicable readers.
+     *
+     * @param factory the factory to use, or {@link LocalSymbolTable#DEFAULT_LST_FACTORY} if null.
+     *
+     * @return this builder instance, if mutable;
+     * otherwise a mutable copy of this builder.
+     *
+     * @see #setLstFactory(_Private_LocalSymbolTableFactory)
+     */
+    public IonReaderBuilder withLstFactory(_Private_LocalSymbolTableFactory factory) {
+<span class="fc" id="L48">        _Private_IonReaderBuilder b = (_Private_IonReaderBuilder) mutable();</span>
+<span class="fc" id="L49">        b.setLstFactory(factory);</span>
+<span class="fc" id="L50">        return b;</span>
+    }
+
+    /**
+     * @see #withLstFactory(_Private_LocalSymbolTableFactory)
+     */
+    public void setLstFactory(_Private_LocalSymbolTableFactory factory) {
+<span class="fc" id="L57">        mutationCheck();</span>
+<span class="pc bpc" id="L58" title="1 of 2 branches missed.">        if (factory == null) {</span>
+<span class="nc" id="L59">            lstFactory = DEFAULT_LST_FACTORY;</span>
+        } else {
+<span class="fc" id="L61">            lstFactory = factory;</span>
+        }
+<span class="fc" id="L63">    }</span>
+
+    public static class Mutable extends _Private_IonReaderBuilder {
+
+<span class="fc" id="L67">        public Mutable() {</span>
+<span class="fc" id="L68">        }</span>
+
+        public Mutable(IonReaderBuilder that) {
+<span class="fc" id="L71">            super((_Private_IonReaderBuilder) that);</span>
+<span class="fc" id="L72">        }</span>
+
+        @Override
+        public IonReaderBuilder immutable() {
+<span class="fc" id="L76">            return new _Private_IonReaderBuilder(this);</span>
+        }
+
+        @Override
+        public IonReaderBuilder mutable() {
+<span class="fc" id="L81">            return this;</span>
+        }
+
+        @Override
+        protected void mutationCheck() {
+<span class="fc" id="L86">        }</span>
+
+    }
+
+    @Override
+    public IonReader build(byte[] ionData, int offset, int length)
+    {
+<span class="fc bfc" id="L93" title="All 2 branches covered.">        if (isIncrementalReadingEnabled()) {</span>
+<span class="fc bfc" id="L94" title="All 2 branches covered.">            if (IonStreamUtils.isGzip(ionData, offset, length)) {</span>
+<span class="fc" id="L95">                throw new IllegalArgumentException(&quot;Automatic GZIP detection is not supported with incremental&quot; +</span>
+                    &quot;support enabled. Wrap the bytes with a GZIPInputStream and call build(InputStream).&quot;);
+            }
+<span class="fc bfc" id="L98" title="All 2 branches covered.">            if (IonStreamUtils.isIonBinary(ionData, offset, length)) {</span>
+<span class="fc" id="L99">                return makeIncrementalReader(this, new ByteArrayInputStream(ionData, offset, length));</span>
+            }
+        }
+<span class="fc" id="L102">        return makeReader(validateCatalog(), ionData, offset, length, lstFactory);</span>
+    }
+
+    /**
+     * Determines whether a stream that begins with the bytes in the provided buffer could be binary Ion.
+     * @param buffer up to the first four bytes in a stream.
+     * @param length the actual number of bytes in the buffer.
+     * @return true if the first 'length' bytes in 'buffer' match the first 'length' bytes in the binary IVM.
+     */
+    private static boolean startsWithIvm(byte[] buffer, int length) {
+<span class="fc bfc" id="L112" title="All 2 branches covered.">        for (int i = 0; i &lt; length; i++) {</span>
+<span class="fc bfc" id="L113" title="All 2 branches covered.">            if (_Private_IonConstants.BINARY_VERSION_MARKER_1_0[i] != buffer[i]) {</span>
+<span class="fc" id="L114">                return false;</span>
+            }
+        }
+<span class="fc" id="L117">        return true;</span>
+    }
+
+    @Override
+    public IonReader build(InputStream ionData)
+    {
+<span class="fc" id="L123">        InputStream wrapper = ionData;</span>
+<span class="fc bfc" id="L124" title="All 2 branches covered.">        if (isIncrementalReadingEnabled()) {</span>
+<span class="fc bfc" id="L125" title="All 2 branches covered.">            if (!ionData.markSupported()) {</span>
+<span class="fc" id="L126">                wrapper = new BufferedInputStream(ionData);</span>
+            }
+<span class="fc" id="L128">            wrapper.mark(_Private_IonConstants.BINARY_VERSION_MARKER_SIZE);</span>
+<span class="fc" id="L129">            byte[] possibleIVM = new byte[_Private_IonConstants.BINARY_VERSION_MARKER_SIZE];</span>
+            int bytesRead;
+            try {
+<span class="fc" id="L132">                bytesRead = wrapper.read(possibleIVM);</span>
+<span class="fc" id="L133">                wrapper.reset();</span>
+<span class="fc" id="L134">            } catch (IOException e) {</span>
+<span class="fc" id="L135">                throw new IonException(e);</span>
+<span class="fc" id="L136">            }</span>
+<span class="fc bfc" id="L137" title="All 2 branches covered.">            if (IonStreamUtils.isGzip(possibleIVM, 0, possibleIVM.length)) {</span>
+<span class="fc" id="L138">                throw new IllegalArgumentException(&quot;Automatic GZIP detection is not supported with incremental&quot; +</span>
+                    &quot;support enabled. Wrap the bytes with a GZIPInputStream and call build(InputStream).&quot;);
+            }
+            // If the input stream is growing, it is possible that fewer than BINARY_VERSION_MARKER_SIZE bytes are
+            // available yet. Simply check whether the stream *could* contain binary Ion based on the available bytes.
+            // If it can't, fall back to text.
+            // NOTE: if incremental text reading is added, there will need to be logic that handles the case where
+            // the reader is created with 0 bytes available, as it is impossible to determine text vs. binary without
+            // reading at least one byte. Currently, in that case, just create a binary incremental reader. Either the
+            // stream will always be empty (in which case it doesn't matter whether a text or binary reader is used)
+            // or it's a binary stream (in which case the correct reader was created) or it's a growing text stream
+            // (which has always been unsupported).
+<span class="fc bfc" id="L150" title="All 2 branches covered.">            if (startsWithIvm(possibleIVM, bytesRead)) {</span>
+<span class="fc" id="L151">                return makeIncrementalReader(this, wrapper);</span>
+            }
+        }
+<span class="fc" id="L154">        return makeReader(validateCatalog(), wrapper, lstFactory);</span>
+    }
+
+    @Override
+    public IonReader build(Reader ionText) {
+<span class="fc" id="L159">        return makeReader(validateCatalog(), ionText, lstFactory);</span>
+    }
+
+    @Override
+    public IonReader build(IonValue value) {
+<span class="fc" id="L164">        return makeReader(validateCatalog(), value, lstFactory);</span>
+    }
+
+    @Override
+    public IonTextReader build(String ionText) {
+<span class="fc" id="L169">        return makeReader(validateCatalog(), ionText, lstFactory);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

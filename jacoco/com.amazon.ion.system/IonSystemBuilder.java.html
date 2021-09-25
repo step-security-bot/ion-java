@@ -101,19 +101,21 @@ public class IonSystemBuilder
 
     IonCatalog myCatalog;
 <span class="fc" id="L103">    boolean myStreamCopyOptimized = false;</span>
+    IonReaderBuilder readerBuilder;
 
 
     /** You no touchy. */
     private IonSystemBuilder()
-<span class="fc" id="L108">    {</span>
+<span class="fc" id="L109">    {</span>
         // empty
-<span class="fc" id="L110">    }</span>
+<span class="fc" id="L111">    }</span>
 
     private IonSystemBuilder(IonSystemBuilder that)
-<span class="fc" id="L113">    {</span>
-<span class="fc" id="L114">        this.myCatalog      = that.myCatalog;</span>
-<span class="fc" id="L115">        this.myStreamCopyOptimized = that.myStreamCopyOptimized;</span>
-<span class="fc" id="L116">    }</span>
+<span class="fc" id="L114">    {</span>
+<span class="fc" id="L115">        this.myCatalog      = that.myCatalog;</span>
+<span class="fc" id="L116">        this.myStreamCopyOptimized = that.myStreamCopyOptimized;</span>
+<span class="fc" id="L117">        this.readerBuilder = that.readerBuilder;</span>
+<span class="fc" id="L118">    }</span>
 
     //=========================================================================
 
@@ -123,7 +125,7 @@ public class IonSystemBuilder
      */
     public final IonSystemBuilder copy()
     {
-<span class="fc" id="L126">        return new Mutable(this);</span>
+<span class="fc" id="L128">        return new Mutable(this);</span>
     }
 
     /**
@@ -135,7 +137,7 @@ public class IonSystemBuilder
      */
     public IonSystemBuilder immutable()
     {
-<span class="fc" id="L138">        return this;</span>
+<span class="fc" id="L140">        return this;</span>
     }
 
     /**
@@ -148,12 +150,12 @@ public class IonSystemBuilder
      */
     public IonSystemBuilder mutable()
     {
-<span class="fc" id="L151">        return copy();</span>
+<span class="fc" id="L153">        return copy();</span>
     }
 
     void mutationCheck()
     {
-<span class="fc" id="L156">        throw new UnsupportedOperationException(&quot;This builder is immutable&quot;);</span>
+<span class="fc" id="L158">        throw new UnsupportedOperationException(&quot;This builder is immutable&quot;);</span>
     }
 
 
@@ -170,7 +172,7 @@ public class IonSystemBuilder
      */
     public final IonCatalog getCatalog()
     {
-<span class="fc" id="L173">        return myCatalog;</span>
+<span class="fc" id="L175">        return myCatalog;</span>
     }
 
     /**
@@ -187,9 +189,9 @@ public class IonSystemBuilder
      */
     public final void setCatalog(IonCatalog catalog)
     {
-<span class="fc" id="L190">        mutationCheck();</span>
-<span class="fc" id="L191">        myCatalog = catalog;</span>
-<span class="fc" id="L192">    }</span>
+<span class="fc" id="L192">        mutationCheck();</span>
+<span class="fc" id="L193">        myCatalog = catalog;</span>
+<span class="fc" id="L194">    }</span>
 
     /**
      * Declares the catalog to use when building an {@link IonSystem},
@@ -204,9 +206,9 @@ public class IonSystemBuilder
      */
     public final IonSystemBuilder withCatalog(IonCatalog catalog)
     {
-<span class="fc" id="L207">        IonSystemBuilder b = mutable();</span>
-<span class="fc" id="L208">        b.setCatalog(catalog);</span>
-<span class="fc" id="L209">        return b;</span>
+<span class="fc" id="L209">        IonSystemBuilder b = mutable();</span>
+<span class="fc" id="L210">        b.setCatalog(catalog);</span>
+<span class="fc" id="L211">        return b;</span>
     }
 
 
@@ -225,7 +227,7 @@ public class IonSystemBuilder
      */
     public final boolean isStreamCopyOptimized()
     {
-<span class="fc" id="L228">        return myStreamCopyOptimized;</span>
+<span class="fc" id="L230">        return myStreamCopyOptimized;</span>
     }
 
     /**
@@ -245,9 +247,9 @@ public class IonSystemBuilder
      */
     public final void setStreamCopyOptimized(boolean optimized)
     {
-<span class="fc" id="L248">        mutationCheck();</span>
-<span class="fc" id="L249">        myStreamCopyOptimized = optimized;</span>
-<span class="fc" id="L250">    }</span>
+<span class="fc" id="L250">        mutationCheck();</span>
+<span class="fc" id="L251">        myStreamCopyOptimized = optimized;</span>
+<span class="fc" id="L252">    }</span>
 
     /**
      * Declares whether built systems may attempt to optimize
@@ -264,12 +266,65 @@ public class IonSystemBuilder
      */
     public final IonSystemBuilder withStreamCopyOptimized(boolean optimized)
     {
-<span class="fc" id="L267">        IonSystemBuilder b = mutable();</span>
-<span class="fc" id="L268">        b.setStreamCopyOptimized(optimized);</span>
-<span class="fc" id="L269">        return b;</span>
+<span class="fc" id="L269">        IonSystemBuilder b = mutable();</span>
+<span class="fc" id="L270">        b.setStreamCopyOptimized(optimized);</span>
+<span class="fc" id="L271">        return b;</span>
     }
 
 
+
+    //=========================================================================
+
+    /**
+     * Gets the reader builder whose options will be used when building an
+     * {@link IonSystem}. By default, {@link IonReaderBuilder#standard()} will
+     * be used.
+     *
+     * @see #setReaderBuilder(IonReaderBuilder)
+     * @see #withReaderBuilder(IonReaderBuilder)
+     */
+    public final IonReaderBuilder getReaderBuilder() {
+<span class="nc" id="L287">        return readerBuilder;</span>
+    }
+
+    /**
+     * Sets the reader builder whose options will be used to use when building
+     * an {@link IonSystem}. The reader builder's catalog will never be used; the
+     * catalog provided to {@link #setCatalog(IonCatalog)} or
+     * {@link #withCatalog(IonCatalog)} will always be used instead.
+     *
+     * @param builder the reader builder to use in built systems.
+     *  If null, each system will be built with {@link IonReaderBuilder#standard()}.
+     *
+     * @see #getReaderBuilder()
+     * @see #withReaderBuilder(IonReaderBuilder)
+     *
+     * @throws UnsupportedOperationException if this is immutable.
+     */
+    public final void setReaderBuilder(IonReaderBuilder builder) {
+<span class="fc" id="L305">        mutationCheck();</span>
+<span class="fc" id="L306">        readerBuilder = builder;</span>
+<span class="fc" id="L307">    }</span>
+
+    /**
+     * Declares the reader builder whose options will be used to use when building
+     * an {@link IonSystem}, returning a new mutable builder if this is immutable.
+     * The reader builder's catalog will never be used; the catalog provided to
+     * {@link #setCatalog(IonCatalog)} or {@link #withCatalog(IonCatalog)} will
+     * always be used instead.
+     *
+     * @param builder the reader builder to use in built systems.
+     *  If null, each system will be built with {@link IonReaderBuilder#standard()}.
+     *
+     * @see #getReaderBuilder()
+     * @see #setReaderBuilder(IonReaderBuilder)
+     */
+    public final IonSystemBuilder withReaderBuilder(IonReaderBuilder builder)
+    {
+<span class="fc" id="L324">        IonSystemBuilder b = mutable();</span>
+<span class="fc" id="L325">        b.setReaderBuilder(builder);</span>
+<span class="fc" id="L326">        return b;</span>
+    }
 
     //=========================================================================
 
@@ -280,28 +335,27 @@ public class IonSystemBuilder
     public final IonSystem build()
     {
         IonCatalog catalog =
-<span class="fc bfc" id="L283" title="All 2 branches covered.">            (myCatalog != null ? myCatalog : new SimpleCatalog());</span>
+<span class="fc bfc" id="L338" title="All 2 branches covered.">            (myCatalog != null ? myCatalog : new SimpleCatalog());</span>
 
         IonTextWriterBuilder twb =
-<span class="fc" id="L286">            IonTextWriterBuilder.standard().withCharsetAscii();</span>
-<span class="fc" id="L287">        twb.setCatalog(catalog);</span>
+<span class="fc" id="L341">            IonTextWriterBuilder.standard().withCharsetAscii();</span>
+<span class="fc" id="L342">        twb.setCatalog(catalog);</span>
 
         _Private_IonBinaryWriterBuilder bwb =
-<span class="fc" id="L290">            _Private_IonBinaryWriterBuilder.standard();</span>
-<span class="fc" id="L291">        bwb.setCatalog(catalog);</span>
-<span class="fc" id="L292">        bwb.setStreamCopyOptimized(myStreamCopyOptimized);</span>
+<span class="fc" id="L345">            _Private_IonBinaryWriterBuilder.standard();</span>
+<span class="fc" id="L346">        bwb.setCatalog(catalog);</span>
+<span class="fc" id="L347">        bwb.setStreamCopyOptimized(myStreamCopyOptimized);</span>
 
         // TODO Would be nice to remove this since it's implied by the BWB.
         //      However that currently causes problems in the IonSystem
         //      constructors (which get a null initialSymtab).
-<span class="fc" id="L297">        SymbolTable systemSymtab = _Private_Utils.systemSymtab(1);</span>
-<span class="fc" id="L298">        bwb.setInitialSymbolTable(systemSymtab);</span>
+<span class="fc" id="L352">        SymbolTable systemSymtab = _Private_Utils.systemSymtab(1);</span>
+<span class="fc" id="L353">        bwb.setInitialSymbolTable(systemSymtab);</span>
         // This is what we need, more or less.
 //        bwb = bwb.fillDefaults();
-<span class="fc" id="L301">        IonReaderBuilder rb = IonReaderBuilder.standard().withCatalog(catalog);</span>
-<span class="fc" id="L302">        IonSystem sys = newLiteSystem(twb, bwb, rb);</span>
-
-<span class="fc" id="L304">        return sys;</span>
+<span class="fc bfc" id="L356" title="All 2 branches covered.">        IonReaderBuilder rb = readerBuilder == null ? IonReaderBuilder.standard() : readerBuilder;</span>
+<span class="fc" id="L357">        rb = rb.withCatalog(catalog);</span>
+<span class="fc" id="L358">        return newLiteSystem(twb, bwb, rb);</span>
     }
 
     //=========================================================================
@@ -311,25 +365,25 @@ public class IonSystemBuilder
     {
         private Mutable(IonSystemBuilder that)
         {
-<span class="fc" id="L314">            super(that);</span>
-<span class="fc" id="L315">        }</span>
+<span class="fc" id="L368">            super(that);</span>
+<span class="fc" id="L369">        }</span>
 
         @Override
         public IonSystemBuilder immutable()
         {
-<span class="fc" id="L320">            return new IonSystemBuilder(this);</span>
+<span class="fc" id="L374">            return new IonSystemBuilder(this);</span>
         }
 
         @Override
         public IonSystemBuilder mutable()
         {
-<span class="fc" id="L326">            return this;</span>
+<span class="fc" id="L380">            return this;</span>
         }
 
         @Override
         void mutationCheck()
         {
-<span class="fc" id="L332">        }</span>
+<span class="fc" id="L386">        }</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

@@ -18,7 +18,6 @@ package com.amazon.ion.impl.lite;
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReader;
 import static com.amazon.ion.impl._Private_Utils.addAllNonNull;
 import static com.amazon.ion.impl._Private_Utils.initialSymtab;
@@ -43,6 +42,7 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.UnsupportedIonVersionException;
 import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
+import com.amazon.ion.impl._Private_IonReaderBuilder;
 import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.impl._Private_IonWriterFactory;
 import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
@@ -89,19 +89,22 @@ final class IonSystemLite
 <span class="pc bpc" id="L89" title="2 of 4 branches missed.">        assert catalog == rb.getCatalog();</span>
 
 <span class="fc" id="L91">        _catalog = catalog;</span>
-<span class="fc" id="L92">        _loader = new IonLoaderLite(this, catalog);</span>
-<span class="fc" id="L93">        _system_symbol_table = bwb.getInitialSymbolTable();</span>
-<span class="pc bpc" id="L94" title="2 of 4 branches missed.">        assert _system_symbol_table.isSystemTable();</span>
+<span class="fc" id="L92">        myReaderBuilder = ((_Private_IonReaderBuilder) rb).withLstFactory(_lstFactory).immutable();</span>
+<span class="fc" id="L93">        _loader = new IonLoaderLite(this, catalog);</span>
+<span class="fc" id="L94">        _system_symbol_table = bwb.getInitialSymbolTable();</span>
+<span class="pc bpc" id="L95" title="2 of 4 branches missed.">        assert _system_symbol_table.isSystemTable();</span>
 
-<span class="fc" id="L96">        myTextWriterBuilder = twb.immutable();</span>
+<span class="fc" id="L97">        myTextWriterBuilder = twb.immutable();</span>
 
-<span class="fc" id="L98">        set_system(this);</span>
+<span class="fc" id="L99">        set_system(this);</span>
 
-<span class="fc" id="L100">        bwb.setSymtabValueFactory(this);</span>
-<span class="fc" id="L101">        myBinaryWriterBuilder = bwb.immutable();</span>
+<span class="fc" id="L101">        bwb.setSymtabValueFactory(this);</span>
+<span class="fc" id="L102">        myBinaryWriterBuilder = bwb.immutable();</span>
+<span class="fc" id="L103">    }</span>
 
-<span class="fc" id="L103">        myReaderBuilder = rb.immutable();</span>
-<span class="fc" id="L104">    }</span>
+    IonReaderBuilder getReaderBuilder() {
+<span class="fc" id="L106">        return myReaderBuilder;</span>
+    }
 
     //==========================================================================
     // IonSystem Methods
@@ -109,171 +112,171 @@ final class IonSystemLite
 
     public boolean isStreamCopyOptimized()
     {
-<span class="nc" id="L112">        return myBinaryWriterBuilder.isStreamCopyOptimized();</span>
+<span class="nc" id="L115">        return myBinaryWriterBuilder.isStreamCopyOptimized();</span>
     }
 
     @SuppressWarnings(&quot;unchecked&quot;)
     public &lt;T extends IonValue&gt; T clone(T value) throws IonException
     {
         // Use &quot;fast clone&quot; when the system is the same.
-<span class="fc bfc" id="L119" title="All 2 branches covered.">        if (value.getSystem() == this)</span>
+<span class="fc bfc" id="L122" title="All 2 branches covered.">        if (value.getSystem() == this)</span>
         {
-<span class="fc" id="L121">            return (T) value.clone();</span>
+<span class="fc" id="L124">            return (T) value.clone();</span>
         }
 
-<span class="fc bfc" id="L124" title="All 2 branches covered.">        if (value instanceof IonDatagram)</span>
+<span class="fc bfc" id="L127" title="All 2 branches covered.">        if (value instanceof IonDatagram)</span>
         {
-<span class="fc" id="L126">            IonDatagram datagram = newDatagram();</span>
-<span class="fc" id="L127">            IonWriter writer = _Private_IonWriterFactory.makeWriter(datagram);</span>
-<span class="fc" id="L128">            IonReader reader = makeSystemReader(value.getSystem(), value);</span>
+<span class="fc" id="L129">            IonDatagram datagram = newDatagram();</span>
+<span class="fc" id="L130">            IonWriter writer = _Private_IonWriterFactory.makeWriter(datagram);</span>
+<span class="fc" id="L131">            IonReader reader = makeSystemReader(value.getSystem(), value);</span>
 
             try {
-<span class="fc" id="L131">                writer.writeValues(reader);</span>
+<span class="fc" id="L134">                writer.writeValues(reader);</span>
             }
-<span class="nc" id="L133">            catch (IOException e) {</span>
-<span class="nc" id="L134">                throw new IonException(e);</span>
-<span class="fc" id="L135">            }</span>
+<span class="nc" id="L136">            catch (IOException e) {</span>
+<span class="nc" id="L137">                throw new IonException(e);</span>
+<span class="fc" id="L138">            }</span>
 
-<span class="fc" id="L137">            return (T) datagram;</span>
+<span class="fc" id="L140">            return (T) datagram;</span>
         }
 
-<span class="fc" id="L140">        IonReader reader = newReader(value);</span>
-<span class="fc" id="L141">        reader.next();</span>
-<span class="fc" id="L142">        return (T) newValue(reader);</span>
+<span class="fc" id="L143">        IonReader reader = newReader(value);</span>
+<span class="fc" id="L144">        reader.next();</span>
+<span class="fc" id="L145">        return (T) newValue(reader);</span>
     }
 
     public IonCatalog getCatalog()
     {
-<span class="fc" id="L147">        return _catalog;</span>
+<span class="fc" id="L150">        return _catalog;</span>
     }
 
     public IonLoader getLoader()
     {
-<span class="fc" id="L152">        return _loader;</span>
+<span class="fc" id="L155">        return _loader;</span>
     }
 
     public IonLoader newLoader()
     {
-<span class="fc" id="L157">        return new IonLoaderLite(this, _catalog);</span>
+<span class="fc" id="L160">        return new IonLoaderLite(this, _catalog);</span>
     }
 
     public IonLoader newLoader(IonCatalog catalog)
     {
-<span class="fc bfc" id="L162" title="All 2 branches covered.">        if (catalog == null) catalog = getCatalog();</span>
-<span class="fc" id="L163">        return new IonLoaderLite(this, catalog);</span>
+<span class="fc bfc" id="L165" title="All 2 branches covered.">        if (catalog == null) catalog = getCatalog();</span>
+<span class="fc" id="L166">        return new IonLoaderLite(this, catalog);</span>
     }
 
     public final SymbolTable getSystemSymbolTable()
     {
-<span class="fc" id="L168">        return _system_symbol_table;</span>
+<span class="fc" id="L171">        return _system_symbol_table;</span>
     }
 
     public SymbolTable getSystemSymbolTable(String ionVersionId)
         throws UnsupportedIonVersionException
     {
-<span class="pc bpc" id="L174" title="1 of 2 branches missed.">        if (!ION_1_0.equals(ionVersionId)) {</span>
-<span class="nc" id="L175">            throw new UnsupportedIonVersionException(ionVersionId);</span>
+<span class="pc bpc" id="L177" title="1 of 2 branches missed.">        if (!ION_1_0.equals(ionVersionId)) {</span>
+<span class="nc" id="L178">            throw new UnsupportedIonVersionException(ionVersionId);</span>
         }
-<span class="fc" id="L177">        return getSystemSymbolTable();</span>
+<span class="fc" id="L180">        return getSystemSymbolTable();</span>
     }
 
     public Iterator&lt;IonValue&gt; iterate(Reader ionText)
     {
-<span class="fc" id="L182">        IonReader reader = makeReader(_catalog, ionText, _lstFactory);</span>
-<span class="fc" id="L183">        ReaderIterator iterator = new ReaderIterator(this, reader);</span>
-<span class="fc" id="L184">        return iterator;</span>
+<span class="fc" id="L185">        IonReader reader = myReaderBuilder.build(ionText);</span>
+<span class="fc" id="L186">        ReaderIterator iterator = new ReaderIterator(this, reader);</span>
+<span class="fc" id="L187">        return iterator;</span>
     }
 
     public Iterator&lt;IonValue&gt; iterate(InputStream ionData)
     {
         // This method causes a memory leak when reading a gzipped stream, see deprecation notice.
-<span class="fc" id="L190">        IonReader reader = makeReader(_catalog, ionData, _lstFactory);</span>
-<span class="fc" id="L191">        return iterate(reader);</span>
+<span class="fc" id="L193">        IonReader reader = myReaderBuilder.build(ionData);</span>
+<span class="fc" id="L194">        return iterate(reader);</span>
     }
 
     public Iterator&lt;IonValue&gt; iterate(String ionText)
     {
-<span class="fc" id="L196">        IonReader reader = makeReader(_catalog, ionText, _lstFactory);</span>
-<span class="fc" id="L197">        ReaderIterator iterator = new ReaderIterator(this, reader);</span>
-<span class="fc" id="L198">        return iterator;</span>
+<span class="fc" id="L199">        IonReader reader = myReaderBuilder.build(ionText);</span>
+<span class="fc" id="L200">        ReaderIterator iterator = new ReaderIterator(this, reader);</span>
+<span class="fc" id="L201">        return iterator;</span>
     }
 
     public Iterator&lt;IonValue&gt; iterate(byte[] ionData)
     {
         // This method causes a memory leak when reading a gzipped stream, see deprecation notice.
-<span class="fc" id="L204">        IonReader reader = makeReader(_catalog, ionData, _lstFactory);</span>
-<span class="fc" id="L205">        return iterate(reader);</span>
+<span class="fc" id="L207">        IonReader reader = myReaderBuilder.build(ionData);</span>
+<span class="fc" id="L208">        return iterate(reader);</span>
     }
 
     public Iterator&lt;IonValue&gt; iterate(IonReader reader)
     {
-<span class="fc" id="L210">        ReaderIterator iterator = new ReaderIterator(this, reader);</span>
-<span class="fc" id="L211">        return iterator;</span>
+<span class="fc" id="L213">        ReaderIterator iterator = new ReaderIterator(this, reader);</span>
+<span class="fc" id="L214">        return iterator;</span>
     }
 
     @Deprecated
     public IonBinaryWriter newBinaryWriter()
     {
-<span class="fc" id="L217">        _Private_IonBinaryWriterBuilder b = myBinaryWriterBuilder;</span>
-<span class="fc" id="L218">        return b.buildLegacy();</span>
+<span class="fc" id="L220">        _Private_IonBinaryWriterBuilder b = myBinaryWriterBuilder;</span>
+<span class="fc" id="L221">        return b.buildLegacy();</span>
     }
 
     @Deprecated
     public IonBinaryWriter newBinaryWriter(SymbolTable... imports)
     {
-<span class="fc" id="L224">        _Private_IonBinaryWriterBuilder b = (_Private_IonBinaryWriterBuilder)</span>
-<span class="fc" id="L225">            myBinaryWriterBuilder.withImports(imports);</span>
-<span class="fc" id="L226">        return b.buildLegacy();</span>
+<span class="fc" id="L227">        _Private_IonBinaryWriterBuilder b = (_Private_IonBinaryWriterBuilder)</span>
+<span class="fc" id="L228">            myBinaryWriterBuilder.withImports(imports);</span>
+<span class="fc" id="L229">        return b.buildLegacy();</span>
     }
 
 
     public IonWriter newBinaryWriter(OutputStream out, SymbolTable... imports)
     {
-<span class="fc" id="L232">        return myBinaryWriterBuilder.withImports(imports).build(out);</span>
+<span class="fc" id="L235">        return myBinaryWriterBuilder.withImports(imports).build(out);</span>
     }
 
     public IonWriter newTextWriter(Appendable out)
     {
-<span class="fc" id="L237">        return myTextWriterBuilder.build(out);</span>
+<span class="fc" id="L240">        return myTextWriterBuilder.build(out);</span>
     }
 
     public IonWriter newTextWriter(Appendable out, SymbolTable... imports)
         throws IOException
     {
-<span class="nc" id="L243">        return myTextWriterBuilder.withImports(imports).build(out);</span>
+<span class="nc" id="L246">        return myTextWriterBuilder.withImports(imports).build(out);</span>
     }
 
     public IonWriter newTextWriter(OutputStream out)
     {
-<span class="fc" id="L248">        return myTextWriterBuilder.build(out);</span>
+<span class="fc" id="L251">        return myTextWriterBuilder.build(out);</span>
     }
 
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
         throws IOException
     {
-<span class="fc" id="L254">        return myTextWriterBuilder.withImports(imports).build(out);</span>
+<span class="fc" id="L257">        return myTextWriterBuilder.withImports(imports).build(out);</span>
     }
 
 
     public SymbolTable newLocalSymbolTable(SymbolTable... imports)
     {
-<span class="fc" id="L260">        return _lstFactory.newLocalSymtab(getSystemSymbolTable(), imports);</span>
+<span class="fc" id="L263">        return _lstFactory.newLocalSymtab(getSystemSymbolTable(), imports);</span>
     }
 
     public SymbolTable newSharedSymbolTable(IonStruct ionRep)
     {
-<span class="fc" id="L265">        return _Private_Utils.newSharedSymtab(ionRep);</span>
+<span class="fc" id="L268">        return _Private_Utils.newSharedSymtab(ionRep);</span>
     }
 
     public SymbolTable newSharedSymbolTable(IonReader reader)
     {
-<span class="fc" id="L270">        return _Private_Utils.newSharedSymtab(reader, false);</span>
+<span class="fc" id="L273">        return _Private_Utils.newSharedSymtab(reader, false);</span>
     }
 
     public SymbolTable newSharedSymbolTable(IonReader reader,
                                             boolean isOnStruct)
     {
-<span class="fc" id="L276">        return _Private_Utils.newSharedSymtab(reader, isOnStruct);</span>
+<span class="fc" id="L279">        return _Private_Utils.newSharedSymtab(reader, isOnStruct);</span>
     }
 
     public SymbolTable newSharedSymbolTable(String name,
@@ -282,134 +285,134 @@ final class IonSystemLite
                                             SymbolTable... imports)
     {
         // TODO streamline to avoid making this collection
-<span class="fc" id="L285">        ArrayList&lt;String&gt; syms = new ArrayList&lt;String&gt;();</span>
+<span class="fc" id="L288">        ArrayList&lt;String&gt; syms = new ArrayList&lt;String&gt;();</span>
 
-<span class="fc" id="L287">        SymbolTable prior = null;</span>
-<span class="fc bfc" id="L288" title="All 2 branches covered.">        if (version &gt; 1)</span>
+<span class="fc" id="L290">        SymbolTable prior = null;</span>
+<span class="fc bfc" id="L291" title="All 2 branches covered.">        if (version &gt; 1)</span>
         {
-<span class="fc" id="L290">            int priorVersion = version - 1;</span>
-<span class="fc" id="L291">            prior = _catalog.getTable(name, priorVersion);</span>
-<span class="pc bpc" id="L292" title="1 of 4 branches missed.">            if (prior == null || prior.getVersion() != priorVersion)</span>
+<span class="fc" id="L293">            int priorVersion = version - 1;</span>
+<span class="fc" id="L294">            prior = _catalog.getTable(name, priorVersion);</span>
+<span class="pc bpc" id="L295" title="1 of 4 branches missed.">            if (prior == null || prior.getVersion() != priorVersion)</span>
             {
-<span class="fc" id="L294">                String message =</span>
+<span class="fc" id="L297">                String message =</span>
                     &quot;Catalog does not contain symbol table &quot; +
-<span class="fc" id="L296">                    printString(name) + &quot; version &quot; + priorVersion +</span>
+<span class="fc" id="L299">                    printString(name) + &quot; version &quot; + priorVersion +</span>
                     &quot; required to create version &quot; + version;
-<span class="fc" id="L298">                throw new IonException(message);</span>
+<span class="fc" id="L301">                throw new IonException(message);</span>
             }
         }
 
-<span class="fc bfc" id="L302" title="All 2 branches covered.">        for (SymbolTable imported : imports)</span>
+<span class="fc bfc" id="L305" title="All 2 branches covered.">        for (SymbolTable imported : imports)</span>
         {
-<span class="fc" id="L304">            addAllNonNull(syms, imported.iterateDeclaredSymbolNames());</span>
+<span class="fc" id="L307">            addAllNonNull(syms, imported.iterateDeclaredSymbolNames());</span>
         }
 
-<span class="fc" id="L307">        addAllNonNull(syms, newSymbols);</span>
+<span class="fc" id="L310">        addAllNonNull(syms, newSymbols);</span>
 
-<span class="fc" id="L309">        SymbolTable st =</span>
-<span class="fc" id="L310">            _Private_Utils.newSharedSymtab(name, version, prior,</span>
-<span class="fc" id="L311">                                           syms.iterator());</span>
-<span class="fc" id="L312">        return st;</span>
+<span class="fc" id="L312">        SymbolTable st =</span>
+<span class="fc" id="L313">            _Private_Utils.newSharedSymtab(name, version, prior,</span>
+<span class="fc" id="L314">                                           syms.iterator());</span>
+<span class="fc" id="L315">        return st;</span>
     }
 
     public IonValueLite newValue(IonReader reader)
     {
-<span class="fc" id="L317">        IonValueLite value = load_value_helper(reader, /*isTopLevel*/ true);</span>
-<span class="fc bfc" id="L318" title="All 2 branches covered.">        if (value == null) {</span>
-<span class="fc" id="L319">            throw new IonException(&quot;No value available&quot;);</span>
+<span class="fc" id="L320">        IonValueLite value = load_value_helper(reader, /*isTopLevel*/ true);</span>
+<span class="fc bfc" id="L321" title="All 2 branches covered.">        if (value == null) {</span>
+<span class="fc" id="L322">            throw new IonException(&quot;No value available&quot;);</span>
         }
-<span class="fc" id="L321">        return value;</span>
+<span class="fc" id="L324">        return value;</span>
     }
 
     private IonValueLite load_value_helper(IonReader reader, boolean isTopLevel)
     {
-<span class="fc" id="L326">        boolean symbol_is_present = false;</span>
+<span class="fc" id="L329">        boolean symbol_is_present = false;</span>
 
-<span class="fc" id="L328">        IonType t = reader.getType();</span>
-<span class="fc bfc" id="L329" title="All 2 branches covered.">        if (t == null) {</span>
-<span class="fc" id="L330">            return null;</span>
+<span class="fc" id="L331">        IonType t = reader.getType();</span>
+<span class="fc bfc" id="L332" title="All 2 branches covered.">        if (t == null) {</span>
+<span class="fc" id="L333">            return null;</span>
         }
         IonValueLite v;
-<span class="fc bfc" id="L333" title="All 2 branches covered.">        if (reader.isNullValue()) {</span>
-<span class="fc" id="L334">            v = newNull(t);</span>
+<span class="fc bfc" id="L336" title="All 2 branches covered.">        if (reader.isNullValue()) {</span>
+<span class="fc" id="L337">            v = newNull(t);</span>
         }
         else {
-<span class="pc bpc" id="L337" title="1 of 13 branches missed.">            switch (t) {</span>
+<span class="pc bpc" id="L340" title="1 of 13 branches missed.">            switch (t) {</span>
             case BOOL:
-<span class="fc" id="L339">                v = newBool(reader.booleanValue());</span>
-<span class="fc" id="L340">                break;</span>
+<span class="fc" id="L342">                v = newBool(reader.booleanValue());</span>
+<span class="fc" id="L343">                break;</span>
             case INT:
                 // TODO amzn/ion-java/issues/9  Inefficient since we can't determine the size
                 // of the integer in order to avoid making BigIntegers.
-<span class="fc" id="L344">                v = newInt(reader.bigIntegerValue());</span>
-<span class="fc" id="L345">                break;</span>
-            case FLOAT:
-<span class="fc" id="L347">                v = newFloat(reader.doubleValue());</span>
+<span class="fc" id="L347">                v = newInt(reader.bigIntegerValue());</span>
 <span class="fc" id="L348">                break;</span>
-            case DECIMAL:
-<span class="fc" id="L350">                v = newDecimal(reader.decimalValue());</span>
+            case FLOAT:
+<span class="fc" id="L350">                v = newFloat(reader.doubleValue());</span>
 <span class="fc" id="L351">                break;</span>
-            case TIMESTAMP:
-<span class="fc" id="L353">                v = newTimestamp(reader.timestampValue());</span>
+            case DECIMAL:
+<span class="fc" id="L353">                v = newDecimal(reader.decimalValue());</span>
 <span class="fc" id="L354">                break;</span>
+            case TIMESTAMP:
+<span class="fc" id="L356">                v = newTimestamp(reader.timestampValue());</span>
+<span class="fc" id="L357">                break;</span>
             case SYMBOL:
-<span class="fc" id="L356">                v = newSymbol(reader.symbolValue());</span>
-<span class="fc" id="L357">                symbol_is_present = true;</span>
-<span class="fc" id="L358">                break;</span>
-            case STRING:
-<span class="fc" id="L360">                v = newString(reader.stringValue());</span>
+<span class="fc" id="L359">                v = newSymbol(reader.symbolValue());</span>
+<span class="fc" id="L360">                symbol_is_present = true;</span>
 <span class="fc" id="L361">                break;</span>
-            case CLOB:
-<span class="fc" id="L363">                v = newClob(reader.newBytes());</span>
+            case STRING:
+<span class="fc" id="L363">                v = newString(reader.stringValue());</span>
 <span class="fc" id="L364">                break;</span>
-            case BLOB:
-<span class="fc" id="L366">                v = newBlob(reader.newBytes());</span>
+            case CLOB:
+<span class="fc" id="L366">                v = newClob(reader.newBytes());</span>
 <span class="fc" id="L367">                break;</span>
-            case LIST:
-<span class="fc" id="L369">                v = newEmptyList();</span>
+            case BLOB:
+<span class="fc" id="L369">                v = newBlob(reader.newBytes());</span>
 <span class="fc" id="L370">                break;</span>
-            case SEXP:
-<span class="fc" id="L372">                v = newEmptySexp();</span>
+            case LIST:
+<span class="fc" id="L372">                v = newEmptyList();</span>
 <span class="fc" id="L373">                break;</span>
-            case STRUCT:
-<span class="fc" id="L375">                v = newEmptyStruct();</span>
+            case SEXP:
+<span class="fc" id="L375">                v = newEmptySexp();</span>
 <span class="fc" id="L376">                break;</span>
-<span class="nc" id="L377">            default: throw new IonException(&quot;unexpected type encountered reading value: &quot;+t.toString());</span>
+            case STRUCT:
+<span class="fc" id="L378">                v = newEmptyStruct();</span>
+<span class="fc" id="L379">                break;</span>
+<span class="nc" id="L380">            default: throw new IonException(&quot;unexpected type encountered reading value: &quot;+t.toString());</span>
             }
         }
 
         // Forget any incoming SIDs on field names.
-<span class="fc bfc" id="L382" title="All 4 branches covered.">        if (!isTopLevel &amp;&amp; reader.isInStruct()) {</span>
-<span class="fc" id="L383">            SymbolToken token = reader.getFieldNameSymbol();</span>
-<span class="fc" id="L384">            String text = token.getText();</span>
-<span class="fc bfc" id="L385" title="All 4 branches covered.">            if (text != null &amp;&amp; token.getSid() != UNKNOWN_SYMBOL_ID)</span>
+<span class="fc bfc" id="L385" title="All 4 branches covered.">        if (!isTopLevel &amp;&amp; reader.isInStruct()) {</span>
+<span class="fc" id="L386">            SymbolToken token = reader.getFieldNameSymbol();</span>
+<span class="fc" id="L387">            String text = token.getText();</span>
+<span class="fc bfc" id="L388" title="All 4 branches covered.">            if (text != null &amp;&amp; token.getSid() != UNKNOWN_SYMBOL_ID)</span>
             {
-<span class="fc" id="L387">                token = newSymbolToken(text, UNKNOWN_SYMBOL_ID);</span>
+<span class="fc" id="L390">                token = newSymbolToken(text, UNKNOWN_SYMBOL_ID);</span>
             }
-<span class="fc" id="L389">            v.setFieldNameSymbol(token);</span>
-<span class="fc" id="L390">            symbol_is_present = true;</span>
+<span class="fc" id="L392">            v.setFieldNameSymbol(token);</span>
+<span class="fc" id="L393">            symbol_is_present = true;</span>
         }
 
         // Forget any incoming SIDs on annotations.
         // This is a fresh array so we can modify it:
-<span class="fc" id="L395">        SymbolToken[] annotations = reader.getTypeAnnotationSymbols();</span>
-<span class="fc bfc" id="L396" title="All 2 branches covered.">        if (annotations.length != 0)</span>
+<span class="fc" id="L398">        SymbolToken[] annotations = reader.getTypeAnnotationSymbols();</span>
+<span class="fc bfc" id="L399" title="All 2 branches covered.">        if (annotations.length != 0)</span>
         {
-<span class="fc bfc" id="L398" title="All 2 branches covered.">            for (int i = 0; i &lt; annotations.length; i++)</span>
+<span class="fc bfc" id="L401" title="All 2 branches covered.">            for (int i = 0; i &lt; annotations.length; i++)</span>
             {
-<span class="fc" id="L400">                SymbolToken token = annotations[i];</span>
-<span class="fc" id="L401">                String text = token.getText();</span>
-<span class="fc bfc" id="L402" title="All 4 branches covered.">                if (text != null &amp;&amp; token.getSid() != UNKNOWN_SYMBOL_ID )</span>
+<span class="fc" id="L403">                SymbolToken token = annotations[i];</span>
+<span class="fc" id="L404">                String text = token.getText();</span>
+<span class="fc bfc" id="L405" title="All 4 branches covered.">                if (text != null &amp;&amp; token.getSid() != UNKNOWN_SYMBOL_ID )</span>
                 {
-<span class="fc" id="L404">                    annotations[i] = newSymbolToken(text, UNKNOWN_SYMBOL_ID);</span>
+<span class="fc" id="L407">                    annotations[i] = newSymbolToken(text, UNKNOWN_SYMBOL_ID);</span>
                 }
             }
-<span class="fc" id="L407">            v.setTypeAnnotationSymbols(annotations);</span>
-<span class="fc" id="L408">            symbol_is_present = true;</span>
+<span class="fc" id="L410">            v.setTypeAnnotationSymbols(annotations);</span>
+<span class="fc" id="L411">            symbol_is_present = true;</span>
         }
 
-<span class="fc bfc" id="L411" title="All 2 branches covered.">        if (!reader.isNullValue()) {</span>
-<span class="pc bpc" id="L412" title="1 of 3 branches missed.">            switch (t) {</span>
+<span class="fc bfc" id="L414" title="All 2 branches covered.">        if (!reader.isNullValue()) {</span>
+<span class="pc bpc" id="L415" title="1 of 3 branches missed.">            switch (t) {</span>
             case BOOL:
             case INT:
             case FLOAT:
@@ -419,24 +422,24 @@ final class IonSystemLite
             case STRING:
             case CLOB:
             case BLOB:
-<span class="fc" id="L422">                break;</span>
+<span class="fc" id="L425">                break;</span>
             case LIST:
             case SEXP:
             case STRUCT:
                 // we have to load the children after we grabbed the
                 // fieldname and annotations off of the parent container
-<span class="fc bfc" id="L428" title="All 2 branches covered.">                if (load_children((IonContainerLite)v, reader)) {</span>
-<span class="fc" id="L429">                    symbol_is_present = true;</span>
+<span class="fc bfc" id="L431" title="All 2 branches covered.">                if (load_children((IonContainerLite)v, reader)) {</span>
+<span class="fc" id="L432">                    symbol_is_present = true;</span>
                 }
                 break;
             default:
-<span class="nc" id="L433">                throw new IonException(&quot;unexpected type encountered reading value: &quot;+t.toString());</span>
+<span class="nc" id="L436">                throw new IonException(&quot;unexpected type encountered reading value: &quot;+t.toString());</span>
             }
         }
-<span class="fc bfc" id="L436" title="All 2 branches covered.">        if (symbol_is_present) {</span>
-<span class="fc" id="L437">            v._isSymbolPresent(true);</span>
+<span class="fc bfc" id="L439" title="All 2 branches covered.">        if (symbol_is_present) {</span>
+<span class="fc" id="L440">            v._isSymbolPresent(true);</span>
         }
-<span class="fc" id="L439">        return v;</span>
+<span class="fc" id="L442">        return v;</span>
     }
 
     /**
@@ -445,113 +448,113 @@ final class IonSystemLite
      */
     private boolean load_children(IonContainerLite container, IonReader reader)
     {
-<span class="fc" id="L448">        boolean symbol_is_present = false;</span>
+<span class="fc" id="L451">        boolean symbol_is_present = false;</span>
 
-<span class="fc" id="L450">        reader.stepIn();</span>
+<span class="fc" id="L453">        reader.stepIn();</span>
         for (;;) {
-<span class="fc" id="L452">            IonType t = reader.next();</span>
-<span class="fc bfc" id="L453" title="All 2 branches covered.">            if (t == null) {</span>
-<span class="fc" id="L454">                break;</span>
+<span class="fc" id="L455">            IonType t = reader.next();</span>
+<span class="fc bfc" id="L456" title="All 2 branches covered.">            if (t == null) {</span>
+<span class="fc" id="L457">                break;</span>
             }
-<span class="fc" id="L456">            IonValueLite child = load_value_helper(reader, /*isTopLevel*/ false);</span>
+<span class="fc" id="L459">            IonValueLite child = load_value_helper(reader, /*isTopLevel*/ false);</span>
 
-<span class="fc" id="L458">            container.add(child);</span>
+<span class="fc" id="L461">            container.add(child);</span>
 
-<span class="fc bfc" id="L460" title="All 2 branches covered.">            if (child._isSymbolPresent()) {</span>
-<span class="fc" id="L461">                symbol_is_present = true;</span>
+<span class="fc bfc" id="L463" title="All 2 branches covered.">            if (child._isSymbolPresent()) {</span>
+<span class="fc" id="L464">                symbol_is_present = true;</span>
             }
-<span class="fc" id="L463">        }</span>
-<span class="fc" id="L464">        reader.stepOut();</span>
+<span class="fc" id="L466">        }</span>
+<span class="fc" id="L467">        reader.stepOut();</span>
 
-<span class="fc" id="L466">        return symbol_is_present;</span>
+<span class="fc" id="L469">        return symbol_is_present;</span>
     }
 
     IonValueLite newValue(IonType valueType)
     {
         IonValueLite v;
 
-<span class="nc bnc" id="L473" title="All 2 branches missed.">        if (valueType == null) {</span>
-<span class="nc" id="L474">            throw new IllegalArgumentException(&quot;the value type must be specified&quot;);</span>
+<span class="nc bnc" id="L476" title="All 2 branches missed.">        if (valueType == null) {</span>
+<span class="nc" id="L477">            throw new IllegalArgumentException(&quot;the value type must be specified&quot;);</span>
         }
-<span class="nc bnc" id="L476" title="All 14 branches missed.">        switch (valueType) {</span>
-<span class="nc" id="L477">        case NULL:          v = newNull();          break;</span>
-<span class="nc" id="L478">        case BOOL:          v = newNullBool();      break;</span>
-<span class="nc" id="L479">        case INT:           v = newNullInt();       break;</span>
-<span class="nc" id="L480">        case FLOAT:         v = newNullFloat();     break;</span>
-<span class="nc" id="L481">        case DECIMAL:       v = newNullDecimal();   break;</span>
-<span class="nc" id="L482">        case TIMESTAMP:     v = newNullTimestamp(); break;</span>
-<span class="nc" id="L483">        case SYMBOL:        v = newNullSymbol();    break;</span>
-<span class="nc" id="L484">        case STRING:        v = newNullString();    break;</span>
-<span class="nc" id="L485">        case CLOB:          v = newNullClob();      break;</span>
-<span class="nc" id="L486">        case BLOB:          v = newNullBlob();      break;</span>
-<span class="nc" id="L487">        case LIST:          v = newEmptyList();     break;</span>
-<span class="nc" id="L488">        case SEXP:          v = newEmptySexp();     break;</span>
-<span class="nc" id="L489">        case STRUCT:        v = newEmptyStruct();   break;</span>
-<span class="nc" id="L490">        default: throw new IonException(&quot;unexpected type encountered reading value: &quot;+valueType);</span>
+<span class="nc bnc" id="L479" title="All 14 branches missed.">        switch (valueType) {</span>
+<span class="nc" id="L480">        case NULL:          v = newNull();          break;</span>
+<span class="nc" id="L481">        case BOOL:          v = newNullBool();      break;</span>
+<span class="nc" id="L482">        case INT:           v = newNullInt();       break;</span>
+<span class="nc" id="L483">        case FLOAT:         v = newNullFloat();     break;</span>
+<span class="nc" id="L484">        case DECIMAL:       v = newNullDecimal();   break;</span>
+<span class="nc" id="L485">        case TIMESTAMP:     v = newNullTimestamp(); break;</span>
+<span class="nc" id="L486">        case SYMBOL:        v = newNullSymbol();    break;</span>
+<span class="nc" id="L487">        case STRING:        v = newNullString();    break;</span>
+<span class="nc" id="L488">        case CLOB:          v = newNullClob();      break;</span>
+<span class="nc" id="L489">        case BLOB:          v = newNullBlob();      break;</span>
+<span class="nc" id="L490">        case LIST:          v = newEmptyList();     break;</span>
+<span class="nc" id="L491">        case SEXP:          v = newEmptySexp();     break;</span>
+<span class="nc" id="L492">        case STRUCT:        v = newEmptyStruct();   break;</span>
+<span class="nc" id="L493">        default: throw new IonException(&quot;unexpected type encountered reading value: &quot;+valueType);</span>
         }
 
-<span class="nc" id="L493">        return v;</span>
+<span class="nc" id="L496">        return v;</span>
     }
 
 
     public IonWriter newWriter(IonContainer container)
     {
-<span class="fc" id="L499">        IonWriter writer = _Private_IonWriterFactory.makeWriter(container);</span>
-<span class="fc" id="L500">        return writer;</span>
+<span class="fc" id="L502">        IonWriter writer = _Private_IonWriterFactory.makeWriter(container);</span>
+<span class="fc" id="L503">        return writer;</span>
     }
 
     private IonValue singleValue(Iterator&lt;IonValue&gt; it)
     {
         IonValue value;
         try {
-<span class="fc" id="L507">            value = it.next();</span>
+<span class="fc" id="L510">            value = it.next();</span>
         }
-<span class="fc" id="L509">        catch (NoSuchElementException e) {</span>
-<span class="fc" id="L510">            throw new UnexpectedEofException(&quot;no value found on input stream&quot;);</span>
-<span class="fc" id="L511">        }</span>
-<span class="fc bfc" id="L512" title="All 2 branches covered.">        if (it.hasNext()) {</span>
-<span class="fc" id="L513">            throw new IonException(&quot;not a single value&quot;);</span>
+<span class="fc" id="L512">        catch (NoSuchElementException e) {</span>
+<span class="fc" id="L513">            throw new UnexpectedEofException(&quot;no value found on input stream&quot;);</span>
+<span class="fc" id="L514">        }</span>
+<span class="fc bfc" id="L515" title="All 2 branches covered.">        if (it.hasNext()) {</span>
+<span class="fc" id="L516">            throw new IonException(&quot;not a single value&quot;);</span>
         }
-<span class="fc" id="L515">        return value;</span>
+<span class="fc" id="L518">        return value;</span>
     }
 
     public IonValue singleValue(String ionText)
     {
-<span class="fc" id="L520">        Iterator&lt;IonValue&gt; it = iterate(ionText);</span>
-<span class="fc" id="L521">        return singleValue(it);</span>
+<span class="fc" id="L523">        Iterator&lt;IonValue&gt; it = iterate(ionText);</span>
+<span class="fc" id="L524">        return singleValue(it);</span>
     }
 
     public IonValue singleValue(byte[] ionData)
     {
-<span class="fc" id="L526">        return singleValue(ionData, 0, ionData.length);</span>
+<span class="fc" id="L529">        return singleValue(ionData, 0, ionData.length);</span>
     }
 
     @Override
     public IonValue singleValue(byte[] ionData, int offset, int len) {
-<span class="fc" id="L531">        IonReader reader = newReader(ionData, offset, len);</span>
+<span class="fc" id="L534">        IonReader reader = newReader(ionData, offset, len);</span>
         try {
-<span class="fc" id="L533">            Iterator&lt;IonValue&gt; it = iterate(reader);</span>
-<span class="fc" id="L534">            return singleValue(it);</span>
+<span class="fc" id="L536">            Iterator&lt;IonValue&gt; it = iterate(reader);</span>
+<span class="fc" id="L537">            return singleValue(it);</span>
         }
         finally {
             try {
-<span class="fc" id="L538">                reader.close();</span>
+<span class="fc" id="L541">                reader.close();</span>
             }
-<span class="nc" id="L540">            catch (IOException e) {</span>
-<span class="nc" id="L541">                throw new IonException(e);</span>
-<span class="fc" id="L542">            }</span>
+<span class="nc" id="L543">            catch (IOException e) {</span>
+<span class="nc" id="L544">                throw new IonException(e);</span>
+<span class="fc" id="L545">            }</span>
         }
     }
 
     protected IonSymbolLite newSystemIdSymbol(String ionVersionMarker)
     {
-<span class="nc bnc" id="L548" title="All 2 branches missed.">        if (!ION_1_0.equals(ionVersionMarker)) {</span>
-<span class="nc" id="L549">            throw new IllegalArgumentException(&quot;name isn't an ion version marker&quot;);</span>
+<span class="nc bnc" id="L551" title="All 2 branches missed.">        if (!ION_1_0.equals(ionVersionMarker)) {</span>
+<span class="nc" id="L552">            throw new IllegalArgumentException(&quot;name isn't an ion version marker&quot;);</span>
         }
-<span class="nc" id="L551">        IonSymbolLite ivm = newSymbol(ionVersionMarker);</span>
-<span class="nc" id="L552">        ivm.setIsIonVersionMarker(true);</span>
+<span class="nc" id="L554">        IonSymbolLite ivm = newSymbol(ionVersionMarker);</span>
+<span class="nc" id="L555">        ivm.setIsIonVersionMarker(true);</span>
 
-<span class="nc" id="L554">        return ivm;</span>
+<span class="nc" id="L557">        return ivm;</span>
     }
 
     static class ReaderIterator
@@ -566,179 +569,179 @@ final class IonSystemLite
         //       we are creating ion values which might want
         //       a local symbol table in some cases.
         protected ReaderIterator(IonSystemLite system, IonReader reader)
-<span class="fc" id="L569">        {</span>
-<span class="fc" id="L570">            _reader = reader;</span>
-<span class="fc" id="L571">            _system = system;</span>
-<span class="fc" id="L572">        }</span>
+<span class="fc" id="L572">        {</span>
+<span class="fc" id="L573">            _reader = reader;</span>
+<span class="fc" id="L574">            _system = system;</span>
+<span class="fc" id="L575">        }</span>
 
         public boolean hasNext()
         {
-<span class="fc bfc" id="L576" title="All 2 branches covered.">            if (_next == null) {</span>
-<span class="fc" id="L577">                _next = _reader.next();</span>
+<span class="fc bfc" id="L579" title="All 2 branches covered.">            if (_next == null) {</span>
+<span class="fc" id="L580">                _next = _reader.next();</span>
             }
-<span class="fc bfc" id="L579" title="All 2 branches covered.">            return (_next != null);</span>
+<span class="fc bfc" id="L582" title="All 2 branches covered.">            return (_next != null);</span>
         }
 
         public IonValue next()
         {
-<span class="fc bfc" id="L584" title="All 2 branches covered.">            if (!hasNext()) {</span>
+<span class="fc bfc" id="L587" title="All 2 branches covered.">            if (!hasNext()) {</span>
                 // IterationTest.testSimpleIteration() wants this
-<span class="fc" id="L586">                throw new NoSuchElementException();</span>
+<span class="fc" id="L589">                throw new NoSuchElementException();</span>
                 // LoaderTest.testSingleValue is expecting null so
                 // IonSystemLite.singleValue can throw an IonException - or
                 // should we change testSingleValue ??
                 // return null;
             }
 
-<span class="fc" id="L593">            SymbolTable symtab = _reader.getSymbolTable();</span>
+<span class="fc" id="L596">            SymbolTable symtab = _reader.getSymbolTable();</span>
 
             // make an ion value from our reader
             // We called _reader.next() inside hasNext() above
-<span class="fc" id="L597">            IonValueLite value = _system.newValue(_reader);</span>
+<span class="fc" id="L600">            IonValueLite value = _system.newValue(_reader);</span>
 
             // we've used up the value now, force a _reader._next() the next time through
-<span class="fc" id="L600">            _next = null;</span>
+<span class="fc" id="L603">            _next = null;</span>
 
-<span class="fc" id="L602">            value.setSymbolTable(symtab);</span>
+<span class="fc" id="L605">            value.setSymbolTable(symtab);</span>
 
-<span class="fc" id="L604">            return value;</span>
+<span class="fc" id="L607">            return value;</span>
         }
 
 
         public void remove()
         {
-<span class="nc" id="L610">            throw new UnsupportedOperationException();</span>
+<span class="nc" id="L613">            throw new UnsupportedOperationException();</span>
         }
 
         public void close() throws IOException
         {
             // TODO _reader.close();
-<span class="nc" id="L616">        }</span>
+<span class="nc" id="L619">        }</span>
     }
 
 
     public IonTimestamp newUtcTimestampFromMillis(long millis)
     {
-<span class="nc" id="L622">        IonTimestamp result = newNullTimestamp();</span>
-<span class="nc" id="L623">        result.setMillisUtc(millis);</span>
-<span class="nc" id="L624">        return result;</span>
+<span class="nc" id="L625">        IonTimestamp result = newNullTimestamp();</span>
+<span class="nc" id="L626">        result.setMillisUtc(millis);</span>
+<span class="nc" id="L627">        return result;</span>
     }
 
     public IonTimestamp newUtcTimestamp(Date utcDate)
     {
-<span class="nc" id="L629">        IonTimestamp result = newNullTimestamp();</span>
-<span class="nc bnc" id="L630" title="All 2 branches missed.">        if (utcDate != null)</span>
+<span class="nc" id="L632">        IonTimestamp result = newNullTimestamp();</span>
+<span class="nc bnc" id="L633" title="All 2 branches missed.">        if (utcDate != null)</span>
         {
-<span class="nc" id="L632">            result.setMillisUtc(utcDate.getTime());</span>
+<span class="nc" id="L635">            result.setMillisUtc(utcDate.getTime());</span>
         }
-<span class="nc" id="L634">        return result;</span>
+<span class="nc" id="L637">        return result;</span>
     }
 
     public IonTimestamp newCurrentUtcTimestamp()
     {
-<span class="nc" id="L639">        IonTimestampLite result = super.newNullTimestamp();</span>
-<span class="nc" id="L640">        result.setCurrentTimeUtc();</span>
-<span class="nc" id="L641">        return result;</span>
+<span class="nc" id="L642">        IonTimestampLite result = super.newNullTimestamp();</span>
+<span class="nc" id="L643">        result.setCurrentTimeUtc();</span>
+<span class="nc" id="L644">        return result;</span>
     }
 
     public IonDatagram newDatagram()
     {
-<span class="fc" id="L646">        IonCatalog catalog = this.getCatalog();</span>
-<span class="fc" id="L647">        IonDatagram dg = newDatagram(catalog);</span>
-<span class="fc" id="L648">        return dg;</span>
+<span class="fc" id="L649">        IonCatalog catalog = this.getCatalog();</span>
+<span class="fc" id="L650">        IonDatagram dg = newDatagram(catalog);</span>
+<span class="fc" id="L651">        return dg;</span>
     }
 
     public IonDatagramLite newDatagram(IonCatalog catalog)
     {
-<span class="fc bfc" id="L653" title="All 2 branches covered.">        if (catalog == null) catalog = getCatalog();</span>
-<span class="fc" id="L654">        IonDatagramLite dg = new IonDatagramLite(this, catalog);</span>
-<span class="fc" id="L655">        return dg;</span>
+<span class="fc bfc" id="L656" title="All 2 branches covered.">        if (catalog == null) catalog = getCatalog();</span>
+<span class="fc" id="L657">        IonDatagramLite dg = new IonDatagramLite(this, catalog);</span>
+<span class="fc" id="L658">        return dg;</span>
     }
 
     public IonDatagram newDatagram(IonValue initialChild)
     {
-<span class="fc" id="L660">        IonDatagram dg = newDatagram(null, initialChild);</span>
-<span class="fc" id="L661">        return dg;</span>
+<span class="fc" id="L663">        IonDatagram dg = newDatagram(null, initialChild);</span>
+<span class="fc" id="L664">        return dg;</span>
     }
 
     public IonDatagram newDatagram(IonCatalog catalog, IonValue initialChild)
     {
-<span class="fc" id="L666">        IonDatagram dg = newDatagram(catalog);</span>
+<span class="fc" id="L669">        IonDatagram dg = newDatagram(catalog);</span>
 
-<span class="fc bfc" id="L668" title="All 2 branches covered.">        if (initialChild != null) {</span>
-<span class="pc bpc" id="L669" title="1 of 2 branches missed.">            if (initialChild.getSystem() != this) {</span>
-<span class="nc" id="L670">                throw new IonException(&quot;this Ion system can't mix with instances from other system impl's&quot;);</span>
+<span class="fc bfc" id="L671" title="All 2 branches covered.">        if (initialChild != null) {</span>
+<span class="pc bpc" id="L672" title="1 of 2 branches missed.">            if (initialChild.getSystem() != this) {</span>
+<span class="nc" id="L673">                throw new IonException(&quot;this Ion system can't mix with instances from other system impl's&quot;);</span>
             }
 
             // This is an API anomaly but it's documented so here we go.
-<span class="fc bfc" id="L674" title="All 2 branches covered.">            if (initialChild.getContainer() != null) {</span>
-<span class="fc" id="L675">                initialChild = clone(initialChild);</span>
+<span class="fc bfc" id="L677" title="All 2 branches covered.">            if (initialChild.getContainer() != null) {</span>
+<span class="fc" id="L678">                initialChild = clone(initialChild);</span>
             }
 
             // This will fail if initialChild instanceof IonDatagram:
-<span class="fc" id="L679">            dg.add(initialChild);</span>
+<span class="fc" id="L682">            dg.add(initialChild);</span>
         }
 
-<span class="pc bpc" id="L682" title="2 of 4 branches missed.">        assert dg.getSystem() == this;</span>
-<span class="fc" id="L683">        return dg;</span>
+<span class="pc bpc" id="L685" title="2 of 4 branches missed.">        assert dg.getSystem() == this;</span>
+<span class="fc" id="L686">        return dg;</span>
     }
 
     public IonDatagram newDatagram(SymbolTable... imports)
     {
-<span class="fc" id="L688">        IonDatagram dg = newDatagram(null, imports);</span>
-<span class="fc" id="L689">        return dg;</span>
+<span class="fc" id="L691">        IonDatagram dg = newDatagram(null, imports);</span>
+<span class="fc" id="L692">        return dg;</span>
     }
 
     public IonDatagram newDatagram(IonCatalog catalog, SymbolTable... imports)
     {
-<span class="fc" id="L694">        SymbolTable defaultSystemSymtab = getSystemSymbolTable();</span>
-<span class="fc" id="L695">        SymbolTable symbols = initialSymtab(_lstFactory, defaultSystemSymtab, imports);</span>
-<span class="fc" id="L696">        IonDatagramLite dg = newDatagram(catalog);</span>
-<span class="fc" id="L697">        dg.appendTrailingSymbolTable(symbols);</span>
-<span class="fc" id="L698">        return dg;</span>
+<span class="fc" id="L697">        SymbolTable defaultSystemSymtab = getSystemSymbolTable();</span>
+<span class="fc" id="L698">        SymbolTable symbols = initialSymtab(_lstFactory, defaultSystemSymtab, imports);</span>
+<span class="fc" id="L699">        IonDatagramLite dg = newDatagram(catalog);</span>
+<span class="fc" id="L700">        dg.appendTrailingSymbolTable(symbols);</span>
+<span class="fc" id="L701">        return dg;</span>
     }
 
     public IonReader newReader(byte[] ionData)
     {
-<span class="fc" id="L703">        return myReaderBuilder.build(ionData);</span>
+<span class="fc" id="L706">        return myReaderBuilder.build(ionData);</span>
     }
 
     public IonReader newSystemReader(byte[] ionData)
     {
-<span class="fc" id="L708">        return makeSystemReader(ionData);</span>
+<span class="fc" id="L711">        return makeSystemReader(ionData);</span>
     }
 
 
     public IonReader newReader(byte[] ionData, int offset, int len)
     {
-<span class="fc" id="L714">        return myReaderBuilder.build(ionData, offset, len);</span>
+<span class="fc" id="L717">        return myReaderBuilder.build(ionData, offset, len);</span>
     }
 
     public IonReader newSystemReader(byte[] ionData, int offset, int len)
     {
-<span class="nc" id="L719">        return makeSystemReader(ionData, offset, len);</span>
+<span class="nc" id="L722">        return makeSystemReader(ionData, offset, len);</span>
     }
 
 
     public IonTextReader newReader(String ionText)
     {
-<span class="fc" id="L725">        return myReaderBuilder.build(ionText);</span>
+<span class="fc" id="L728">        return myReaderBuilder.build(ionText);</span>
     }
 
     public IonReader newSystemReader(String ionText)
     {
-<span class="fc" id="L730">        return makeSystemReader(ionText);</span>
+<span class="fc" id="L733">        return makeSystemReader(ionText);</span>
     }
 
 
     public IonReader newReader(InputStream ionData)
     {
-<span class="fc" id="L736">        return myReaderBuilder.build(ionData);</span>
+<span class="fc" id="L739">        return myReaderBuilder.build(ionData);</span>
     }
 
     public IonReader newSystemReader(InputStream ionData)
     {
-<span class="fc" id="L741">        return makeSystemReader(ionData);</span>
+<span class="fc" id="L744">        return makeSystemReader(ionData);</span>
     }
 
 
@@ -748,23 +751,23 @@ final class IonSystemLite
 
     public IonReader newReader(Reader ionText)
     {
-<span class="fc" id="L751">        return myReaderBuilder.build(ionText);</span>
+<span class="fc" id="L754">        return myReaderBuilder.build(ionText);</span>
     }
 
     public IonReader newSystemReader(Reader ionText)
     {
-<span class="fc" id="L756">        return makeSystemReader(ionText);</span>
+<span class="fc" id="L759">        return makeSystemReader(ionText);</span>
     }
 
 
     public IonReader newReader(IonValue value)
     {
-<span class="fc" id="L762">        return myReaderBuilder.build(value);</span>
+<span class="fc" id="L765">        return myReaderBuilder.build(value);</span>
     }
 
     public IonReader newSystemReader(IonValue value)
     {
-<span class="fc" id="L767">        return makeSystemReader(this, value);</span>
+<span class="fc" id="L770">        return makeSystemReader(this, value);</span>
     }
 
 
@@ -777,8 +780,8 @@ final class IonSystemLite
      */
     public IonWriter newTreeSystemWriter(IonContainer container)
     {
-<span class="fc" id="L780">        IonWriter writer = _Private_IonWriterFactory.makeSystemWriter(container);</span>
-<span class="fc" id="L781">        return writer;</span>
+<span class="fc" id="L783">        IonWriter writer = _Private_IonWriterFactory.makeSystemWriter(container);</span>
+<span class="fc" id="L784">        return writer;</span>
     }
 
     /**
@@ -786,37 +789,37 @@ final class IonSystemLite
      */
     public IonWriter newTreeWriter(IonContainer container)
     {
-<span class="fc" id="L789">        IonWriter writer = _Private_IonWriterFactory.makeWriter(container);</span>
-<span class="fc" id="L790">        return writer;</span>
+<span class="fc" id="L792">        IonWriter writer = _Private_IonWriterFactory.makeWriter(container);</span>
+<span class="fc" id="L793">        return writer;</span>
     }
 
 
     public Iterator&lt;IonValue&gt; systemIterate(Reader ionText)
     {
-<span class="fc" id="L796">        IonReader ir = newSystemReader(ionText);</span>
-<span class="fc" id="L797">        return _Private_Utils.iterate(this, ir);</span>
+<span class="fc" id="L799">        IonReader ir = newSystemReader(ionText);</span>
+<span class="fc" id="L800">        return _Private_Utils.iterate(this, ir);</span>
     }
 
     public Iterator&lt;IonValue&gt; systemIterate(String ionText)
     {
-<span class="fc" id="L802">        IonReader ir = newSystemReader(ionText);</span>
-<span class="fc" id="L803">        return _Private_Utils.iterate(this, ir);</span>
+<span class="fc" id="L805">        IonReader ir = newSystemReader(ionText);</span>
+<span class="fc" id="L806">        return _Private_Utils.iterate(this, ir);</span>
     }
 
     public Iterator&lt;IonValue&gt; systemIterate(IonReader reader)
     {
-<span class="fc" id="L808">        return _Private_Utils.iterate(this, reader);</span>
+<span class="fc" id="L811">        return _Private_Utils.iterate(this, reader);</span>
     }
 
 
     public boolean valueIsSharedSymbolTable(IonValue value)
     {
-<span class="nc bnc" id="L814" title="All 2 branches missed.">        if (value instanceof IonStruct) {</span>
-<span class="nc bnc" id="L815" title="All 2 branches missed.">            if (value.hasTypeAnnotation(ION_SYMBOL_TABLE)) {</span>
-<span class="nc" id="L816">                return true;</span>
+<span class="nc bnc" id="L817" title="All 2 branches missed.">        if (value instanceof IonStruct) {</span>
+<span class="nc bnc" id="L818" title="All 2 branches missed.">            if (value.hasTypeAnnotation(ION_SYMBOL_TABLE)) {</span>
+<span class="nc" id="L819">                return true;</span>
             }
         }
-<span class="nc" id="L819">        return false;</span>
+<span class="nc" id="L822">        return false;</span>
     }
 
 }
