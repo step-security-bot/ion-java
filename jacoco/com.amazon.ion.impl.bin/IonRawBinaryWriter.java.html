@@ -126,7 +126,7 @@ import java.util.NoSuchElementException;
 
 <span class="fc" id="L127">    final Utf8StringEncoder utf8StringEncoder = Utf8StringEncoderPool</span>
 <span class="fc" id="L128">            .getInstance()</span>
-<span class="fc" id="L129">            .getOrCreateUtf8Encoder();</span>
+<span class="fc" id="L129">            .getOrCreate();</span>
 
     private static final byte[] makeTypedPreallocatedBytes(final int typeDesc, final int length)
     {

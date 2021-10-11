@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Utf8StringDecoder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.amazon.ion:ion-java</a> &gt; <a href="index.source.html" class="el_package">com.amazon.ion.impl.bin.utf8</a> &gt; <span class="el_source">Utf8StringDecoder.java</span></div><h1>Utf8StringDecoder.java</h1><pre class="source lang-java linenums">package com.amazon.ion.impl.bin.utf8;
+
+import com.amazon.ion.IonException;
+
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CoderResult;
+
+/**
+ * Decodes {@link String}s from UTF-8. Instances of this class are reusable but are NOT threadsafe.
+ *
+ * Instances are vended by {@link Utf8StringDecoderPool#getOrCreate()}.
+ *
+ * Users are expected to call {@link #close()} when the decoder is no longer needed.
+ *
+ * There are two ways of using this class:
+ * &lt;ol&gt;
+ *     &lt;li&gt;Use {@link #decode(ByteBuffer, int)} to decode the requested number of bytes from the given ByteBuffer in
+ *     a single step. Or,&lt;/li&gt;
+ *     &lt;li&gt;Use the following sequence of method calls:
+ *     &lt;ol&gt;
+ *         &lt;li&gt;{@link #prepareDecode(int)} to prepare the decoder to decode the requested number of bytes.&lt;/li&gt;
+ *         &lt;li&gt;{@link #partialDecode(ByteBuffer, boolean)} to decode the available bytes from the byte buffer. This may
+ *         be repeated as more bytes are made available in the ByteBuffer, which is the caller's responsibility.&lt;/li&gt;
+ *         &lt;li&gt;{@link #finishDecode()} to finish decoding and return the resulting String.&lt;/li&gt;
+ *     &lt;/ol&gt;
+ *     Note: {@link #decode(ByteBuffer, int)} must not be called between calls to {@link #prepareDecode(int)} and
+ *     {@link #finishDecode()}.
+ *     &lt;/li&gt;
+ * &lt;/ol&gt;
+ */
+public class Utf8StringDecoder extends Poolable&lt;Utf8StringDecoder&gt; {
+
+    // The size of the UTF-8 decoding buffer.
+    private static final int UTF8_BUFFER_SIZE_IN_BYTES = 4 * 1024;
+
+    private final CharBuffer reusableUtf8DecodingBuffer;
+    private final CharsetDecoder utf8CharsetDecoder;
+    private CharBuffer utf8DecodingBuffer;
+
+    Utf8StringDecoder(Pool&lt;Utf8StringDecoder&gt; pool) {
+<span class="fc" id="L44">        super(pool);</span>
+<span class="fc" id="L45">        reusableUtf8DecodingBuffer = CharBuffer.allocate(UTF8_BUFFER_SIZE_IN_BYTES);</span>
+<span class="fc" id="L46">        utf8CharsetDecoder = Charset.forName(&quot;UTF-8&quot;).newDecoder();</span>
+<span class="fc" id="L47">    }</span>
+
+    /**
+     * Prepares the decoder to decode the given number of UTF-8 bytes.
+     * @param numberOfBytes the number of bytes to decode.
+     */
+    public void prepareDecode(int numberOfBytes) {
+<span class="fc" id="L54">        utf8CharsetDecoder.reset();</span>
+<span class="fc" id="L55">        utf8DecodingBuffer = reusableUtf8DecodingBuffer;</span>
+<span class="fc bfc" id="L56" title="All 2 branches covered.">        if (numberOfBytes &gt; reusableUtf8DecodingBuffer.capacity()) {</span>
+<span class="fc" id="L57">            utf8DecodingBuffer = CharBuffer.allocate(numberOfBytes);</span>
+        }
+<span class="fc" id="L59">    }</span>
+
+    /**
+     * Decodes the available bytes from the given ByteBuffer.
+     * @param utf8InputBuffer a ByteBuffer containing UTF-8 bytes.
+     * @param endOfInput true if the end of the UTF-8 sequence is expected to occur in the buffer; otherwise, false.
+     */
+    public void partialDecode(ByteBuffer utf8InputBuffer, boolean endOfInput) {
+<span class="fc" id="L67">        CoderResult coderResult = utf8CharsetDecoder.decode(utf8InputBuffer, utf8DecodingBuffer, endOfInput);</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">        if (coderResult.isError()) {</span>
+<span class="fc" id="L69">            throw new IonException(&quot;Illegal value encountered while validating UTF-8 data in input stream. &quot; + coderResult.toString());</span>
+        }
+<span class="fc" id="L71">    }</span>
+
+    /**
+     * Finishes decoding and returns the resulting String.
+     * @return the decoded Java String.
+     */
+    public String finishDecode() {
+<span class="fc" id="L78">        utf8DecodingBuffer.flip();</span>
+<span class="fc" id="L79">        return utf8DecodingBuffer.toString();</span>
+    }
+
+    /**
+     * Decodes the given number of UTF-8 bytes from the given ByteBuffer into a Java String.
+     * @param utf8InputBuffer a ByteBuffer containing UTF-8 bytes.
+     * @param numberOfBytes the number of bytes from the utf8InputBuffer to decode.
+     * @return the decoded Java String.
+     */
+    public String decode(ByteBuffer utf8InputBuffer, int numberOfBytes) {
+<span class="fc" id="L89">        prepareDecode(numberOfBytes);</span>
+
+<span class="fc" id="L91">        utf8DecodingBuffer.position(0);</span>
+<span class="fc" id="L92">        utf8DecodingBuffer.limit(utf8DecodingBuffer.capacity());</span>
+
+<span class="fc" id="L94">        partialDecode(utf8InputBuffer, true);</span>
+<span class="fc" id="L95">        return finishDecode();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

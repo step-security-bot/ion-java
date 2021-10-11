@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Pool.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.amazon.ion:ion-java</a> &gt; <a href="index.source.html" class="el_package">com.amazon.ion.impl.bin.utf8</a> &gt; <span class="el_source">Pool.java</span></div><h1>Pool.java</h1><pre class="source lang-java linenums">package com.amazon.ion.impl.bin.utf8;
+
+import java.util.concurrent.ArrayBlockingQueue;
+
+abstract class Pool&lt;T extends Poolable&lt;?&gt;&gt; {
+
+    /**
+     * Allocates objects to be pooled.
+     * @param &lt;T&gt; the type of object.
+     */
+    interface Allocator&lt;T extends Poolable&lt;?&gt;&gt; {
+
+        /**
+         * Allocate a new object and link it to the given pool.
+         * @param pool the pool to which the new object will be linked.
+         * @return a new instance.
+         */
+        T newInstance(Pool&lt;T&gt; pool);
+    }
+
+    // The maximum number of objects that can be waiting in the queue before new ones will be discarded.
+    private static final int MAX_QUEUE_SIZE = 128;
+
+    // A queue of previously initialized objects that can be loaned out.
+    private final ArrayBlockingQueue&lt;T&gt; bufferQueue;
+
+    // Allocator of objects to be pooled.
+    private final Allocator&lt;T&gt; allocator;
+
+<span class="fc" id="L30">    Pool(Allocator&lt;T&gt; allocator) {</span>
+<span class="fc" id="L31">        this.allocator = allocator;</span>
+<span class="fc" id="L32">        bufferQueue = new ArrayBlockingQueue&lt;T&gt;(MAX_QUEUE_SIZE);</span>
+<span class="fc" id="L33">    }</span>
+
+    /**
+     * If the pool is not empty, removes an object from the pool and returns it;
+     * otherwise, constructs a new object.
+     *
+     * @return An object.
+     */
+    public T getOrCreate() {
+        // The `poll` method does not block. If the queue is empty it returns `null` immediately.
+<span class="fc" id="L43">        T object = bufferQueue.poll();</span>
+<span class="fc bfc" id="L44" title="All 2 branches covered.">        if (object == null) {</span>
+            // No buffers were available in the pool. Create a new one.
+<span class="fc" id="L46">            object = allocator.newInstance(this);</span>
+        }
+<span class="fc" id="L48">        return object;</span>
+    }
+
+    /**
+     * Adds the provided instance to the pool. If the pool is full, the instance will
+     * be discarded.
+     *
+     * Callers MUST NOT use an object after returning it to the pool.
+     *
+     * @param object   An object to add to the pool.
+     */
+    public void returnToPool(T object) {
+        // The `offer` method does not block. If the queue is full, it returns `false` immediately.
+        // If the provided instance cannot be added to the pool, we discard it silently.
+<span class="fc" id="L62">        bufferQueue.offer(object);</span>
+<span class="fc" id="L63">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

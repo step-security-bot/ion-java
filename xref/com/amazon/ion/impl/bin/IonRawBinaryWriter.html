@@ -134,7 +134,7 @@
 <a class="jxr_linenumber" name="L126" href="#L126">126</a> 
 <a class="jxr_linenumber" name="L127" href="#L127">127</a>     <strong class="jxr_keyword">final</strong> <a name="Utf8StringEncoder" href="../../../../../com/amazon/ion/impl/bin/utf8/Utf8StringEncoder.html#Utf8StringEncoder">Utf8StringEncoder</a> utf8StringEncoder = <a name="Utf8StringEncoderPool" href="../../../../../com/amazon/ion/impl/bin/utf8/Utf8StringEncoderPool.html#Utf8StringEncoderPool">Utf8StringEncoderPool</a>
 <a class="jxr_linenumber" name="L128" href="#L128">128</a>             .getInstance()
-<a class="jxr_linenumber" name="L129" href="#L129">129</a>             .getOrCreateUtf8Encoder();
+<a class="jxr_linenumber" name="L129" href="#L129">129</a>             .getOrCreate();
 <a class="jxr_linenumber" name="L130" href="#L130">130</a> 
 <a class="jxr_linenumber" name="L131" href="#L131">131</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> byte[] makeTypedPreallocatedBytes(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> typeDesc, <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> length)
 <a class="jxr_linenumber" name="L132" href="#L132">132</a>     {
