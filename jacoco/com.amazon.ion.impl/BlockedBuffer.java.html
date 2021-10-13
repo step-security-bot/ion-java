@@ -752,9 +752,9 @@ static final boolean test_with_no_version_checking = false;
 <span class="fc" id="L752">        int currBlockPosition = currBlock.blockOffsetFromAbsolute(pos);</span>
 <span class="fc" id="L753">        int removedFromThisBlock = currBlock._limit - currBlockPosition;</span>
 <span class="fc bfc" id="L754" title="All 2 branches covered.">        if (removedFromThisBlock &gt; amountToRemove) removedFromThisBlock = amountToRemove;</span>
-<span class="pc bpc" id="L755" title="1 of 2 branches missed.">        if (removedFromThisBlock == currBlock._limit) {</span>
+<span class="fc bfc" id="L755" title="All 2 branches covered.">        if (removedFromThisBlock == currBlock._limit) {</span>
             // we'll be removing the whole block in the whole block loop below
-<span class="nc" id="L757">            startingIdx--;  // so we have to back up on to fix the next block that will</span>
+<span class="fc" id="L757">            startingIdx--;  // so we have to back up on to fix the next block that will</span>
                             // &quot;fall&quot; down into the soon to be emptied slot here
         }
         else {
