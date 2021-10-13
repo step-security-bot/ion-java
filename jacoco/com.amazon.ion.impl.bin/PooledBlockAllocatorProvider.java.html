@@ -18,6 +18,7 @@ package com.amazon.ion.impl.bin;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A singleton implementation of {@link BlockAllocatorProvider} offering a thread-safe free block list
@@ -37,80 +38,99 @@ import java.util.concurrent.ConcurrentMap;
     {
         private final int blockSize, blockLimit;
         private final ConcurrentLinkedQueue&lt;Block&gt; freeBlocks;
+<span class="fc" id="L41">        private final AtomicInteger size = new AtomicInteger(0);</span>
         static final int FREE_CAPACITY = 1024 * 1024 * 64; // 64MB
 
         public PooledBlockAllocator(final int blockSize)
-<span class="fc" id="L43">        {</span>
-<span class="fc" id="L44">            this.blockSize = blockSize;</span>
-<span class="fc" id="L45">            this.freeBlocks = new ConcurrentLinkedQueue&lt;Block&gt;();</span>
-<span class="fc" id="L46">            this.blockLimit = FREE_CAPACITY / blockSize;</span>
-<span class="fc" id="L47">        }</span>
+<span class="fc" id="L45">        {</span>
+<span class="fc" id="L46">            this.blockSize = blockSize;</span>
+<span class="fc" id="L47">            this.freeBlocks = new ConcurrentLinkedQueue&lt;Block&gt;();</span>
+<span class="fc" id="L48">            this.blockLimit = FREE_CAPACITY / blockSize;</span>
+<span class="fc" id="L49">        }</span>
 
         @Override
         public Block allocateBlock()
         {
-<span class="fc" id="L52">            Block block = freeBlocks.poll();</span>
-<span class="fc bfc" id="L53" title="All 2 branches covered.">            if (block == null)</span>
+<span class="fc" id="L54">            Block block = freeBlocks.poll();</span>
+<span class="fc bfc" id="L55" title="All 2 branches covered.">            if (block == null)</span>
             {
-<span class="fc" id="L55">                block = new Block(new byte[blockSize])</span>
-<span class="fc" id="L56">                {</span>
+<span class="fc" id="L57">                block = new Block(new byte[blockSize])</span>
+<span class="fc" id="L58">                {</span>
                     @Override
                     public void close()
                     {
-<span class="pc bpc" id="L60" title="1 of 2 branches missed.">                        if (freeBlocks.size() &lt; blockLimit) {</span>
-<span class="fc" id="L61">                            reset();</span>
-<span class="fc" id="L62">                            freeBlocks.add(this);</span>
+                        // In the common case, the pool is not full. Optimistically increment the size.
+<span class="pc bpc" id="L63" title="1 of 2 branches missed.">                        if (size.getAndIncrement() &lt; blockLimit)</span>
+                        {
+<span class="fc" id="L65">                            reset();</span>
+<span class="fc" id="L66">                            freeBlocks.add(this);</span>
                         }
-<span class="fc" id="L64">                    }</span>
+                        else
+                        {
+                            // The pool was full. Since the size was optimistically incremented, decrement it now.
+                            // Note: there is a race condition here that is deliberately allowed as an optimization.
+                            // Under high contention, multiple threads could end up here before the first one
+                            // decrements the size, causing blocks to be dropped wastefully. This is not harmful
+                            // because blocks will be re-allocated when necessary; the pool is kept as close as
+                            // possible to capacity on a best-effort basis. This race condition should not be &quot;fixed&quot;
+                            // without a thorough study of the performance implications.
+<span class="nc" id="L77">                            size.decrementAndGet();</span>
+                        }
+<span class="fc" id="L79">                    }</span>
                 };
             }
-<span class="fc" id="L67">            return block;</span>
+            else
+            {
+                // A block was retrieved from the pool; decrement the pool size.
+<span class="fc" id="L85">                size.decrementAndGet();</span>
+            }
+<span class="fc" id="L87">            return block;</span>
         }
 
         @Override
         public int getBlockSize()
         {
-<span class="fc" id="L73">            return blockSize;</span>
+<span class="fc" id="L93">            return blockSize;</span>
         }
 
         @Override
-<span class="fc" id="L77">        public void close() {}</span>
+<span class="fc" id="L97">        public void close() {}</span>
     }
 
     // A globally shared instance of the PooledBlockAllocatorProvider.
     // This instance allows BlockAllocators to be re-used across instantiations of classes like
     // the binary Ion writer, thereby avoiding costly array initializations.
-<span class="fc" id="L83">    private static final PooledBlockAllocatorProvider INSTANCE = new PooledBlockAllocatorProvider();</span>
+<span class="fc" id="L103">    private static final PooledBlockAllocatorProvider INSTANCE = new PooledBlockAllocatorProvider();</span>
     private final ConcurrentMap&lt;Integer, BlockAllocator&gt; allocators;
 
     private PooledBlockAllocatorProvider()
-<span class="fc" id="L87">    {</span>
-<span class="fc" id="L88">        allocators = new ConcurrentHashMap&lt;Integer, BlockAllocator&gt;();</span>
-<span class="fc" id="L89">    }</span>
+<span class="fc" id="L107">    {</span>
+<span class="fc" id="L108">        allocators = new ConcurrentHashMap&lt;Integer, BlockAllocator&gt;();</span>
+<span class="fc" id="L109">    }</span>
 
     public static PooledBlockAllocatorProvider getInstance() {
-<span class="fc" id="L92">        return INSTANCE;</span>
+<span class="fc" id="L112">        return INSTANCE;</span>
     }
 
     @Override
     public BlockAllocator vendAllocator(final int blockSize)
     {
-<span class="pc bpc" id="L98" title="1 of 2 branches missed.">        if (blockSize &lt;= 0)</span>
+<span class="pc bpc" id="L118" title="1 of 2 branches missed.">        if (blockSize &lt;= 0)</span>
         {
-<span class="nc" id="L100">            throw new IllegalArgumentException(&quot;Invalid block size: &quot; + blockSize);</span>
+<span class="nc" id="L120">            throw new IllegalArgumentException(&quot;Invalid block size: &quot; + blockSize);</span>
         }
 
-<span class="fc" id="L103">        BlockAllocator allocator = allocators.get(blockSize);</span>
-<span class="fc bfc" id="L104" title="All 2 branches covered.">        if (allocator == null)</span>
+<span class="fc" id="L123">        BlockAllocator allocator = allocators.get(blockSize);</span>
+<span class="fc bfc" id="L124" title="All 2 branches covered.">        if (allocator == null)</span>
         {
-<span class="fc" id="L106">            allocator = new PooledBlockAllocator(blockSize);</span>
-<span class="fc" id="L107">            final BlockAllocator existingAllocator = allocators.putIfAbsent(blockSize, allocator);</span>
-<span class="pc bpc" id="L108" title="1 of 2 branches missed.">            if (existingAllocator != null)</span>
+<span class="fc" id="L126">            allocator = new PooledBlockAllocator(blockSize);</span>
+<span class="fc" id="L127">            final BlockAllocator existingAllocator = allocators.putIfAbsent(blockSize, allocator);</span>
+<span class="pc bpc" id="L128" title="1 of 2 branches missed.">            if (existingAllocator != null)</span>
             {
-<span class="nc" id="L110">                allocator = existingAllocator;</span>
+<span class="nc" id="L130">                allocator = existingAllocator;</span>
             }
         }
-<span class="fc" id="L113">        return allocator;</span>
+<span class="fc" id="L133">        return allocator;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
