@@ -124,54 +124,60 @@ final class IonDecimalLite
 <span class="fc" id="L124">        return d;</span>
     }
 
+    @Override
     public BigDecimal bigDecimalValue()
         throws NullValueException
     {
-<span class="fc" id="L130">        return Decimal.bigDecimalValue(_decimal_value); // Works for null.</span>
+<span class="fc" id="L131">        return Decimal.bigDecimalValue(_decimal_value); // Works for null.</span>
     }
 
     public Decimal decimalValue()
         throws NullValueException
     {
-<span class="fc" id="L136">        return Decimal.valueOf(_decimal_value); // Works for null.</span>
+<span class="fc" id="L137">        return Decimal.valueOf(_decimal_value); // Works for null.</span>
+    }
+
+    @Override
+    public boolean isNumericValue() {
+<span class="fc bfc" id="L142" title="All 2 branches covered.">        return !isNullValue();</span>
     }
 
     public void setValue(long value)
     {
         // base setValue will check for the lock
-<span class="fc" id="L142">        setValue(Decimal.valueOf(value));</span>
-<span class="fc" id="L143">    }</span>
-
-    public void setValue(float value)
-    {
-        // base setValue will check for the lock
 <span class="fc" id="L148">        setValue(Decimal.valueOf(value));</span>
 <span class="fc" id="L149">    }</span>
 
-    public void setValue(double value)
+    public void setValue(float value)
     {
         // base setValue will check for the lock
 <span class="fc" id="L154">        setValue(Decimal.valueOf(value));</span>
 <span class="fc" id="L155">    }</span>
 
+    public void setValue(double value)
+    {
+        // base setValue will check for the lock
+<span class="fc" id="L160">        setValue(Decimal.valueOf(value));</span>
+<span class="fc" id="L161">    }</span>
+
     public void setValue(BigDecimal value)
     {
-<span class="fc" id="L159">        checkForLock();</span>
-<span class="fc" id="L160">        _decimal_value = value;</span>
-<span class="fc bfc" id="L161" title="All 2 branches covered.">        _isNullValue(value == null);</span>
-<span class="fc" id="L162">    }</span>
+<span class="fc" id="L165">        checkForLock();</span>
+<span class="fc" id="L166">        _decimal_value = value;</span>
+<span class="fc bfc" id="L167" title="All 2 branches covered.">        _isNullValue(value == null);</span>
+<span class="fc" id="L168">    }</span>
 
     @Override
     final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
-<span class="fc" id="L168">        writer.writeDecimal(_decimal_value);</span>
-<span class="fc" id="L169">    }</span>
+<span class="fc" id="L174">        writer.writeDecimal(_decimal_value);</span>
+<span class="fc" id="L175">    }</span>
 
     @Override
     public void accept(ValueVisitor visitor) throws Exception
     {
-<span class="fc" id="L174">        visitor.visit(this);</span>
-<span class="fc" id="L175">    }</span>
+<span class="fc" id="L180">        visitor.visit(this);</span>
+<span class="fc" id="L181">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

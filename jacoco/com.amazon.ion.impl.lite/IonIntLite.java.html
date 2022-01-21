@@ -146,112 +146,128 @@ final class IonIntLite
 <span class="fc" id="L146">        return _big_int_value;</span>
     }
 
+    @Override
+    public BigDecimal bigDecimalValue() {
+<span class="fc bfc" id="L151" title="All 2 branches covered.">        if (isNullValue()) {</span>
+<span class="fc" id="L152">            return null;</span>
+<span class="fc bfc" id="L153" title="All 2 branches covered.">        } else if (_big_int_value == null) {</span>
+<span class="fc" id="L154">            return BigDecimal.valueOf(_long_value);</span>
+        } else {
+<span class="fc" id="L156">            return new BigDecimal(_big_int_value);</span>
+        }
+    }
+
+    @Override
+    public boolean isNumericValue() {
+<span class="fc bfc" id="L162" title="All 2 branches covered.">        return !isNullValue();</span>
+    }
+
     public void setValue(int value)
     {
-<span class="fc" id="L151">        setValue((long)value);</span>
-<span class="fc" id="L152">    }</span>
+<span class="fc" id="L167">        setValue((long)value);</span>
+<span class="fc" id="L168">    }</span>
 
     public void setValue(long value)
     {
-<span class="fc" id="L156">        checkForLock();</span>
-<span class="fc" id="L157">        doSetValue(value, false);</span>
-<span class="fc" id="L158">    }</span>
+<span class="fc" id="L172">        checkForLock();</span>
+<span class="fc" id="L173">        doSetValue(value, false);</span>
+<span class="fc" id="L174">    }</span>
 
     public void setValue(Number value)
     {
-<span class="fc" id="L162">        checkForLock();</span>
-<span class="fc bfc" id="L163" title="All 2 branches covered.">        if (value == null)</span>
+<span class="fc" id="L178">        checkForLock();</span>
+<span class="fc bfc" id="L179" title="All 2 branches covered.">        if (value == null)</span>
         {
-<span class="fc" id="L165">            doSetValue(0, true);</span>
+<span class="fc" id="L181">            doSetValue(0, true);</span>
         }
-<span class="fc bfc" id="L167" title="All 2 branches covered.">        else if (value instanceof BigInteger)</span>
+<span class="fc bfc" id="L183" title="All 2 branches covered.">        else if (value instanceof BigInteger)</span>
         {
-<span class="fc" id="L169">            BigInteger big = (BigInteger) value;</span>
-<span class="fc" id="L170">            doSetValue(big);</span>
-<span class="fc" id="L171">        }</span>
-<span class="pc bpc" id="L172" title="1 of 2 branches missed.">        else if (value instanceof BigDecimal)</span>
+<span class="fc" id="L185">            BigInteger big = (BigInteger) value;</span>
+<span class="fc" id="L186">            doSetValue(big);</span>
+<span class="fc" id="L187">        }</span>
+<span class="pc bpc" id="L188" title="1 of 2 branches missed.">        else if (value instanceof BigDecimal)</span>
         {
-<span class="fc" id="L174">            BigDecimal bd = (BigDecimal) value;</span>
-<span class="fc" id="L175">            doSetValue(bd.toBigInteger());</span>
-<span class="fc" id="L176">        }</span>
+<span class="fc" id="L190">            BigDecimal bd = (BigDecimal) value;</span>
+<span class="fc" id="L191">            doSetValue(bd.toBigInteger());</span>
+<span class="fc" id="L192">        }</span>
         else
         {
             // XXX this is essentially a narrowing conversion
             // for some types of numbers
-<span class="nc" id="L181">            doSetValue(value.longValue(), false);</span>
+<span class="nc" id="L197">            doSetValue(value.longValue(), false);</span>
         }
-<span class="fc" id="L183">    }</span>
+<span class="fc" id="L199">    }</span>
 
     @Override
     final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
-<span class="fc bfc" id="L189" title="All 2 branches covered.">        if (isNullValue())</span>
+<span class="fc bfc" id="L205" title="All 2 branches covered.">        if (isNullValue())</span>
         {
-<span class="fc" id="L191">            writer.writeNull(IonType.INT);</span>
+<span class="fc" id="L207">            writer.writeNull(IonType.INT);</span>
         }
-<span class="fc bfc" id="L193" title="All 2 branches covered.">        else if (_big_int_value != null)</span>
+<span class="fc bfc" id="L209" title="All 2 branches covered.">        else if (_big_int_value != null)</span>
         {
-<span class="fc" id="L195">            writer.writeInt(_big_int_value);</span>
+<span class="fc" id="L211">            writer.writeInt(_big_int_value);</span>
         }
         else
         {
-<span class="fc" id="L199">            writer.writeInt(_long_value);</span>
+<span class="fc" id="L215">            writer.writeInt(_long_value);</span>
         }
-<span class="fc" id="L201">    }</span>
+<span class="fc" id="L217">    }</span>
 
     private void doSetValue(long value, boolean isNull)
     {
-<span class="fc" id="L205">        _long_value = value;</span>
-<span class="fc" id="L206">        _big_int_value = null;</span>
-<span class="fc" id="L207">        _isNullValue(isNull);</span>
-<span class="fc bfc" id="L208" title="All 2 branches covered.">        if (!isNull)</span>
+<span class="fc" id="L221">        _long_value = value;</span>
+<span class="fc" id="L222">        _big_int_value = null;</span>
+<span class="fc" id="L223">        _isNullValue(isNull);</span>
+<span class="fc bfc" id="L224" title="All 2 branches covered.">        if (!isNull)</span>
         {
-<span class="fc bfc" id="L210" title="All 4 branches covered.">            if (value &lt; Integer.MIN_VALUE || value &gt; Integer.MAX_VALUE)</span>
+<span class="fc bfc" id="L226" title="All 4 branches covered.">            if (value &lt; Integer.MIN_VALUE || value &gt; Integer.MAX_VALUE)</span>
             {
                 // fits in long
-<span class="fc" id="L213">                setSize(IntegerSize.LONG);</span>
+<span class="fc" id="L229">                setSize(IntegerSize.LONG);</span>
             }
             else
             {
                 // fits in int
-<span class="fc" id="L218">                setSize(IntegerSize.INT);</span>
+<span class="fc" id="L234">                setSize(IntegerSize.INT);</span>
             }
         }
-<span class="fc" id="L221">    }</span>
+<span class="fc" id="L237">    }</span>
 
     private void doSetValue(BigInteger value) {
-<span class="fc bfc" id="L224" title="All 2 branches covered.">        if ((value.compareTo(LONG_MIN_VALUE) &lt; 0) ||</span>
-<span class="fc bfc" id="L225" title="All 2 branches covered.">            (value.compareTo(LONG_MAX_VALUE) &gt; 0))</span>
+<span class="fc bfc" id="L240" title="All 2 branches covered.">        if ((value.compareTo(LONG_MIN_VALUE) &lt; 0) ||</span>
+<span class="fc bfc" id="L241" title="All 2 branches covered.">            (value.compareTo(LONG_MAX_VALUE) &gt; 0))</span>
         {
-<span class="fc" id="L227">            setSize(IntegerSize.BIG_INTEGER);</span>
-<span class="fc" id="L228">            _long_value = 0L;</span>
-<span class="fc" id="L229">            _big_int_value = value;</span>
-<span class="fc" id="L230">            _isNullValue(false);</span>
+<span class="fc" id="L243">            setSize(IntegerSize.BIG_INTEGER);</span>
+<span class="fc" id="L244">            _long_value = 0L;</span>
+<span class="fc" id="L245">            _big_int_value = value;</span>
+<span class="fc" id="L246">            _isNullValue(false);</span>
         }
         else {
-<span class="fc" id="L233">            doSetValue(value.longValue(), false);</span>
+<span class="fc" id="L249">            doSetValue(value.longValue(), false);</span>
         }
-<span class="fc" id="L235">    }</span>
+<span class="fc" id="L251">    }</span>
 
     private void setSize(IntegerSize size)
     {
-<span class="fc" id="L239">        _setMetadata(size.ordinal(), INT_SIZE_MASK, INT_SIZE_SHIFT);</span>
-<span class="fc" id="L240">    }</span>
+<span class="fc" id="L255">        _setMetadata(size.ordinal(), INT_SIZE_MASK, INT_SIZE_SHIFT);</span>
+<span class="fc" id="L256">    }</span>
 
     @Override
     public void accept(ValueVisitor visitor) throws Exception
     {
-<span class="fc" id="L245">        visitor.visit(this);</span>
-<span class="fc" id="L246">    }</span>
+<span class="fc" id="L261">        visitor.visit(this);</span>
+<span class="fc" id="L262">    }</span>
 
     public IntegerSize getIntegerSize()
     {
-<span class="fc bfc" id="L250" title="All 2 branches covered.">        if (isNullValue())</span>
+<span class="fc bfc" id="L266" title="All 2 branches covered.">        if (isNullValue())</span>
         {
-<span class="fc" id="L252">            return null;</span>
+<span class="fc" id="L268">            return null;</span>
         }
-<span class="fc" id="L254">        return SIZES[_getMetadata(INT_SIZE_MASK, INT_SIZE_SHIFT)];</span>
+<span class="fc" id="L270">        return SIZES[_getMetadata(INT_SIZE_MASK, INT_SIZE_SHIFT)];</span>
     }
 
 }

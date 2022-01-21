@@ -95,71 +95,73 @@ final class IonFloatLite
 <span class="fc" id="L95">        return _float_value.doubleValue();</span>
     }
 
+    @Override
     public BigDecimal bigDecimalValue()
         throws NullValueException
     {
-<span class="fc bfc" id="L101" title="All 2 branches covered.">        if (isNullValue()) {</span>
-<span class="fc" id="L102">            return null;</span>
+<span class="fc bfc" id="L102" title="All 2 branches covered.">        if (isNullValue()) {</span>
+<span class="fc" id="L103">            return null;</span>
         }
-<span class="fc" id="L104">        return Decimal.valueOf(_float_value.doubleValue());</span>
+<span class="fc" id="L105">        return Decimal.valueOf(_float_value.doubleValue());</span>
     }
 
     public void setValue(float value)
     {
         // base set value will check for the lock
-<span class="fc" id="L110">        setValue(new Double(value));</span>
-<span class="fc" id="L111">    }</span>
+<span class="fc" id="L111">        setValue(new Double(value));</span>
+<span class="fc" id="L112">    }</span>
 
     public void setValue(double value)
     {
         // base setValue will check for the lock
-<span class="fc" id="L116">        setValue(new Double(value));</span>
-<span class="fc" id="L117">    }</span>
+<span class="fc" id="L117">        setValue(new Double(value));</span>
+<span class="fc" id="L118">    }</span>
 
     public void setValue(BigDecimal value)
     {
-<span class="fc" id="L121">        checkForLock();</span>
-<span class="pc bpc" id="L122" title="1 of 2 branches missed.">        if (value == null)</span>
+<span class="fc" id="L122">        checkForLock();</span>
+<span class="pc bpc" id="L123" title="1 of 2 branches missed.">        if (value == null)</span>
         {
-<span class="fc" id="L124">            _float_value = null;</span>
-<span class="fc" id="L125">            _isNullValue(true);</span>
+<span class="fc" id="L125">            _float_value = null;</span>
+<span class="fc" id="L126">            _isNullValue(true);</span>
         }
         else
         {
-<span class="nc" id="L129">            setValue(value.doubleValue());</span>
+<span class="nc" id="L130">            setValue(value.doubleValue());</span>
         }
-<span class="fc" id="L131">    }</span>
+<span class="fc" id="L132">    }</span>
 
     public void setValue(Double d)
     {
-<span class="fc" id="L135">        checkForLock();</span>
-<span class="fc" id="L136">        _float_value = d;</span>
-<span class="pc bpc" id="L137" title="1 of 2 branches missed.">        _isNullValue(d == null);</span>
-<span class="fc" id="L138">    }</span>
+<span class="fc" id="L136">        checkForLock();</span>
+<span class="fc" id="L137">        _float_value = d;</span>
+<span class="pc bpc" id="L138" title="1 of 2 branches missed.">        _isNullValue(d == null);</span>
+<span class="fc" id="L139">    }</span>
 
     @Override
     final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
-<span class="fc bfc" id="L144" title="All 2 branches covered.">        if (isNullValue())</span>
+<span class="fc bfc" id="L145" title="All 2 branches covered.">        if (isNullValue())</span>
         {
-<span class="fc" id="L146">            writer.writeNull(IonType.FLOAT);</span>
+<span class="fc" id="L147">            writer.writeNull(IonType.FLOAT);</span>
         }
         else
         {
-<span class="fc" id="L150">            writer.writeFloat(_float_value);</span>
+<span class="fc" id="L151">            writer.writeFloat(_float_value);</span>
         }
-<span class="fc" id="L152">    }</span>
+<span class="fc" id="L153">    }</span>
 
+    @Override
     public boolean isNumericValue()
     {
-<span class="fc bfc" id="L156" title="All 6 branches covered.">        return !(isNullValue() || _float_value.isNaN() || _float_value.isInfinite());</span>
+<span class="fc bfc" id="L158" title="All 6 branches covered.">        return !(isNullValue() || _float_value.isNaN() || _float_value.isInfinite());</span>
     }
 
     @Override
     public void accept(ValueVisitor visitor) throws Exception
     {
-<span class="fc" id="L162">        visitor.visit(this);</span>
-<span class="fc" id="L163">    }</span>
+<span class="fc" id="L164">        visitor.visit(this);</span>
+<span class="fc" id="L165">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
