@@ -929,7 +929,45 @@
 <a class="jxr_linenumber" name="L921" href="#L921">921</a>         buf.truncate(3);
 <a class="jxr_linenumber" name="L922" href="#L922">922</a>         assertBuffer(<span class="jxr_string">"ARG"</span>.getBytes(<span class="jxr_string">"UTF-8"</span>));
 <a class="jxr_linenumber" name="L923" href="#L923">923</a>     }
-<a class="jxr_linenumber" name="L924" href="#L924">924</a> }
+<a class="jxr_linenumber" name="L924" href="#L924">924</a> 
+<a class="jxr_linenumber" name="L925" href="#L925">925</a>     @Test
+<a class="jxr_linenumber" name="L926" href="#L926">926</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> shiftBytesLeftWithinFirstBufferBlock() <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="L927" href="#L927">927</a>         assertEquals(11, ALLOCATOR.getBlockSize());
+<a class="jxr_linenumber" name="L928" href="#L928">928</a>         <em class="jxr_comment">// All bytes are being shifted within the first buffer block.</em>
+<a class="jxr_linenumber" name="L929" href="#L929">929</a>         buf.writeBytes(<span class="jxr_string">"01234567"</span>.getBytes());
+<a class="jxr_linenumber" name="L930" href="#L930">930</a>         buf.shiftBytesLeft(4, 1);
+<a class="jxr_linenumber" name="L931" href="#L931">931</a>         assertBuffer(<span class="jxr_string">"0124567"</span>.getBytes());
+<a class="jxr_linenumber" name="L932" href="#L932">932</a>     }
+<a class="jxr_linenumber" name="L933" href="#L933">933</a> 
+<a class="jxr_linenumber" name="L934" href="#L934">934</a>     @Test
+<a class="jxr_linenumber" name="L935" href="#L935">935</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> shiftBytesLeftWithinLastBufferBlock() <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="L936" href="#L936">936</a>         assertEquals(11, ALLOCATOR.getBlockSize());
+<a class="jxr_linenumber" name="L937" href="#L937">937</a>         <em class="jxr_comment">// All bytes are being shifted within the last buffer block.</em>
+<a class="jxr_linenumber" name="L938" href="#L938">938</a>         buf.writeBytes(<span class="jxr_string">"0123456789ABCDEF"</span>.getBytes());
+<a class="jxr_linenumber" name="L939" href="#L939">939</a>         buf.shiftBytesLeft(3, 2);
+<a class="jxr_linenumber" name="L940" href="#L940">940</a>         assertBuffer(<span class="jxr_string">"0123456789ADEF"</span>.getBytes());
+<a class="jxr_linenumber" name="L941" href="#L941">941</a>     }
+<a class="jxr_linenumber" name="L942" href="#L942">942</a> 
+<a class="jxr_linenumber" name="L943" href="#L943">943</a>     @Test
+<a class="jxr_linenumber" name="L944" href="#L944">944</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> shiftBytesLeftAcrossBufferBlocks() <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="L945" href="#L945">945</a>         assertEquals(11, ALLOCATOR.getBlockSize());
+<a class="jxr_linenumber" name="L946" href="#L946">946</a>         <em class="jxr_comment">// Some bytes are shifted to the previous block, some are shifted within</em>
+<a class="jxr_linenumber" name="L947" href="#L947">947</a>         <em class="jxr_comment">// the last block.</em>
+<a class="jxr_linenumber" name="L948" href="#L948">948</a>         buf.writeBytes(<span class="jxr_string">"0123456789ABCDEF"</span>.getBytes());
+<a class="jxr_linenumber" name="L949" href="#L949">949</a>         buf.shiftBytesLeft(8, 3);
+<a class="jxr_linenumber" name="L950" href="#L950">950</a>         assertBuffer(<span class="jxr_string">"0123489ABCDEF"</span>.getBytes());
+<a class="jxr_linenumber" name="L951" href="#L951">951</a>     }
+<a class="jxr_linenumber" name="L952" href="#L952">952</a> 
+<a class="jxr_linenumber" name="L953" href="#L953">953</a>     @Test
+<a class="jxr_linenumber" name="L954" href="#L954">954</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> shiftBytesLeftAcrossBufferBlocksExclusively() <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="L955" href="#L955">955</a>         assertEquals(11, ALLOCATOR.getBlockSize());
+<a class="jxr_linenumber" name="L956" href="#L956">956</a>         <em class="jxr_comment">// Unlike `shiftBytesLeftAcrossBufferBlocks`, EVERY byte that is shifted</em>
+<a class="jxr_linenumber" name="L957" href="#L957">957</a>         <em class="jxr_comment">// in the buffer ends up in the previous block.</em>
+<a class="jxr_linenumber" name="L958" href="#L958">958</a>         buf.writeBytes(<span class="jxr_string">"0123456789ABCDEF"</span>.getBytes());
+<a class="jxr_linenumber" name="L959" href="#L959">959</a>         buf.shiftBytesLeft(5, 5);
+<a class="jxr_linenumber" name="L960" href="#L960">960</a>         assertBuffer(<span class="jxr_string">"012345BCDEF"</span>.getBytes());
+<a class="jxr_linenumber" name="L961" href="#L961">961</a>     }
+<a class="jxr_linenumber" name="L962" href="#L962">962</a> }
 </pre>
 <hr/>
 <div id="footer">Copyright &#169; 2022. All rights reserved.</div>

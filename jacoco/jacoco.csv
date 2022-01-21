@@ -63,7 +63,7 @@ com.amazon.ion:ion-java,com.amazon.ion.impl,IonTypeID,0,273,0,62,0,38,0,34,0,3
 com.amazon.ion:ion-java,com.amazon.ion.impl,SimpleByteBuffer.UserByteWriter,238,0,8,0,63,0,25,0,21,0
 com.amazon.ion:ion-java,com.amazon.ion.impl,SubstituteSymbolTable,24,161,6,26,6,49,10,28,4,18
 com.amazon.ion:ion-java,com.amazon.ion.impl,UnifiedDataPageX.Bytes,48,25,4,0,10,8,6,2,4,2
-com.amazon.ion:ion-java,com.amazon.ion.impl,BlockedBuffer,752,1644,157,233,104,342,150,80,7,28
+com.amazon.ion:ion-java,com.amazon.ion.impl,BlockedBuffer,745,1651,158,232,101,345,151,79,7,28
 com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_SymtabExtendsCache,7,58,5,11,0,12,5,6,0,3
 com.amazon.ion:ion-java,com.amazon.ion.impl,LocalSymbolTable.Factory,0,36,0,2,0,8,0,3,0,2
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderLookaheadBuffer.VarUInt.Location,0,44,0,0,0,5,0,1,0,1
@@ -241,7 +241,7 @@ com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonManagedBinaryWriter.UserState
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonManagedBinaryWriter.ImportedSymbolResolverMode.new IonManagedBinaryWriter.ImportedSymbolResolverMode() {...},0,24,0,0,0,4,0,2,0,2
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonManagedBinaryWriter.UserState.new IonManagedBinaryWriter.UserState() {...},65,111,14,18,6,28,14,8,0,5
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonManagedBinaryWriter.UserState.new IonManagedBinaryWriter.UserState() {...},24,121,6,15,2,33,6,9,0,4
-com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonRawBinaryWriter.PreallocationMode,14,66,2,2,2,13,2,4,0,3
+com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonRawBinaryWriter.PreallocationMode,14,71,2,2,2,14,2,5,0,4
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonManagedBinaryWriter.ImportDescriptor,43,30,11,3,2,9,9,4,2,4
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,AbstractIonWriter.WriteValueOptimization,0,24,0,0,0,3,0,1,0,1
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonManagedBinaryWriter.ImportedSymbolResolverMode.2.new IonManagedBinaryWriter.SymbolResolverBuilder() {...},0,28,0,0,0,4,0,3,0,3
@@ -257,12 +257,12 @@ com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonRawBinaryWriter.Preallocation
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonManagedBinaryWriter.LocalSymbolTableView,51,91,10,4,13,22,9,13,3,12
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,Symbols.4.new Iterator() {...},38,0,4,0,8,0,6,0,4,0
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonManagedBinaryWriter.ImportedSymbolContext,12,52,1,5,1,15,1,3,0,1
-com.amazon.ion:ion-java,com.amazon.ion.impl.bin,WriteBuffer,109,2454,25,199,11,509,23,146,0,57
+com.amazon.ion:ion-java,com.amazon.ion.impl.bin,WriteBuffer,109,2622,26,210,11,546,24,154,0,60
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,PooledBlockAllocatorProvider,14,43,2,4,2,12,2,5,0,4
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonRawBinaryWriter.StreamFlushMode,0,24,0,0,0,3,0,1,0,1
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,PooledBlockAllocatorProvider.PooledBlockAllocator.new Block() {...},5,25,1,1,1,5,1,2,0,2
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,BlockAllocatorProviders.BasicBlockAllocatorProvider.1.new Block() {...},0,8,0,0,0,2,0,2,0,2
-com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonRawBinaryWriter,99,1984,14,222,18,497,22,162,8,58
+com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonRawBinaryWriter,99,1989,13,219,18,501,21,161,8,58
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonBinaryWriterAdapter.InternalByteArrayOutputStream,3,0,0,0,1,0,1,0,1,0
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonRawBinaryWriter.new _Private_RecyclingStack.ElementFactory() {...},0,10,0,0,0,2,0,2,0,2
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonManagedBinaryWriter.SymbolState,0,44,0,0,0,5,0,1,0,1
