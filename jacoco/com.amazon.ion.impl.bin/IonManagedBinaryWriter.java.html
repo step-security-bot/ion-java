@@ -927,118 +927,116 @@ import java.util.Map;
 
     public void setTypeAnnotations(final String... annotations)
     {
-<span class="fc bfc" id="L930" title="All 2 branches covered.">        if (annotations == null)</span>
-        {
-<span class="fc" id="L932">            user.setTypeAnnotationSymbols((SymbolToken[]) null);</span>
+        // Clear the current list of annotations
+<span class="fc" id="L931">        user.setTypeAnnotationSymbols((SymbolToken[]) null);</span>
+<span class="fc bfc" id="L932" title="All 2 branches covered.">        if (annotations == null) {</span>
+<span class="fc" id="L933">            return;</span>
         }
-        else
-        {
-<span class="fc" id="L936">            final SymbolToken[] tokens = new SymbolToken[annotations.length];</span>
-<span class="fc bfc" id="L937" title="All 2 branches covered.">            for (int i = 0; i &lt; tokens.length; i++)</span>
-            {
-<span class="fc" id="L939">                tokens[i] = intern(annotations[i]);</span>
-            }
-<span class="fc" id="L941">            user.setTypeAnnotationSymbols(tokens);</span>
+
+        // Add each string to the annotations list.
+        // XXX: This is a very hot path. This code avoids allocating temporary iterators/arrays.
+<span class="fc bfc" id="L938" title="All 2 branches covered.">        for (int i = 0; i &lt; annotations.length; i++) {</span>
+<span class="fc" id="L939">            addTypeAnnotation(annotations[i]);</span>
         }
-<span class="fc" id="L943">    }</span>
+<span class="fc" id="L941">    }</span>
 
     public void setTypeAnnotationSymbols(final SymbolToken... annotations)
     {
-<span class="fc bfc" id="L947" title="All 2 branches covered.">        if (annotations == null)</span>
+<span class="fc bfc" id="L945" title="All 2 branches covered.">        if (annotations == null)</span>
         {
-<span class="fc" id="L949">            user.setTypeAnnotationSymbols((SymbolToken[]) null);</span>
+<span class="fc" id="L947">            user.setTypeAnnotationSymbols((SymbolToken[]) null);</span>
         }
         else
         {
-<span class="fc bfc" id="L953" title="All 2 branches covered.">            for (int i = 0; i &lt; annotations.length; i++)</span>
+<span class="fc bfc" id="L951" title="All 2 branches covered.">            for (int i = 0; i &lt; annotations.length; i++)</span>
             {
-<span class="fc" id="L955">                annotations[i] = intern(annotations[i]);</span>
+<span class="fc" id="L953">                annotations[i] = intern(annotations[i]);</span>
             }
-<span class="fc" id="L957">            user.setTypeAnnotationSymbols(annotations);</span>
+<span class="fc" id="L955">            user.setTypeAnnotationSymbols(annotations);</span>
         }
-<span class="fc" id="L959">    }</span>
+<span class="fc" id="L957">    }</span>
 
     public void addTypeAnnotation(final String annotation)
     {
-<span class="fc" id="L963">        final SymbolToken token = intern(annotation);</span>
-<span class="fc" id="L964">        user.addTypeAnnotationSymbol(token);</span>
-<span class="fc" id="L965">    }</span>
+<span class="fc" id="L961">        final SymbolToken token = intern(annotation);</span>
+<span class="fc" id="L962">        user.addTypeAnnotationSymbol(token);</span>
+<span class="fc" id="L963">    }</span>
 
     // Container Manipulation
 
     public void stepIn(final IonType containerType) throws IOException
     {
-<span class="fc" id="L971">        userState.beforeStepIn(this, containerType);</span>
-<span class="fc" id="L972">        user.stepIn(containerType);</span>
-<span class="fc" id="L973">    }</span>
+<span class="fc" id="L969">        userState.beforeStepIn(this, containerType);</span>
+<span class="fc" id="L970">        user.stepIn(containerType);</span>
+<span class="fc" id="L971">    }</span>
 
     public void stepOut() throws IOException
     {
-<span class="fc" id="L977">        user.stepOut();</span>
-<span class="fc" id="L978">        userState.afterStepOut(this);</span>
-<span class="fc" id="L979">    }</span>
+<span class="fc" id="L975">        user.stepOut();</span>
+<span class="fc" id="L976">        userState.afterStepOut(this);</span>
+<span class="fc" id="L977">    }</span>
 
     public boolean isInStruct()
     {
-<span class="fc" id="L983">        return user.isInStruct();</span>
+<span class="fc" id="L981">        return user.isInStruct();</span>
     }
 
     // Write Value Methods
 
     public void writeNull() throws IOException
     {
-<span class="fc" id="L990">        user.writeNull();</span>
-<span class="fc" id="L991">    }</span>
+<span class="fc" id="L988">        user.writeNull();</span>
+<span class="fc" id="L989">    }</span>
 
     public void writeNull(final IonType type) throws IOException
     {
-<span class="fc" id="L995">        user.writeNull(type);</span>
-<span class="fc" id="L996">    }</span>
+<span class="fc" id="L993">        user.writeNull(type);</span>
+<span class="fc" id="L994">    }</span>
 
     public void writeBool(final boolean value) throws IOException
     {
-<span class="fc" id="L1000">        user.writeBool(value);</span>
-<span class="fc" id="L1001">    }</span>
+<span class="fc" id="L998">        user.writeBool(value);</span>
+<span class="fc" id="L999">    }</span>
 
     public void writeInt(long value) throws IOException
     {
-<span class="fc" id="L1005">        userState.writeInt(this, value);</span>
-<span class="fc" id="L1006">        user.writeInt(value);</span>
-<span class="fc" id="L1007">    }</span>
+<span class="fc" id="L1003">        userState.writeInt(this, value);</span>
+<span class="fc" id="L1004">        user.writeInt(value);</span>
+<span class="fc" id="L1005">    }</span>
 
     public void writeInt(final BigInteger value) throws IOException
     {
-<span class="fc" id="L1011">        userState.writeInt(this, value);</span>
-<span class="fc" id="L1012">        user.writeInt(value);</span>
-<span class="fc" id="L1013">    }</span>
+<span class="fc" id="L1009">        userState.writeInt(this, value);</span>
+<span class="fc" id="L1010">        user.writeInt(value);</span>
+<span class="fc" id="L1011">    }</span>
 
     public void writeFloat(final double value) throws IOException
     {
-<span class="fc" id="L1017">        user.writeFloat(value);</span>
-<span class="fc" id="L1018">    }</span>
+<span class="fc" id="L1015">        user.writeFloat(value);</span>
+<span class="fc" id="L1016">    }</span>
 
     public void writeDecimal(final BigDecimal value) throws IOException
     {
-<span class="fc" id="L1022">        user.writeDecimal(value);</span>
-<span class="fc" id="L1023">    }</span>
+<span class="fc" id="L1020">        user.writeDecimal(value);</span>
+<span class="fc" id="L1021">    }</span>
 
     public void writeTimestamp(final Timestamp value) throws IOException
     {
-<span class="fc" id="L1027">        user.writeTimestamp(value);</span>
-<span class="fc" id="L1028">    }</span>
+<span class="fc" id="L1025">        user.writeTimestamp(value);</span>
+<span class="fc" id="L1026">    }</span>
 
     public void writeSymbol(String content) throws IOException
     {
-<span class="fc" id="L1032">        writeSymbolToken(intern(content));</span>
-<span class="fc" id="L1033">    }</span>
+<span class="fc" id="L1030">        writeSymbolToken(intern(content));</span>
+<span class="fc" id="L1031">    }</span>
 
     private boolean handleIVM(int sid) throws IOException {
-<span class="fc bfc" id="L1036" title="All 2 branches covered.">        if (user.isIVM(sid))</span>
+<span class="fc bfc" id="L1034" title="All 2 branches covered.">        if (user.isIVM(sid))</span>
         {
-<span class="fc bfc" id="L1038" title="All 2 branches covered.">            if (user.hasWrittenValuesSinceFinished())</span>
+<span class="fc bfc" id="L1036" title="All 2 branches covered.">            if (user.hasWrittenValuesSinceFinished())</span>
             {
                 // this explicitly translates SID 2 to an IVM and flushes out local symbol state
-<span class="fc" id="L1041">                finish();</span>
+<span class="fc" id="L1039">                finish();</span>
             }
             else
             {
@@ -1046,112 +1044,112 @@ import java.util.Map;
                 // TODO should this not no-op when called multiple times with IVMs?
                 // TODO integrate with all that IVM configuration-fu
             }
-<span class="fc" id="L1049">            return true;</span>
+<span class="fc" id="L1047">            return true;</span>
         }
-<span class="fc" id="L1051">        return false;</span>
+<span class="fc" id="L1049">        return false;</span>
     }
 
     public void writeSymbolToken(SymbolToken token) throws IOException
     {
-<span class="fc bfc" id="L1056" title="All 4 branches covered.">        if (token != null &amp;&amp; handleIVM(token.getSid()))</span>
+<span class="fc bfc" id="L1054" title="All 4 branches covered.">        if (token != null &amp;&amp; handleIVM(token.getSid()))</span>
         {
-<span class="fc" id="L1058">            return;</span>
+<span class="fc" id="L1056">            return;</span>
         }
-<span class="fc" id="L1060">        token = intern(token);</span>
-<span class="fc" id="L1061">        userState.writeSymbolToken(this, token);</span>
-<span class="fc" id="L1062">        user.writeSymbolToken(token);</span>
-<span class="fc" id="L1063">    }</span>
+<span class="fc" id="L1058">        token = intern(token);</span>
+<span class="fc" id="L1059">        userState.writeSymbolToken(this, token);</span>
+<span class="fc" id="L1060">        user.writeSymbolToken(token);</span>
+<span class="fc" id="L1061">    }</span>
 
     public void writeString(final String value) throws IOException
     {
-<span class="fc" id="L1067">        userState.writeString(this, value);</span>
-<span class="fc" id="L1068">        user.writeString(value);</span>
-<span class="fc" id="L1069">    }</span>
+<span class="fc" id="L1065">        userState.writeString(this, value);</span>
+<span class="fc" id="L1066">        user.writeString(value);</span>
+<span class="fc" id="L1067">    }</span>
 
     public void writeClob(byte[] data) throws IOException
     {
-<span class="fc" id="L1073">        user.writeClob(data);</span>
-<span class="fc" id="L1074">    }</span>
+<span class="fc" id="L1071">        user.writeClob(data);</span>
+<span class="fc" id="L1072">    }</span>
 
     public void writeClob(final byte[] data, final int offset, final int length) throws IOException
     {
-<span class="fc" id="L1078">        user.writeClob(data, offset, length);</span>
-<span class="fc" id="L1079">    }</span>
+<span class="fc" id="L1076">        user.writeClob(data, offset, length);</span>
+<span class="fc" id="L1077">    }</span>
 
     public void writeBlob(byte[] data) throws IOException
     {
-<span class="fc" id="L1083">        user.writeBlob(data);</span>
-<span class="fc" id="L1084">    }</span>
+<span class="fc" id="L1081">        user.writeBlob(data);</span>
+<span class="fc" id="L1082">    }</span>
 
     public void writeBlob(final byte[] data, final int offset, final int length) throws IOException
     {
-<span class="fc" id="L1088">        user.writeBlob(data, offset, length);</span>
-<span class="fc" id="L1089">    }</span>
+<span class="fc" id="L1086">        user.writeBlob(data, offset, length);</span>
+<span class="fc" id="L1087">    }</span>
 
     @Override
     public void writeString(byte[] data, int offset, int length) throws IOException
     {
-<span class="nc" id="L1094">        user.writeString(data, offset, length);</span>
-<span class="nc" id="L1095">    }</span>
+<span class="nc" id="L1092">        user.writeString(data, offset, length);</span>
+<span class="nc" id="L1093">    }</span>
 
     public void writeBytes(byte[] data, int off, int len) throws IOException
     {
         // this is a raw transfer--we basically have to dump the symbol table since we don't have much context
-<span class="fc" id="L1100">        startLocalSymbolTableIfNeeded(/*writeIVM*/ true);</span>
-<span class="fc" id="L1101">        user.writeBytes(data, off, len);</span>
-<span class="fc" id="L1102">    }</span>
+<span class="fc" id="L1098">        startLocalSymbolTableIfNeeded(/*writeIVM*/ true);</span>
+<span class="fc" id="L1099">        user.writeBytes(data, off, len);</span>
+<span class="fc" id="L1100">    }</span>
 
     // Stream Terminators
 
     public void flush() throws IOException
     {
-<span class="fc bfc" id="L1108" title="All 8 branches covered.">        if (getDepth() == 0 &amp;&amp; !user.hasAnnotations() &amp;&amp; (localsLocked || lstAppendEnabled))</span>
+<span class="fc bfc" id="L1106" title="All 8 branches covered.">        if (getDepth() == 0 &amp;&amp; !user.hasAnnotations() &amp;&amp; (localsLocked || lstAppendEnabled))</span>
         {
-<span class="fc" id="L1110">            unsafeFlush();</span>
+<span class="fc" id="L1108">            unsafeFlush();</span>
         }
-<span class="fc" id="L1112">    }</span>
+<span class="fc" id="L1110">    }</span>
 
     private void unsafeFlush() throws IOException
     {
-<span class="fc bfc" id="L1116" title="All 2 branches covered.">        if (user.hasWrittenValuesSinceFinished())</span>
+<span class="fc bfc" id="L1114" title="All 2 branches covered.">        if (user.hasWrittenValuesSinceFinished())</span>
         {
             // this implies that we have a local symbol table of some sort and the user locked it
-<span class="fc" id="L1119">            symbolState.closeTable(symbols);</span>
+<span class="fc" id="L1117">            symbolState.closeTable(symbols);</span>
             // make sure that until the local symbol state changes we no-op the table closing routine
-<span class="fc" id="L1121">            symbolState = SymbolState.LOCAL_SYMBOLS_FLUSHED;</span>
+<span class="fc" id="L1119">            symbolState = SymbolState.LOCAL_SYMBOLS_FLUSHED;</span>
         }
         // push the data out
-<span class="fc" id="L1124">        symbols.finish();</span>
-<span class="fc" id="L1125">        user.finish();</span>
-<span class="fc" id="L1126">    }</span>
+<span class="fc" id="L1122">        symbols.finish();</span>
+<span class="fc" id="L1123">        user.finish();</span>
+<span class="fc" id="L1124">    }</span>
 
     public void finish() throws IOException
     {
-<span class="fc bfc" id="L1130" title="All 2 branches covered.">        if (getDepth() != 0)</span>
+<span class="fc bfc" id="L1128" title="All 2 branches covered.">        if (getDepth() != 0)</span>
         {
-<span class="fc" id="L1132">            throw new IllegalStateException(&quot;IonWriter.finish() can only be called at top-level.&quot;);</span>
+<span class="fc" id="L1130">            throw new IllegalStateException(&quot;IonWriter.finish() can only be called at top-level.&quot;);</span>
         }
-<span class="fc" id="L1134">        unsafeFlush();</span>
+<span class="fc" id="L1132">        unsafeFlush();</span>
         // Reset local symbols
         // TODO be more configurable with respect to local symbol table caching
-<span class="fc" id="L1137">        locals.clear();</span>
-<span class="fc" id="L1138">        localsLocked = false;</span>
-<span class="fc" id="L1139">        symbolState = SymbolState.SYSTEM_SYMBOLS;</span>
-<span class="fc" id="L1140">        imports = bootstrapImports;</span>
-<span class="fc" id="L1141">    }</span>
+<span class="fc" id="L1135">        locals.clear();</span>
+<span class="fc" id="L1136">        localsLocked = false;</span>
+<span class="fc" id="L1137">        symbolState = SymbolState.SYSTEM_SYMBOLS;</span>
+<span class="fc" id="L1138">        imports = bootstrapImports;</span>
+<span class="fc" id="L1139">    }</span>
 
     public void close() throws IOException
     {
-<span class="fc bfc" id="L1145" title="All 2 branches covered.">        if (closed)</span>
+<span class="fc bfc" id="L1143" title="All 2 branches covered.">        if (closed)</span>
         {
-<span class="fc" id="L1147">            return;</span>
+<span class="fc" id="L1145">            return;</span>
         }
-<span class="fc" id="L1149">        closed = true;</span>
+<span class="fc" id="L1147">        closed = true;</span>
         try
         {
-<span class="fc" id="L1152">            finish();</span>
+<span class="fc" id="L1150">            finish();</span>
         }
-<span class="fc" id="L1154">        catch (IllegalStateException e)</span>
+<span class="fc" id="L1152">        catch (IllegalStateException e)</span>
         {
             // callers do not expect this...
         }
@@ -1159,14 +1157,14 @@ import java.util.Map;
         {
             try
             {
-<span class="fc" id="L1162">                symbols.close();</span>
+<span class="fc" id="L1160">                symbols.close();</span>
             }
             finally
             {
-<span class="fc" id="L1166">                user.close();</span>
+<span class="fc" id="L1164">                user.close();</span>
             }
         }
-<span class="fc" id="L1169">    }</span>
+<span class="fc" id="L1167">    }</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

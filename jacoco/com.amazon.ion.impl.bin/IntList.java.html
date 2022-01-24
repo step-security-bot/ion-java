@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>IntList.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.amazon.ion:ion-java</a> &gt; <a href="index.source.html" class="el_package">com.amazon.ion.impl.bin</a> &gt; <span class="el_source">IntList.java</span></div><h1>IntList.java</h1><pre class="source lang-java linenums">package com.amazon.ion.impl.bin;
+
+/**
+ * A list of integer values that grows as necessary.
+ *
+ * Unlike {@link java.util.List}, IntList does not require each int to be boxed. This makes it helpful in use cases
+ * where storing {@link Integer} leads to excessive time spent in garbage collection.
+ */
+public class IntList {
+    public static final int DEFAULT_INITIAL_CAPACITY = 8;
+    private static final int GROWTH_MULTIPLIER = 2;
+    private int[] data;
+    private int numberOfValues;
+
+    /**
+     * Constructs a new IntList with a capacity of {@link IntList#DEFAULT_INITIAL_CAPACITY}.
+     */
+    public IntList() {
+<span class="fc" id="L19">        this(DEFAULT_INITIAL_CAPACITY);</span>
+<span class="fc" id="L20">    }</span>
+
+    /**
+     * Constructs a new IntList with the specified capacity.
+     * @param initialCapacity   The number of ints that can be stored in this IntList before it will need to be
+     *                          reallocated.
+     */
+<span class="fc" id="L27">    public IntList(final int initialCapacity) {</span>
+<span class="fc" id="L28">        data = new int[initialCapacity];</span>
+<span class="fc" id="L29">        numberOfValues = 0;</span>
+<span class="fc" id="L30">    }</span>
+
+    /**
+     * Accessor.
+     * @return  The number of ints currently stored in the list.
+     */
+    public int size() {
+<span class="fc" id="L37">        return numberOfValues;</span>
+    }
+
+    /**
+     * @return {@code true} if there are ints stored in the list.
+     */
+    public boolean isEmpty() {
+<span class="fc bfc" id="L44" title="All 2 branches covered.">        return numberOfValues == 0;</span>
+    }
+
+    /**
+     * Empties the list.
+     *
+     * Note that this method does not shrink the size of the backing data store.
+     */
+    public void clear() {
+<span class="fc" id="L53">        numberOfValues = 0;</span>
+<span class="fc" id="L54">    }</span>
+
+    /**
+     * Returns the {@code index}th int in the list.
+     * @param index     The list index of the desired int.
+     * @return          The int at index {@code index} in the list.
+     * @throws IndexOutOfBoundsException    if the index is negative or greater than the number of ints stored in the
+     *                                      list.
+     */
+    public int get(int index) {
+<span class="pc bpc" id="L64" title="2 of 4 branches missed.">        if (index &lt; 0 || index &gt;= numberOfValues) {</span>
+<span class="nc" id="L65">            throw new IndexOutOfBoundsException(</span>
+                    &quot;Invalid index &quot; + index + &quot; requested from IntList with &quot; + numberOfValues + &quot; values.&quot;
+            );
+        }
+<span class="fc" id="L69">        return data[index];</span>
+    }
+
+    /**
+     * Appends an int to the end of the list, growing the list if necessary.
+     * @param value     The int to add to the end of the list.
+     */
+    public void add(int value) {
+<span class="fc bfc" id="L77" title="All 2 branches covered.">        if (numberOfValues == data.length) {</span>
+<span class="fc" id="L78">            grow();</span>
+        }
+<span class="fc" id="L80">        data[numberOfValues] = value;</span>
+<span class="fc" id="L81">        numberOfValues += 1;</span>
+<span class="fc" id="L82">    }</span>
+
+    /**
+     * Reallocates the backing array to accommodate storing more ints.
+     */
+    private void grow() {
+<span class="fc" id="L88">        int[] newData = new int[data.length * GROWTH_MULTIPLIER];</span>
+<span class="fc" id="L89">        System.arraycopy(data, 0, newData, 0, data.length);</span>
+<span class="fc" id="L90">        data = newData;</span>
+<span class="fc" id="L91">    }</span>
+
+    @Override
+    public String toString() {
+<span class="nc" id="L95">        StringBuilder builder = new StringBuilder();</span>
+<span class="nc" id="L96">        builder.append(&quot;IntList{data=[&quot;);</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">        if (numberOfValues &gt; 0) {</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">            for (int m = 0; m &lt; numberOfValues; m++) {</span>
+<span class="nc" id="L99">                builder.append(data[m]).append(&quot;,&quot;);</span>
+            }
+        }
+<span class="nc" id="L102">        builder.append(&quot;]}&quot;);</span>
+<span class="nc" id="L103">        return builder.toString();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
