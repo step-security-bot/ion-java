@@ -8,68 +8,89 @@
 <div id="overview"><a href="../../../../../../../apidocs/com/amazon/ion/impl/bin/utf8/Pool.html">View Javadoc</a></div><pre>
 <a class="jxr_linenumber" name="L1" href="#L1">1</a>   <strong class="jxr_keyword">package</strong> com.amazon.ion.impl.bin.utf8;
 <a class="jxr_linenumber" name="L2" href="#L2">2</a>   
-<a class="jxr_linenumber" name="L3" href="#L3">3</a>   <strong class="jxr_keyword">import</strong> java.util.concurrent.ArrayBlockingQueue;
-<a class="jxr_linenumber" name="L4" href="#L4">4</a>   
-<a class="jxr_linenumber" name="L5" href="#L5">5</a>   <strong class="jxr_keyword">abstract</strong> <strong class="jxr_keyword">class</strong> Pool&lt;T <strong class="jxr_keyword">extends</strong> Poolable&lt;?&gt;&gt; {
+<a class="jxr_linenumber" name="L3" href="#L3">3</a>   <strong class="jxr_keyword">import</strong> java.util.Queue;
+<a class="jxr_linenumber" name="L4" href="#L4">4</a>   <strong class="jxr_keyword">import</strong> java.util.concurrent.ConcurrentLinkedQueue;
+<a class="jxr_linenumber" name="L5" href="#L5">5</a>   <strong class="jxr_keyword">import</strong> java.util.concurrent.atomic.AtomicInteger;
 <a class="jxr_linenumber" name="L6" href="#L6">6</a>   
-<a class="jxr_linenumber" name="L7" href="#L7">7</a>       <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L8" href="#L8">8</a>   <em class="jxr_javadoccomment">     * Allocates objects to be pooled.</em>
-<a class="jxr_linenumber" name="L9" href="#L9">9</a>   <em class="jxr_javadoccomment">     * @param &lt;T&gt; the type of object.</em>
-<a class="jxr_linenumber" name="L10" href="#L10">10</a>  <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L11" href="#L11">11</a>      <strong class="jxr_keyword">interface</strong> Allocator&lt;T <strong class="jxr_keyword">extends</strong> Poolable&lt;?&gt;&gt; {
-<a class="jxr_linenumber" name="L12" href="#L12">12</a>  
-<a class="jxr_linenumber" name="L13" href="#L13">13</a>          <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L14" href="#L14">14</a>  <em class="jxr_javadoccomment">         * Allocate a new object and link it to the given pool.</em>
-<a class="jxr_linenumber" name="L15" href="#L15">15</a>  <em class="jxr_javadoccomment">         * @param pool the pool to which the new object will be linked.</em>
-<a class="jxr_linenumber" name="L16" href="#L16">16</a>  <em class="jxr_javadoccomment">         * @return a new instance.</em>
-<a class="jxr_linenumber" name="L17" href="#L17">17</a>  <em class="jxr_javadoccomment">         */</em>
-<a class="jxr_linenumber" name="L18" href="#L18">18</a>          T newInstance(Pool&lt;T&gt; pool);
-<a class="jxr_linenumber" name="L19" href="#L19">19</a>      }
-<a class="jxr_linenumber" name="L20" href="#L20">20</a>  
-<a class="jxr_linenumber" name="L21" href="#L21">21</a>      <em class="jxr_comment">// The maximum number of objects that can be waiting in the queue before new ones will be discarded.</em>
-<a class="jxr_linenumber" name="L22" href="#L22">22</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> MAX_QUEUE_SIZE = 128;
-<a class="jxr_linenumber" name="L23" href="#L23">23</a>  
-<a class="jxr_linenumber" name="L24" href="#L24">24</a>      <em class="jxr_comment">// A queue of previously initialized objects that can be loaned out.</em>
-<a class="jxr_linenumber" name="L25" href="#L25">25</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> ArrayBlockingQueue&lt;T&gt; bufferQueue;
-<a class="jxr_linenumber" name="L26" href="#L26">26</a>  
-<a class="jxr_linenumber" name="L27" href="#L27">27</a>      <em class="jxr_comment">// Allocator of objects to be pooled.</em>
-<a class="jxr_linenumber" name="L28" href="#L28">28</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> Allocator&lt;T&gt; allocator;
-<a class="jxr_linenumber" name="L29" href="#L29">29</a>  
-<a class="jxr_linenumber" name="L30" href="#L30">30</a>      <a name="Pool" href="../../../../../../com/amazon/ion/impl/bin/utf8/Pool.html#Pool">Pool</a>(Allocator&lt;T&gt; allocator) {
-<a class="jxr_linenumber" name="L31" href="#L31">31</a>          <strong class="jxr_keyword">this</strong>.allocator = allocator;
-<a class="jxr_linenumber" name="L32" href="#L32">32</a>          bufferQueue = <strong class="jxr_keyword">new</strong> ArrayBlockingQueue&lt;T&gt;(MAX_QUEUE_SIZE);
-<a class="jxr_linenumber" name="L33" href="#L33">33</a>      }
-<a class="jxr_linenumber" name="L34" href="#L34">34</a>  
-<a class="jxr_linenumber" name="L35" href="#L35">35</a>      <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L36" href="#L36">36</a>  <em class="jxr_javadoccomment">     * If the pool is not empty, removes an object from the pool and returns it;</em>
-<a class="jxr_linenumber" name="L37" href="#L37">37</a>  <em class="jxr_javadoccomment">     * otherwise, constructs a new object.</em>
-<a class="jxr_linenumber" name="L38" href="#L38">38</a>  <em class="jxr_javadoccomment">     *</em>
-<a class="jxr_linenumber" name="L39" href="#L39">39</a>  <em class="jxr_javadoccomment">     * @return An object.</em>
-<a class="jxr_linenumber" name="L40" href="#L40">40</a>  <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L41" href="#L41">41</a>      <strong class="jxr_keyword">public</strong> T getOrCreate() {
-<a class="jxr_linenumber" name="L42" href="#L42">42</a>          <em class="jxr_comment">// The `poll` method does not block. If the queue is empty it returns `null` immediately.</em>
-<a class="jxr_linenumber" name="L43" href="#L43">43</a>          T object = bufferQueue.poll();
-<a class="jxr_linenumber" name="L44" href="#L44">44</a>          <strong class="jxr_keyword">if</strong> (object == <strong class="jxr_keyword">null</strong>) {
-<a class="jxr_linenumber" name="L45" href="#L45">45</a>              <em class="jxr_comment">// No buffers were available in the pool. Create a new one.</em>
-<a class="jxr_linenumber" name="L46" href="#L46">46</a>              object = allocator.newInstance(<strong class="jxr_keyword">this</strong>);
-<a class="jxr_linenumber" name="L47" href="#L47">47</a>          }
-<a class="jxr_linenumber" name="L48" href="#L48">48</a>          <strong class="jxr_keyword">return</strong> object;
-<a class="jxr_linenumber" name="L49" href="#L49">49</a>      }
-<a class="jxr_linenumber" name="L50" href="#L50">50</a>  
-<a class="jxr_linenumber" name="L51" href="#L51">51</a>      <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L52" href="#L52">52</a>  <em class="jxr_javadoccomment">     * Adds the provided instance to the pool. If the pool is full, the instance will</em>
-<a class="jxr_linenumber" name="L53" href="#L53">53</a>  <em class="jxr_javadoccomment">     * be discarded.</em>
-<a class="jxr_linenumber" name="L54" href="#L54">54</a>  <em class="jxr_javadoccomment">     *</em>
-<a class="jxr_linenumber" name="L55" href="#L55">55</a>  <em class="jxr_javadoccomment">     * Callers MUST NOT use an object after returning it to the pool.</em>
-<a class="jxr_linenumber" name="L56" href="#L56">56</a>  <em class="jxr_javadoccomment">     *</em>
-<a class="jxr_linenumber" name="L57" href="#L57">57</a>  <em class="jxr_javadoccomment">     * @param object   An object to add to the pool.</em>
-<a class="jxr_linenumber" name="L58" href="#L58">58</a>  <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L59" href="#L59">59</a>      <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> returnToPool(T object) {
-<a class="jxr_linenumber" name="L60" href="#L60">60</a>          <em class="jxr_comment">// The `offer` method does not block. If the queue is full, it returns `false` immediately.</em>
-<a class="jxr_linenumber" name="L61" href="#L61">61</a>          <em class="jxr_comment">// If the provided instance cannot be added to the pool, we discard it silently.</em>
-<a class="jxr_linenumber" name="L62" href="#L62">62</a>          bufferQueue.offer(object);
-<a class="jxr_linenumber" name="L63" href="#L63">63</a>      }
-<a class="jxr_linenumber" name="L64" href="#L64">64</a>  }
+<a class="jxr_linenumber" name="L7" href="#L7">7</a>   <strong class="jxr_keyword">abstract</strong> <strong class="jxr_keyword">class</strong> Pool&lt;T <strong class="jxr_keyword">extends</strong> Poolable&lt;?&gt;&gt; {
+<a class="jxr_linenumber" name="L8" href="#L8">8</a>   
+<a class="jxr_linenumber" name="L9" href="#L9">9</a>       <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L10" href="#L10">10</a>  <em class="jxr_javadoccomment">     * Allocates objects to be pooled.</em>
+<a class="jxr_linenumber" name="L11" href="#L11">11</a>  <em class="jxr_javadoccomment">     * @param &lt;T&gt; the type of object.</em>
+<a class="jxr_linenumber" name="L12" href="#L12">12</a>  <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L13" href="#L13">13</a>      <strong class="jxr_keyword">interface</strong> Allocator&lt;T <strong class="jxr_keyword">extends</strong> Poolable&lt;?&gt;&gt; {
+<a class="jxr_linenumber" name="L14" href="#L14">14</a>  
+<a class="jxr_linenumber" name="L15" href="#L15">15</a>          <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L16" href="#L16">16</a>  <em class="jxr_javadoccomment">         * Allocate a new object and link it to the given pool.</em>
+<a class="jxr_linenumber" name="L17" href="#L17">17</a>  <em class="jxr_javadoccomment">         * @param pool the pool to which the new object will be linked.</em>
+<a class="jxr_linenumber" name="L18" href="#L18">18</a>  <em class="jxr_javadoccomment">         * @return a new instance.</em>
+<a class="jxr_linenumber" name="L19" href="#L19">19</a>  <em class="jxr_javadoccomment">         */</em>
+<a class="jxr_linenumber" name="L20" href="#L20">20</a>          T newInstance(Pool&lt;T&gt; pool);
+<a class="jxr_linenumber" name="L21" href="#L21">21</a>      }
+<a class="jxr_linenumber" name="L22" href="#L22">22</a>  
+<a class="jxr_linenumber" name="L23" href="#L23">23</a>      <em class="jxr_comment">// The maximum number of objects that can be waiting in the queue before new ones will be discarded.</em>
+<a class="jxr_linenumber" name="L24" href="#L24">24</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> MAX_QUEUE_SIZE = 128;
+<a class="jxr_linenumber" name="L25" href="#L25">25</a>  
+<a class="jxr_linenumber" name="L26" href="#L26">26</a>      <em class="jxr_comment">// A queue of previously initialized objects that can be loaned out.</em>
+<a class="jxr_linenumber" name="L27" href="#L27">27</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> Queue&lt;T&gt; objectQueue;
+<a class="jxr_linenumber" name="L28" href="#L28">28</a>  
+<a class="jxr_linenumber" name="L29" href="#L29">29</a>      <em class="jxr_comment">// The current size of the queue. Note: some implementations of Queue.size() (including ConcurrentLinkedQueue's)</em>
+<a class="jxr_linenumber" name="L30" href="#L30">30</a>      <em class="jxr_comment">// are not constant-time operations. Tracking the size externally is a performance optimization.</em>
+<a class="jxr_linenumber" name="L31" href="#L31">31</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> AtomicInteger size;
+<a class="jxr_linenumber" name="L32" href="#L32">32</a>  
+<a class="jxr_linenumber" name="L33" href="#L33">33</a>      <em class="jxr_comment">// Allocator of objects to be pooled.</em>
+<a class="jxr_linenumber" name="L34" href="#L34">34</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> Allocator&lt;T&gt; allocator;
+<a class="jxr_linenumber" name="L35" href="#L35">35</a>  
+<a class="jxr_linenumber" name="L36" href="#L36">36</a>      <a name="Pool" href="../../../../../../com/amazon/ion/impl/bin/utf8/Pool.html#Pool">Pool</a>(Allocator&lt;T&gt; allocator) {
+<a class="jxr_linenumber" name="L37" href="#L37">37</a>          <strong class="jxr_keyword">this</strong>.allocator = allocator;
+<a class="jxr_linenumber" name="L38" href="#L38">38</a>          objectQueue = <strong class="jxr_keyword">new</strong> ConcurrentLinkedQueue&lt;T&gt;();
+<a class="jxr_linenumber" name="L39" href="#L39">39</a>          size = <strong class="jxr_keyword">new</strong> AtomicInteger(0);
+<a class="jxr_linenumber" name="L40" href="#L40">40</a>      }
+<a class="jxr_linenumber" name="L41" href="#L41">41</a>  
+<a class="jxr_linenumber" name="L42" href="#L42">42</a>      <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L43" href="#L43">43</a>  <em class="jxr_javadoccomment">     * If the pool is not empty, removes an object from the pool and returns it;</em>
+<a class="jxr_linenumber" name="L44" href="#L44">44</a>  <em class="jxr_javadoccomment">     * otherwise, constructs a new object.</em>
+<a class="jxr_linenumber" name="L45" href="#L45">45</a>  <em class="jxr_javadoccomment">     *</em>
+<a class="jxr_linenumber" name="L46" href="#L46">46</a>  <em class="jxr_javadoccomment">     * @return An object.</em>
+<a class="jxr_linenumber" name="L47" href="#L47">47</a>  <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L48" href="#L48">48</a>      <strong class="jxr_keyword">public</strong> T getOrCreate() {
+<a class="jxr_linenumber" name="L49" href="#L49">49</a>          <em class="jxr_comment">// The `poll` method does not block. If the queue is empty it returns `null` immediately.</em>
+<a class="jxr_linenumber" name="L50" href="#L50">50</a>          T object = objectQueue.poll();
+<a class="jxr_linenumber" name="L51" href="#L51">51</a>          <strong class="jxr_keyword">if</strong> (object == <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="L52" href="#L52">52</a>              <em class="jxr_comment">// No objects were available in the pool. Create a new one.</em>
+<a class="jxr_linenumber" name="L53" href="#L53">53</a>              object = allocator.newInstance(<strong class="jxr_keyword">this</strong>);
+<a class="jxr_linenumber" name="L54" href="#L54">54</a>          } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="L55" href="#L55">55</a>              <em class="jxr_comment">// An object was retrieved from the pool; decrement the pool size.</em>
+<a class="jxr_linenumber" name="L56" href="#L56">56</a>              size.decrementAndGet();
+<a class="jxr_linenumber" name="L57" href="#L57">57</a>          }
+<a class="jxr_linenumber" name="L58" href="#L58">58</a>          <strong class="jxr_keyword">return</strong> object;
+<a class="jxr_linenumber" name="L59" href="#L59">59</a>      }
+<a class="jxr_linenumber" name="L60" href="#L60">60</a>  
+<a class="jxr_linenumber" name="L61" href="#L61">61</a>      <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L62" href="#L62">62</a>  <em class="jxr_javadoccomment">     * Adds the provided instance to the pool. If the pool is full, the instance will</em>
+<a class="jxr_linenumber" name="L63" href="#L63">63</a>  <em class="jxr_javadoccomment">     * be discarded.</em>
+<a class="jxr_linenumber" name="L64" href="#L64">64</a>  <em class="jxr_javadoccomment">     *</em>
+<a class="jxr_linenumber" name="L65" href="#L65">65</a>  <em class="jxr_javadoccomment">     * Callers MUST NOT use an object after returning it to the pool.</em>
+<a class="jxr_linenumber" name="L66" href="#L66">66</a>  <em class="jxr_javadoccomment">     *</em>
+<a class="jxr_linenumber" name="L67" href="#L67">67</a>  <em class="jxr_javadoccomment">     * @param object   An object to add to the pool.</em>
+<a class="jxr_linenumber" name="L68" href="#L68">68</a>  <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L69" href="#L69">69</a>      <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> returnToPool(T object) {
+<a class="jxr_linenumber" name="L70" href="#L70">70</a>          <em class="jxr_comment">// The `offer` method does not block. If the queue is full, it returns `false` immediately.</em>
+<a class="jxr_linenumber" name="L71" href="#L71">71</a>          <em class="jxr_comment">// If the provided instance cannot be added to the pool, we discard it silently.</em>
+<a class="jxr_linenumber" name="L72" href="#L72">72</a>          <strong class="jxr_keyword">if</strong> (size.getAndIncrement() &lt; MAX_QUEUE_SIZE) {
+<a class="jxr_linenumber" name="L73" href="#L73">73</a>              objectQueue.offer(object);
+<a class="jxr_linenumber" name="L74" href="#L74">74</a>          } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="L75" href="#L75">75</a>              <em class="jxr_comment">// The pool was full. Since the size was optimistically incremented, decrement it now.</em>
+<a class="jxr_linenumber" name="L76" href="#L76">76</a>              <em class="jxr_comment">// Note: there is a race condition here that is deliberately allowed as an optimization.</em>
+<a class="jxr_linenumber" name="L77" href="#L77">77</a>              <em class="jxr_comment">// Under high contention, multiple threads could end up here before the first one</em>
+<a class="jxr_linenumber" name="L78" href="#L78">78</a>              <em class="jxr_comment">// decrements the size, causing objects to be dropped wastefully. This is not harmful</em>
+<a class="jxr_linenumber" name="L79" href="#L79">79</a>              <em class="jxr_comment">// because objects will be re-allocated when necessary; the pool is kept as close as</em>
+<a class="jxr_linenumber" name="L80" href="#L80">80</a>              <em class="jxr_comment">// possible to capacity on a best-effort basis. This race condition should not be "fixed"</em>
+<a class="jxr_linenumber" name="L81" href="#L81">81</a>              <em class="jxr_comment">// without a thorough study of the performance implications.</em>
+<a class="jxr_linenumber" name="L82" href="#L82">82</a>              size.decrementAndGet();
+<a class="jxr_linenumber" name="L83" href="#L83">83</a>          }
+<a class="jxr_linenumber" name="L84" href="#L84">84</a>      }
+<a class="jxr_linenumber" name="L85" href="#L85">85</a>  }
 </pre>
 <hr/>
 <div id="footer">Copyright &#169; 2022. All rights reserved.</div>

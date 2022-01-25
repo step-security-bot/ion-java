@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Pool.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.amazon.ion:ion-java</a> &gt; <a href="index.source.html" class="el_package">com.amazon.ion.impl.bin.utf8</a> &gt; <span class="el_source">Pool.java</span></div><h1>Pool.java</h1><pre class="source lang-java linenums">package com.amazon.ion.impl.bin.utf8;
 
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 abstract class Pool&lt;T extends Poolable&lt;?&gt;&gt; {
 
@@ -22,15 +24,20 @@ abstract class Pool&lt;T extends Poolable&lt;?&gt;&gt; {
     private static final int MAX_QUEUE_SIZE = 128;
 
     // A queue of previously initialized objects that can be loaned out.
-    private final ArrayBlockingQueue&lt;T&gt; bufferQueue;
+    private final Queue&lt;T&gt; objectQueue;
+
+    // The current size of the queue. Note: some implementations of Queue.size() (including ConcurrentLinkedQueue's)
+    // are not constant-time operations. Tracking the size externally is a performance optimization.
+    private final AtomicInteger size;
 
     // Allocator of objects to be pooled.
     private final Allocator&lt;T&gt; allocator;
 
-<span class="fc" id="L30">    Pool(Allocator&lt;T&gt; allocator) {</span>
-<span class="fc" id="L31">        this.allocator = allocator;</span>
-<span class="fc" id="L32">        bufferQueue = new ArrayBlockingQueue&lt;T&gt;(MAX_QUEUE_SIZE);</span>
-<span class="fc" id="L33">    }</span>
+<span class="fc" id="L36">    Pool(Allocator&lt;T&gt; allocator) {</span>
+<span class="fc" id="L37">        this.allocator = allocator;</span>
+<span class="fc" id="L38">        objectQueue = new ConcurrentLinkedQueue&lt;T&gt;();</span>
+<span class="fc" id="L39">        size = new AtomicInteger(0);</span>
+<span class="fc" id="L40">    }</span>
 
     /**
      * If the pool is not empty, removes an object from the pool and returns it;
@@ -40,12 +47,15 @@ abstract class Pool&lt;T extends Poolable&lt;?&gt;&gt; {
      */
     public T getOrCreate() {
         // The `poll` method does not block. If the queue is empty it returns `null` immediately.
-<span class="fc" id="L43">        T object = bufferQueue.poll();</span>
-<span class="fc bfc" id="L44" title="All 2 branches covered.">        if (object == null) {</span>
-            // No buffers were available in the pool. Create a new one.
-<span class="fc" id="L46">            object = allocator.newInstance(this);</span>
+<span class="fc" id="L50">        T object = objectQueue.poll();</span>
+<span class="fc bfc" id="L51" title="All 2 branches covered.">        if (object == null) {</span>
+            // No objects were available in the pool. Create a new one.
+<span class="fc" id="L53">            object = allocator.newInstance(this);</span>
+        } else {
+            // An object was retrieved from the pool; decrement the pool size.
+<span class="fc" id="L56">            size.decrementAndGet();</span>
         }
-<span class="fc" id="L48">        return object;</span>
+<span class="fc" id="L58">        return object;</span>
     }
 
     /**
@@ -59,7 +69,18 @@ abstract class Pool&lt;T extends Poolable&lt;?&gt;&gt; {
     public void returnToPool(T object) {
         // The `offer` method does not block. If the queue is full, it returns `false` immediately.
         // If the provided instance cannot be added to the pool, we discard it silently.
-<span class="fc" id="L62">        bufferQueue.offer(object);</span>
-<span class="fc" id="L63">    }</span>
+<span class="pc bpc" id="L72" title="1 of 2 branches missed.">        if (size.getAndIncrement() &lt; MAX_QUEUE_SIZE) {</span>
+<span class="fc" id="L73">            objectQueue.offer(object);</span>
+        } else {
+            // The pool was full. Since the size was optimistically incremented, decrement it now.
+            // Note: there is a race condition here that is deliberately allowed as an optimization.
+            // Under high contention, multiple threads could end up here before the first one
+            // decrements the size, causing objects to be dropped wastefully. This is not harmful
+            // because objects will be re-allocated when necessary; the pool is kept as close as
+            // possible to capacity on a best-effort basis. This race condition should not be &quot;fixed&quot;
+            // without a thorough study of the performance implications.
+<span class="nc" id="L82">            size.decrementAndGet();</span>
+        }
+<span class="fc" id="L84">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
