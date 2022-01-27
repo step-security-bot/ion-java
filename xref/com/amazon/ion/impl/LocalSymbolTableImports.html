@@ -286,23 +286,38 @@
 <a class="jxr_linenumber" name="L278" href="#L278">278</a>         <strong class="jxr_keyword">return</strong> myImports;
 <a class="jxr_linenumber" name="L279" href="#L279">279</a>     }
 <a class="jxr_linenumber" name="L280" href="#L280">280</a> 
-<a class="jxr_linenumber" name="L281" href="#L281">281</a>     @Override
-<a class="jxr_linenumber" name="L282" href="#L282">282</a>     <strong class="jxr_keyword">public</strong> String toString()
-<a class="jxr_linenumber" name="L283" href="#L283">283</a>     {
-<a class="jxr_linenumber" name="L284" href="#L284">284</a>         <strong class="jxr_keyword">return</strong> Arrays.toString(myImports);
-<a class="jxr_linenumber" name="L285" href="#L285">285</a>     }
-<a class="jxr_linenumber" name="L286" href="#L286">286</a> 
-<a class="jxr_linenumber" name="L287" href="#L287">287</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L288" href="#L288">288</a> <em class="jxr_javadoccomment">     * Determines whether the passed-in instance has the same sequence of</em>
-<a class="jxr_linenumber" name="L289" href="#L289">289</a> <em class="jxr_javadoccomment">     * symbol table imports as this instance. Note that equality of these</em>
-<a class="jxr_linenumber" name="L290" href="#L290">290</a> <em class="jxr_javadoccomment">     * imports are checked using their reference, instead of their semantic</em>
-<a class="jxr_linenumber" name="L291" href="#L291">291</a> <em class="jxr_javadoccomment">     * state.</em>
-<a class="jxr_linenumber" name="L292" href="#L292">292</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L293" href="#L293">293</a>     <strong class="jxr_keyword">boolean</strong> equalImports(<a name="LocalSymbolTableImports" href="../../../../com/amazon/ion/impl/LocalSymbolTableImports.html#LocalSymbolTableImports">LocalSymbolTableImports</a> other)
-<a class="jxr_linenumber" name="L294" href="#L294">294</a>     {
-<a class="jxr_linenumber" name="L295" href="#L295">295</a>         <strong class="jxr_keyword">return</strong> Arrays.equals(myImports, other.myImports);
-<a class="jxr_linenumber" name="L296" href="#L296">296</a>     }
-<a class="jxr_linenumber" name="L297" href="#L297">297</a> }
+<a class="jxr_linenumber" name="L281" href="#L281">281</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L282" href="#L282">282</a> <em class="jxr_javadoccomment">     * Gets the {@link ImportLocation} for the given symbol ID.</em>
+<a class="jxr_linenumber" name="L283" href="#L283">283</a> <em class="jxr_javadoccomment">     * @param sid the symbol ID.</em>
+<a class="jxr_linenumber" name="L284" href="#L284">284</a> <em class="jxr_javadoccomment">     * @return an ImportLocation, or null if the given symbol ID is not present in the imports.</em>
+<a class="jxr_linenumber" name="L285" href="#L285">285</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L286" href="#L286">286</a>     <a name="ImportLocation" href="../../../../com/amazon/ion/impl/ImportLocation.html#ImportLocation">ImportLocation</a> getImportLocation(<strong class="jxr_keyword">int</strong> sid) {
+<a class="jxr_linenumber" name="L287" href="#L287">287</a>         <em class="jxr_comment">// TODO once ion-java moves to Java 1.6+, the search for the import could use Arrays.binarySearch.</em>
+<a class="jxr_linenumber" name="L288" href="#L288">288</a>         <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = myBaseSids.length - 1; i &gt;= 0; i--) {
+<a class="jxr_linenumber" name="L289" href="#L289">289</a>             <strong class="jxr_keyword">if</strong> (myBaseSids[i] &lt; sid) {
+<a class="jxr_linenumber" name="L290" href="#L290">290</a>                 <strong class="jxr_keyword">return</strong> <strong class="jxr_keyword">new</strong> <a name="ImportLocation" href="../../../../com/amazon/ion/impl/ImportLocation.html#ImportLocation">ImportLocation</a>(myImports[i].getName(), sid - myBaseSids[i]);
+<a class="jxr_linenumber" name="L291" href="#L291">291</a>             }
+<a class="jxr_linenumber" name="L292" href="#L292">292</a>         }
+<a class="jxr_linenumber" name="L293" href="#L293">293</a>         <strong class="jxr_keyword">return</strong> <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="L294" href="#L294">294</a>     }
+<a class="jxr_linenumber" name="L295" href="#L295">295</a> 
+<a class="jxr_linenumber" name="L296" href="#L296">296</a>     @Override
+<a class="jxr_linenumber" name="L297" href="#L297">297</a>     <strong class="jxr_keyword">public</strong> String toString()
+<a class="jxr_linenumber" name="L298" href="#L298">298</a>     {
+<a class="jxr_linenumber" name="L299" href="#L299">299</a>         <strong class="jxr_keyword">return</strong> Arrays.toString(myImports);
+<a class="jxr_linenumber" name="L300" href="#L300">300</a>     }
+<a class="jxr_linenumber" name="L301" href="#L301">301</a> 
+<a class="jxr_linenumber" name="L302" href="#L302">302</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L303" href="#L303">303</a> <em class="jxr_javadoccomment">     * Determines whether the passed-in instance has the same sequence of</em>
+<a class="jxr_linenumber" name="L304" href="#L304">304</a> <em class="jxr_javadoccomment">     * symbol table imports as this instance. Note that equality of these</em>
+<a class="jxr_linenumber" name="L305" href="#L305">305</a> <em class="jxr_javadoccomment">     * imports are checked using their reference, instead of their semantic</em>
+<a class="jxr_linenumber" name="L306" href="#L306">306</a> <em class="jxr_javadoccomment">     * state.</em>
+<a class="jxr_linenumber" name="L307" href="#L307">307</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L308" href="#L308">308</a>     <strong class="jxr_keyword">boolean</strong> equalImports(<a name="LocalSymbolTableImports" href="../../../../com/amazon/ion/impl/LocalSymbolTableImports.html#LocalSymbolTableImports">LocalSymbolTableImports</a> other)
+<a class="jxr_linenumber" name="L309" href="#L309">309</a>     {
+<a class="jxr_linenumber" name="L310" href="#L310">310</a>         <strong class="jxr_keyword">return</strong> Arrays.equals(myImports, other.myImports);
+<a class="jxr_linenumber" name="L311" href="#L311">311</a>     }
+<a class="jxr_linenumber" name="L312" href="#L312">312</a> }
 </pre>
 <hr/>
 <div id="footer">Copyright &#169; 2022. All rights reserved.</div>

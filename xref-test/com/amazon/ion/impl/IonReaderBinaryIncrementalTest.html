@@ -1683,7 +1683,7 @@
 <a class="jxr_linenumber" name="L1675" href="#L1675">1675</a> 
 <a class="jxr_linenumber" name="L1676" href="#L1676">1676</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">void</strong> assertSymbolEquals(
 <a class="jxr_linenumber" name="L1677" href="#L1677">1677</a>         String expectedText,
-<a class="jxr_linenumber" name="L1678" href="#L1678">1678</a>         IonReaderBinaryIncremental.ImportLocation expectedImportLocation,
+<a class="jxr_linenumber" name="L1678" href="#L1678">1678</a>         ImportLocation expectedImportLocation,
 <a class="jxr_linenumber" name="L1679" href="#L1679">1679</a>         SymbolToken actual
 <a class="jxr_linenumber" name="L1680" href="#L1680">1680</a>     ) {
 <a class="jxr_linenumber" name="L1681" href="#L1681">1681</a>         assertEquals(expectedText, actual.getText());
@@ -2170,11 +2170,11 @@
 <a class="jxr_linenumber" name="L2162" href="#L2162">2162</a>         IonReaderBinaryIncremental.SymbolTokenImpl symbolValue =
 <a class="jxr_linenumber" name="L2163" href="#L2163">2163</a>             (IonReaderBinaryIncremental.SymbolTokenImpl) reader.symbolValue();
 <a class="jxr_linenumber" name="L2164" href="#L2164">2164</a>         assertNull(symbolValue.getText());
-<a class="jxr_linenumber" name="L2165" href="#L2165">2165</a>         assertEquals(<strong class="jxr_keyword">new</strong> IonReaderBinaryIncremental.ImportLocation(<span class="jxr_string">"foo"</span>, 3), symbolValue.getImportLocation());
+<a class="jxr_linenumber" name="L2165" href="#L2165">2165</a>         assertEquals(<strong class="jxr_keyword">new</strong> ImportLocation(<span class="jxr_string">"foo"</span>, 3), symbolValue.getImportLocation());
 <a class="jxr_linenumber" name="L2166" href="#L2166">2166</a>         assertEquals(IonType.SYMBOL, reader.next());
 <a class="jxr_linenumber" name="L2167" href="#L2167">2167</a>         symbolValue = (IonReaderBinaryIncremental.SymbolTokenImpl) reader.symbolValue();
 <a class="jxr_linenumber" name="L2168" href="#L2168">2168</a>         assertNull(symbolValue.getText());
-<a class="jxr_linenumber" name="L2169" href="#L2169">2169</a>         assertEquals(<strong class="jxr_keyword">new</strong> IonReaderBinaryIncremental.ImportLocation(<span class="jxr_string">"foo"</span>, 4), symbolValue.getImportLocation());
+<a class="jxr_linenumber" name="L2169" href="#L2169">2169</a>         assertEquals(<strong class="jxr_keyword">new</strong> ImportLocation(<span class="jxr_string">"foo"</span>, 4), symbolValue.getImportLocation());
 <a class="jxr_linenumber" name="L2170" href="#L2170">2170</a>         assertEquals(IonType.SYMBOL, reader.next());
 <a class="jxr_linenumber" name="L2171" href="#L2171">2171</a>         assertEquals(<span class="jxr_string">"123"</span>, reader.stringValue());
 <a class="jxr_linenumber" name="L2172" href="#L2172">2172</a>         assertEquals(IonType.SYMBOL, reader.next());
@@ -2183,7 +2183,7 @@
 <a class="jxr_linenumber" name="L2175" href="#L2175">2175</a>             <strong class="jxr_keyword">new</strong> IonReaderBinaryIncremental.SymbolTokenImpl(
 <a class="jxr_linenumber" name="L2176" href="#L2176">2176</a>                 <strong class="jxr_keyword">null</strong>,
 <a class="jxr_linenumber" name="L2177" href="#L2177">2177</a>                 15,
-<a class="jxr_linenumber" name="L2178" href="#L2178">2178</a>                 <strong class="jxr_keyword">new</strong> IonReaderBinaryIncremental.ImportLocation(<span class="jxr_string">"baz"</span>, 1)
+<a class="jxr_linenumber" name="L2178" href="#L2178">2178</a>                 <strong class="jxr_keyword">new</strong> ImportLocation(<span class="jxr_string">"baz"</span>, 1)
 <a class="jxr_linenumber" name="L2179" href="#L2179">2179</a>             ),
 <a class="jxr_linenumber" name="L2180" href="#L2180">2180</a>             symbolValue
 <a class="jxr_linenumber" name="L2181" href="#L2181">2181</a>         );
@@ -2193,7 +2193,7 @@
 <a class="jxr_linenumber" name="L2185" href="#L2185">2185</a>             <strong class="jxr_keyword">new</strong> IonReaderBinaryIncremental.SymbolTokenImpl(
 <a class="jxr_linenumber" name="L2186" href="#L2186">2186</a>                 <strong class="jxr_keyword">null</strong>,
 <a class="jxr_linenumber" name="L2187" href="#L2187">2187</a>                 16,
-<a class="jxr_linenumber" name="L2188" href="#L2188">2188</a>                 <strong class="jxr_keyword">new</strong> IonReaderBinaryIncremental.ImportLocation(<span class="jxr_string">"baz"</span>, 2)
+<a class="jxr_linenumber" name="L2188" href="#L2188">2188</a>                 <strong class="jxr_keyword">new</strong> ImportLocation(<span class="jxr_string">"baz"</span>, 2)
 <a class="jxr_linenumber" name="L2189" href="#L2189">2189</a>             ),
 <a class="jxr_linenumber" name="L2190" href="#L2190">2190</a>             symbolValue
 <a class="jxr_linenumber" name="L2191" href="#L2191">2191</a>         );

@@ -278,10 +278,25 @@ import java.util.List;
 <span class="fc" id="L278">        return myImports;</span>
     }
 
+    /**
+     * Gets the {@link ImportLocation} for the given symbol ID.
+     * @param sid the symbol ID.
+     * @return an ImportLocation, or null if the given symbol ID is not present in the imports.
+     */
+    ImportLocation getImportLocation(int sid) {
+        // TODO once ion-java moves to Java 1.6+, the search for the import could use Arrays.binarySearch.
+<span class="pc bpc" id="L288" title="1 of 2 branches missed.">        for (int i = myBaseSids.length - 1; i &gt;= 0; i--) {</span>
+<span class="fc bfc" id="L289" title="All 2 branches covered.">            if (myBaseSids[i] &lt; sid) {</span>
+<span class="fc" id="L290">                return new ImportLocation(myImports[i].getName(), sid - myBaseSids[i]);</span>
+            }
+        }
+<span class="nc" id="L293">        return null;</span>
+    }
+
     @Override
     public String toString()
     {
-<span class="nc" id="L284">        return Arrays.toString(myImports);</span>
+<span class="nc" id="L299">        return Arrays.toString(myImports);</span>
     }
 
     /**
@@ -292,7 +307,7 @@ import java.util.List;
      */
     boolean equalImports(LocalSymbolTableImports other)
     {
-<span class="fc" id="L295">        return Arrays.equals(myImports, other.myImports);</span>
+<span class="fc" id="L310">        return Arrays.equals(myImports, other.myImports);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
