@@ -1008,7 +1008,7 @@
 <a class="jxr_linenumber" name="L1000" href="#L1000">1000</a> 
 <a class="jxr_linenumber" name="L1001" href="#L1001">1001</a>         lookahead.fillInput();
 <a class="jxr_linenumber" name="L1002" href="#L1002">1002</a>         assertEquals(1, lookahead.getIvmIndex());
-<a class="jxr_linenumber" name="L1003" href="#L1003">1003</a>         assertTrue(lookahead.getAnnotationSids().isEmpty());
+<a class="jxr_linenumber" name="L1003" href="#L1003">1003</a>         assertFalse(lookahead.hasAnnotations());
 <a class="jxr_linenumber" name="L1004" href="#L1004">1004</a>         assertTrue(lookahead.getSymbolTableMarkers().isEmpty());
 <a class="jxr_linenumber" name="L1005" href="#L1005">1005</a>         assertEquals(5, lookahead.getValueStart());
 <a class="jxr_linenumber" name="L1006" href="#L1006">1006</a>         assertIonTypeId(IonType.INT, 0x1, lookahead.getValueTid());
@@ -1022,7 +1022,7 @@
 <a class="jxr_linenumber" name="L1014" href="#L1014">1014</a>         assertEquals(indexForInitialBufferSize(1, 1, 7), lookahead.getIvmIndex());
 <a class="jxr_linenumber" name="L1015" href="#L1015">1015</a>         lookahead.resetIvmIndex();
 <a class="jxr_linenumber" name="L1016" href="#L1016">1016</a>         assertEquals(-1, lookahead.getIvmIndex());
-<a class="jxr_linenumber" name="L1017" href="#L1017">1017</a>         assertTrue(lookahead.getAnnotationSids().isEmpty());
+<a class="jxr_linenumber" name="L1017" href="#L1017">1017</a>         assertFalse(lookahead.hasAnnotations());
 <a class="jxr_linenumber" name="L1018" href="#L1018">1018</a>         assertTrue(lookahead.getSymbolTableMarkers().isEmpty());
 <a class="jxr_linenumber" name="L1019" href="#L1019">1019</a>         assertEquals(indexForInitialBufferSize(6, 6, 12), lookahead.getValueStart());
 <a class="jxr_linenumber" name="L1020" href="#L1020">1020</a>         assertIonTypeId(IonType.STRUCT, 0x1, lookahead.getValueTid());
@@ -1031,178 +1031,218 @@
 <a class="jxr_linenumber" name="L1023" href="#L1023">1023</a>         lookahead.fillInput();
 <a class="jxr_linenumber" name="L1024" href="#L1024">1024</a>         assertEquals(-1, lookahead.getIvmIndex());
 <a class="jxr_linenumber" name="L1025" href="#L1025">1025</a>         assertTrue(lookahead.getSymbolTableMarkers().isEmpty());
-<a class="jxr_linenumber" name="L1026" href="#L1026">1026</a>         assertEquals(Arrays.asList(4, 5), lookahead.getAnnotationSids());
-<a class="jxr_linenumber" name="L1027" href="#L1027">1027</a>         assertEquals(indexForInitialBufferSize(12, 12, 18), lookahead.getValueStart());
-<a class="jxr_linenumber" name="L1028" href="#L1028">1028</a>         assertIonTypeId(IonTypeID.ION_TYPE_ANNOTATION_WRAPPER, 0x5, lookahead.getValueTid());
-<a class="jxr_linenumber" name="L1029" href="#L1029">1029</a>         assertEquals(indexForInitialBufferSize(14, 14, 20), lookahead.getValueEnd());
-<a class="jxr_linenumber" name="L1030" href="#L1030">1030</a> 
-<a class="jxr_linenumber" name="L1031" href="#L1031">1031</a>         lookahead.fillInput();
-<a class="jxr_linenumber" name="L1032" href="#L1032">1032</a>         assertEquals(-1, lookahead.getIvmIndex());
-<a class="jxr_linenumber" name="L1033" href="#L1033">1033</a>         assertTrue(lookahead.getSymbolTableMarkers().isEmpty());
-<a class="jxr_linenumber" name="L1034" href="#L1034">1034</a>         assertTrue(lookahead.getAnnotationSids().isEmpty());
-<a class="jxr_linenumber" name="L1035" href="#L1035">1035</a>         assertEquals(indexForInitialBufferSize(15, 15, 21), lookahead.getValueStart());
-<a class="jxr_linenumber" name="L1036" href="#L1036">1036</a>         assertIonTypeId(IonType.INT, 0x0, lookahead.getValueTid());
-<a class="jxr_linenumber" name="L1037" href="#L1037">1037</a>         assertEquals(indexForInitialBufferSize(15, 15, 21), lookahead.getValueEnd());
-<a class="jxr_linenumber" name="L1038" href="#L1038">1038</a> 
-<a class="jxr_linenumber" name="L1039" href="#L1039">1039</a>         assertEquals(IonType.STRUCT, reader.next());
-<a class="jxr_linenumber" name="L1040" href="#L1040">1040</a>         reader.stepIn();
-<a class="jxr_linenumber" name="L1041" href="#L1041">1041</a>         assertEquals(IonType.INT, reader.next());
-<a class="jxr_linenumber" name="L1042" href="#L1042">1042</a>         assertEquals(<span class="jxr_string">"name"</span>, reader.getFieldName());
-<a class="jxr_linenumber" name="L1043" href="#L1043">1043</a>         assertEquals(0, reader.intValue());
-<a class="jxr_linenumber" name="L1044" href="#L1044">1044</a>         reader.stepOut();
-<a class="jxr_linenumber" name="L1045" href="#L1045">1045</a> 
-<a class="jxr_linenumber" name="L1046" href="#L1046">1046</a>         assertEquals(IonType.INT, reader.next());
-<a class="jxr_linenumber" name="L1047" href="#L1047">1047</a>         assertArrayEquals(<strong class="jxr_keyword">new</strong> String[]{<span class="jxr_string">"name"</span>, <span class="jxr_string">"version"</span>}, reader.getTypeAnnotations());
-<a class="jxr_linenumber" name="L1048" href="#L1048">1048</a>         assertEquals(-1, reader.intValue());
-<a class="jxr_linenumber" name="L1049" href="#L1049">1049</a> 
-<a class="jxr_linenumber" name="L1050" href="#L1050">1050</a>         assertEquals(IonType.INT, reader.next());
-<a class="jxr_linenumber" name="L1051" href="#L1051">1051</a>         assertEquals(0, reader.intValue());
-<a class="jxr_linenumber" name="L1052" href="#L1052">1052</a> 
-<a class="jxr_linenumber" name="L1053" href="#L1053">1053</a>         assertTrue(lookahead.moreDataRequired());
-<a class="jxr_linenumber" name="L1054" href="#L1054">1054</a>         reader.close();
-<a class="jxr_linenumber" name="L1055" href="#L1055">1055</a>     }
-<a class="jxr_linenumber" name="L1056" href="#L1056">1056</a> 
-<a class="jxr_linenumber" name="L1057" href="#L1057">1057</a>     @Test
-<a class="jxr_linenumber" name="L1058" href="#L1058">1058</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> symbolTableMarkersAreSet() <strong class="jxr_keyword">throws</strong> Exception {
-<a class="jxr_linenumber" name="L1059" href="#L1059">1059</a>         <strong class="jxr_keyword">if</strong> (initialBufferSize != <strong class="jxr_keyword">null</strong>) {
-<a class="jxr_linenumber" name="L1060" href="#L1060">1060</a>             builder.withInitialBufferSize(initialBufferSize);
-<a class="jxr_linenumber" name="L1061" href="#L1061">1061</a>         }
-<a class="jxr_linenumber" name="L1062" href="#L1062">1062</a>         lookahead = bufferFor(
-<a class="jxr_linenumber" name="L1063" href="#L1063">1063</a>             <em class="jxr_comment">// Symbol table declaring symbol 'x'.</em>
-<a class="jxr_linenumber" name="L1064" href="#L1064">1064</a>             0xE7, 0x81, 0x83, 0xD4, 0x87, 0xB2, 0x81, 'x',
-<a class="jxr_linenumber" name="L1065" href="#L1065">1065</a>             <em class="jxr_comment">// Symbol value with SID 10 ('x').</em>
-<a class="jxr_linenumber" name="L1066" href="#L1066">1066</a>             0x71, 0x0A,
-<a class="jxr_linenumber" name="L1067" href="#L1067">1067</a>             <em class="jxr_comment">// The value will not be consumed, so the indices continue.</em>
-<a class="jxr_linenumber" name="L1068" href="#L1068">1068</a>             <em class="jxr_comment">// Symbol table appending symbol 'y'.</em>
-<a class="jxr_linenumber" name="L1069" href="#L1069">1069</a>             0xEA, 0x81, 0x83, 0xD7, 0x86, 0x71, 0x03, 0x87, 0xB2, 0x81, 'y',
-<a class="jxr_linenumber" name="L1070" href="#L1070">1070</a>             <em class="jxr_comment">// Symbol value with SID 11 ('y').</em>
-<a class="jxr_linenumber" name="L1071" href="#L1071">1071</a>             0x71, 0x0B,
-<a class="jxr_linenumber" name="L1072" href="#L1072">1072</a>             <em class="jxr_comment">// The value will be consumed, so the indices reset if the initial buffer size is smaller than the data size.</em>
-<a class="jxr_linenumber" name="L1073" href="#L1073">1073</a>             <em class="jxr_comment">// Second byte of IVM is at byte index 1. The IVM resets the symbol table markers.</em>
-<a class="jxr_linenumber" name="L1074" href="#L1074">1074</a>             0xE0, 0x01, 0x00, 0xEA,
-<a class="jxr_linenumber" name="L1075" href="#L1075">1075</a>             <em class="jxr_comment">// Symbol table declaring symbol 'a'.</em>
-<a class="jxr_linenumber" name="L1076" href="#L1076">1076</a>             0xE7, 0x81, 0x83, 0xD4, 0x87, 0xB2, 0x81, 'a',
-<a class="jxr_linenumber" name="L1077" href="#L1077">1077</a>             <em class="jxr_comment">// Symbol table declaring symbol 'b'.</em>
-<a class="jxr_linenumber" name="L1078" href="#L1078">1078</a>             0xE7, 0x81, 0x83, 0xD4, 0x87, 0xB2, 0x81, 'b',
-<a class="jxr_linenumber" name="L1079" href="#L1079">1079</a>             <em class="jxr_comment">// The IVM resets the symbol table markers.</em>
-<a class="jxr_linenumber" name="L1080" href="#L1080">1080</a>             0xE0, 0x01, 0x00, 0xEA,
-<a class="jxr_linenumber" name="L1081" href="#L1081">1081</a>             <em class="jxr_comment">// Symbol table declaring symbol 'c'.</em>
-<a class="jxr_linenumber" name="L1082" href="#L1082">1082</a>             0xE7, 0x81, 0x83, 0xD4, 0x87, 0xB2, 0x81, 'c',
-<a class="jxr_linenumber" name="L1083" href="#L1083">1083</a>             <em class="jxr_comment">// Symbol table declaring symbol 'd'.</em>
-<a class="jxr_linenumber" name="L1084" href="#L1084">1084</a>             0xE7, 0x81, 0x83, 0xD4, 0x87, 0xB2, 0x81, 'd',
-<a class="jxr_linenumber" name="L1085" href="#L1085">1085</a>             <em class="jxr_comment">// Symbol value with SID 10 ('d').</em>
-<a class="jxr_linenumber" name="L1086" href="#L1086">1086</a>             0x71, 0x0A
-<a class="jxr_linenumber" name="L1087" href="#L1087">1087</a>         );
-<a class="jxr_linenumber" name="L1088" href="#L1088">1088</a>         lookahead.fillInput();
-<a class="jxr_linenumber" name="L1089" href="#L1089">1089</a>         assertEquals(1, lookahead.getIvmIndex());
-<a class="jxr_linenumber" name="L1090" href="#L1090">1090</a>         assertTrue(lookahead.getAnnotationSids().isEmpty());
-<a class="jxr_linenumber" name="L1091" href="#L1091">1091</a>         List&lt;IonReaderLookaheadBuffer.SymbolTableMarker&gt; symbolTableMarkers = lookahead.getSymbolTableMarkers();
-<a class="jxr_linenumber" name="L1092" href="#L1092">1092</a>         assertEquals(1, symbolTableMarkers.size());
-<a class="jxr_linenumber" name="L1093" href="#L1093">1093</a>         assertEquals(8, symbolTableMarkers.get(0).startIndex);
-<a class="jxr_linenumber" name="L1094" href="#L1094">1094</a>         assertEquals(12, symbolTableMarkers.get(0).endIndex);
-<a class="jxr_linenumber" name="L1095" href="#L1095">1095</a>         assertEquals(13, lookahead.getValueStart());
-<a class="jxr_linenumber" name="L1096" href="#L1096">1096</a>         assertIonTypeId(IonType.SYMBOL, 0x1, lookahead.getValueTid());
-<a class="jxr_linenumber" name="L1097" href="#L1097">1097</a>         assertEquals(14, lookahead.getValueEnd());
-<a class="jxr_linenumber" name="L1098" href="#L1098">1098</a>         lookahead.resetSymbolTableMarkers();
-<a class="jxr_linenumber" name="L1099" href="#L1099">1099</a>         assertTrue(lookahead.getSymbolTableMarkers().isEmpty());
-<a class="jxr_linenumber" name="L1100" href="#L1100">1100</a> 
-<a class="jxr_linenumber" name="L1101" href="#L1101">1101</a>         lookahead.fillInput();
-<a class="jxr_linenumber" name="L1102" href="#L1102">1102</a>         symbolTableMarkers = lookahead.getSymbolTableMarkers();
-<a class="jxr_linenumber" name="L1103" href="#L1103">1103</a>         assertEquals(1, symbolTableMarkers.size());
-<a class="jxr_linenumber" name="L1104" href="#L1104">1104</a>         assertEquals(18, symbolTableMarkers.get(0).startIndex);
-<a class="jxr_linenumber" name="L1105" href="#L1105">1105</a>         assertEquals(25, symbolTableMarkers.get(0).endIndex);
-<a class="jxr_linenumber" name="L1106" href="#L1106">1106</a>         assertEquals(26, lookahead.getValueStart());
-<a class="jxr_linenumber" name="L1107" href="#L1107">1107</a>         assertIonTypeId(IonType.SYMBOL, 0x1, lookahead.getValueTid());
-<a class="jxr_linenumber" name="L1108" href="#L1108">1108</a>         assertEquals(27, lookahead.getValueEnd());
-<a class="jxr_linenumber" name="L1109" href="#L1109">1109</a> 
-<a class="jxr_linenumber" name="L1110" href="#L1110">1110</a>         IonReader reader = lookahead.newIonReader(IonReaderBuilder.standard());
-<a class="jxr_linenumber" name="L1111" href="#L1111">1111</a>         assertEquals(IonType.SYMBOL, reader.next());
-<a class="jxr_linenumber" name="L1112" href="#L1112">1112</a>         assertEquals(<span class="jxr_string">"x"</span>, reader.stringValue());
+<a class="jxr_linenumber" name="L1026" href="#L1026">1026</a>         assertTrue(lookahead.hasAnnotations());
+<a class="jxr_linenumber" name="L1027" href="#L1027">1027</a>         assertEquals(indexForInitialBufferSize(10, 10, 16), lookahead.getAnnotationSidsMarker().startIndex);
+<a class="jxr_linenumber" name="L1028" href="#L1028">1028</a>         assertEquals(indexForInitialBufferSize(12, 12, 18), lookahead.getAnnotationSidsMarker().endIndex);
+<a class="jxr_linenumber" name="L1029" href="#L1029">1029</a>         assertEquals(indexForInitialBufferSize(12, 12, 18), lookahead.getValueStart());
+<a class="jxr_linenumber" name="L1030" href="#L1030">1030</a>         assertIonTypeId(IonTypeID.ION_TYPE_ANNOTATION_WRAPPER, 0x5, lookahead.getValueTid());
+<a class="jxr_linenumber" name="L1031" href="#L1031">1031</a>         assertEquals(indexForInitialBufferSize(14, 14, 20), lookahead.getValueEnd());
+<a class="jxr_linenumber" name="L1032" href="#L1032">1032</a> 
+<a class="jxr_linenumber" name="L1033" href="#L1033">1033</a>         lookahead.fillInput();
+<a class="jxr_linenumber" name="L1034" href="#L1034">1034</a>         assertEquals(-1, lookahead.getIvmIndex());
+<a class="jxr_linenumber" name="L1035" href="#L1035">1035</a>         assertTrue(lookahead.getSymbolTableMarkers().isEmpty());
+<a class="jxr_linenumber" name="L1036" href="#L1036">1036</a>         assertFalse(lookahead.hasAnnotations());
+<a class="jxr_linenumber" name="L1037" href="#L1037">1037</a>         assertEquals(indexForInitialBufferSize(15, 15, 21), lookahead.getValueStart());
+<a class="jxr_linenumber" name="L1038" href="#L1038">1038</a>         assertIonTypeId(IonType.INT, 0x0, lookahead.getValueTid());
+<a class="jxr_linenumber" name="L1039" href="#L1039">1039</a>         assertEquals(indexForInitialBufferSize(15, 15, 21), lookahead.getValueEnd());
+<a class="jxr_linenumber" name="L1040" href="#L1040">1040</a> 
+<a class="jxr_linenumber" name="L1041" href="#L1041">1041</a>         assertEquals(IonType.STRUCT, reader.next());
+<a class="jxr_linenumber" name="L1042" href="#L1042">1042</a>         reader.stepIn();
+<a class="jxr_linenumber" name="L1043" href="#L1043">1043</a>         assertEquals(IonType.INT, reader.next());
+<a class="jxr_linenumber" name="L1044" href="#L1044">1044</a>         assertEquals(<span class="jxr_string">"name"</span>, reader.getFieldName());
+<a class="jxr_linenumber" name="L1045" href="#L1045">1045</a>         assertEquals(0, reader.intValue());
+<a class="jxr_linenumber" name="L1046" href="#L1046">1046</a>         reader.stepOut();
+<a class="jxr_linenumber" name="L1047" href="#L1047">1047</a> 
+<a class="jxr_linenumber" name="L1048" href="#L1048">1048</a>         assertEquals(IonType.INT, reader.next());
+<a class="jxr_linenumber" name="L1049" href="#L1049">1049</a>         assertArrayEquals(<strong class="jxr_keyword">new</strong> String[]{<span class="jxr_string">"name"</span>, <span class="jxr_string">"version"</span>}, reader.getTypeAnnotations());
+<a class="jxr_linenumber" name="L1050" href="#L1050">1050</a>         assertEquals(-1, reader.intValue());
+<a class="jxr_linenumber" name="L1051" href="#L1051">1051</a> 
+<a class="jxr_linenumber" name="L1052" href="#L1052">1052</a>         assertEquals(IonType.INT, reader.next());
+<a class="jxr_linenumber" name="L1053" href="#L1053">1053</a>         assertEquals(0, reader.intValue());
+<a class="jxr_linenumber" name="L1054" href="#L1054">1054</a> 
+<a class="jxr_linenumber" name="L1055" href="#L1055">1055</a>         assertTrue(lookahead.moreDataRequired());
+<a class="jxr_linenumber" name="L1056" href="#L1056">1056</a>         reader.close();
+<a class="jxr_linenumber" name="L1057" href="#L1057">1057</a>     }
+<a class="jxr_linenumber" name="L1058" href="#L1058">1058</a> 
+<a class="jxr_linenumber" name="L1059" href="#L1059">1059</a>     @Test
+<a class="jxr_linenumber" name="L1060" href="#L1060">1060</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> symbolTableMarkersAreSet() <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="L1061" href="#L1061">1061</a>         <strong class="jxr_keyword">if</strong> (initialBufferSize != <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="L1062" href="#L1062">1062</a>             builder.withInitialBufferSize(initialBufferSize);
+<a class="jxr_linenumber" name="L1063" href="#L1063">1063</a>         }
+<a class="jxr_linenumber" name="L1064" href="#L1064">1064</a>         lookahead = bufferFor(
+<a class="jxr_linenumber" name="L1065" href="#L1065">1065</a>             <em class="jxr_comment">// Symbol table with extra annotation 'name' declaring symbol 'x'.</em>
+<a class="jxr_linenumber" name="L1066" href="#L1066">1066</a>             0xE8, 0x82, 0x83, 0x84, 0xD4, 0x87, 0xB2, 0x81, 'x',
+<a class="jxr_linenumber" name="L1067" href="#L1067">1067</a>             <em class="jxr_comment">// Symbol value with SID 10 ('x').</em>
+<a class="jxr_linenumber" name="L1068" href="#L1068">1068</a>             0x71, 0x0A,
+<a class="jxr_linenumber" name="L1069" href="#L1069">1069</a>             <em class="jxr_comment">// The value will not be consumed, so the indices continue.</em>
+<a class="jxr_linenumber" name="L1070" href="#L1070">1070</a>             <em class="jxr_comment">// Symbol table appending symbol 'y'.</em>
+<a class="jxr_linenumber" name="L1071" href="#L1071">1071</a>             0xEA, 0x81, 0x83, 0xD7, 0x86, 0x71, 0x03, 0x87, 0xB2, 0x81, 'y',
+<a class="jxr_linenumber" name="L1072" href="#L1072">1072</a>             <em class="jxr_comment">// Symbol value with SID 11 ('y').</em>
+<a class="jxr_linenumber" name="L1073" href="#L1073">1073</a>             0x71, 0x0B,
+<a class="jxr_linenumber" name="L1074" href="#L1074">1074</a>             <em class="jxr_comment">// The value will be consumed, so the indices reset if the initial buffer size is smaller than the data size.</em>
+<a class="jxr_linenumber" name="L1075" href="#L1075">1075</a>             <em class="jxr_comment">// Second byte of IVM is at byte index 1. The IVM resets the symbol table markers.</em>
+<a class="jxr_linenumber" name="L1076" href="#L1076">1076</a>             0xE0, 0x01, 0x00, 0xEA,
+<a class="jxr_linenumber" name="L1077" href="#L1077">1077</a>             <em class="jxr_comment">// Symbol table declaring symbol 'a'.</em>
+<a class="jxr_linenumber" name="L1078" href="#L1078">1078</a>             0xE7, 0x81, 0x83, 0xD4, 0x87, 0xB2, 0x81, 'a',
+<a class="jxr_linenumber" name="L1079" href="#L1079">1079</a>             <em class="jxr_comment">// Symbol table declaring symbol 'b'.</em>
+<a class="jxr_linenumber" name="L1080" href="#L1080">1080</a>             0xE7, 0x81, 0x83, 0xD4, 0x87, 0xB2, 0x81, 'b',
+<a class="jxr_linenumber" name="L1081" href="#L1081">1081</a>             <em class="jxr_comment">// The IVM resets the symbol table markers.</em>
+<a class="jxr_linenumber" name="L1082" href="#L1082">1082</a>             0xE0, 0x01, 0x00, 0xEA,
+<a class="jxr_linenumber" name="L1083" href="#L1083">1083</a>             <em class="jxr_comment">// Symbol table declaring symbol 'c'.</em>
+<a class="jxr_linenumber" name="L1084" href="#L1084">1084</a>             0xE7, 0x81, 0x83, 0xD4, 0x87, 0xB2, 0x81, 'c',
+<a class="jxr_linenumber" name="L1085" href="#L1085">1085</a>             <em class="jxr_comment">// Symbol table declaring symbol 'd'.</em>
+<a class="jxr_linenumber" name="L1086" href="#L1086">1086</a>             0xE7, 0x81, 0x83, 0xD4, 0x87, 0xB2, 0x81, 'd',
+<a class="jxr_linenumber" name="L1087" href="#L1087">1087</a>             <em class="jxr_comment">// Symbol value with SID 10 ('d').</em>
+<a class="jxr_linenumber" name="L1088" href="#L1088">1088</a>             0x71, 0x0A
+<a class="jxr_linenumber" name="L1089" href="#L1089">1089</a>         );
+<a class="jxr_linenumber" name="L1090" href="#L1090">1090</a>         lookahead.fillInput();
+<a class="jxr_linenumber" name="L1091" href="#L1091">1091</a>         assertEquals(1, lookahead.getIvmIndex());
+<a class="jxr_linenumber" name="L1092" href="#L1092">1092</a>         assertFalse(lookahead.hasAnnotations());
+<a class="jxr_linenumber" name="L1093" href="#L1093">1093</a>         List&lt;IonReaderLookaheadBuffer.Marker&gt; symbolTableMarkers = lookahead.getSymbolTableMarkers();
+<a class="jxr_linenumber" name="L1094" href="#L1094">1094</a>         assertEquals(1, symbolTableMarkers.size());
+<a class="jxr_linenumber" name="L1095" href="#L1095">1095</a>         assertEquals(9, symbolTableMarkers.get(0).startIndex);
+<a class="jxr_linenumber" name="L1096" href="#L1096">1096</a>         assertEquals(13, symbolTableMarkers.get(0).endIndex);
+<a class="jxr_linenumber" name="L1097" href="#L1097">1097</a>         assertEquals(14, lookahead.getValueStart());
+<a class="jxr_linenumber" name="L1098" href="#L1098">1098</a>         assertIonTypeId(IonType.SYMBOL, 0x1, lookahead.getValueTid());
+<a class="jxr_linenumber" name="L1099" href="#L1099">1099</a>         assertEquals(15, lookahead.getValueEnd());
+<a class="jxr_linenumber" name="L1100" href="#L1100">1100</a>         lookahead.resetSymbolTableMarkers();
+<a class="jxr_linenumber" name="L1101" href="#L1101">1101</a>         assertTrue(lookahead.getSymbolTableMarkers().isEmpty());
+<a class="jxr_linenumber" name="L1102" href="#L1102">1102</a> 
+<a class="jxr_linenumber" name="L1103" href="#L1103">1103</a>         lookahead.fillInput();
+<a class="jxr_linenumber" name="L1104" href="#L1104">1104</a>         symbolTableMarkers = lookahead.getSymbolTableMarkers();
+<a class="jxr_linenumber" name="L1105" href="#L1105">1105</a>         assertEquals(1, symbolTableMarkers.size());
+<a class="jxr_linenumber" name="L1106" href="#L1106">1106</a>         assertEquals(19, symbolTableMarkers.get(0).startIndex);
+<a class="jxr_linenumber" name="L1107" href="#L1107">1107</a>         assertEquals(26, symbolTableMarkers.get(0).endIndex);
+<a class="jxr_linenumber" name="L1108" href="#L1108">1108</a>         assertEquals(27, lookahead.getValueStart());
+<a class="jxr_linenumber" name="L1109" href="#L1109">1109</a>         assertIonTypeId(IonType.SYMBOL, 0x1, lookahead.getValueTid());
+<a class="jxr_linenumber" name="L1110" href="#L1110">1110</a>         assertEquals(28, lookahead.getValueEnd());
+<a class="jxr_linenumber" name="L1111" href="#L1111">1111</a> 
+<a class="jxr_linenumber" name="L1112" href="#L1112">1112</a>         IonReader reader = lookahead.newIonReader(IonReaderBuilder.standard());
 <a class="jxr_linenumber" name="L1113" href="#L1113">1113</a>         assertEquals(IonType.SYMBOL, reader.next());
-<a class="jxr_linenumber" name="L1114" href="#L1114">1114</a>         assertEquals(<span class="jxr_string">"y"</span>, reader.stringValue());
-<a class="jxr_linenumber" name="L1115" href="#L1115">1115</a> 
-<a class="jxr_linenumber" name="L1116" href="#L1116">1116</a>         lookahead.fillInput();
-<a class="jxr_linenumber" name="L1117" href="#L1117">1117</a>         symbolTableMarkers = lookahead.getSymbolTableMarkers();
-<a class="jxr_linenumber" name="L1118" href="#L1118">1118</a>         assertEquals(2, symbolTableMarkers.size());
-<a class="jxr_linenumber" name="L1119" href="#L1119">1119</a>         assertEquals(indexForInitialBufferSize(28, 28, 55), symbolTableMarkers.get(0).startIndex);
-<a class="jxr_linenumber" name="L1120" href="#L1120">1120</a>         assertEquals(indexForInitialBufferSize(32, 32, 59), symbolTableMarkers.get(0).endIndex);
-<a class="jxr_linenumber" name="L1121" href="#L1121">1121</a>         assertEquals(indexForInitialBufferSize(36, 36, 63), symbolTableMarkers.get(1).startIndex);
-<a class="jxr_linenumber" name="L1122" href="#L1122">1122</a>         assertEquals(indexForInitialBufferSize(40, 40, 67), symbolTableMarkers.get(1).endIndex);
-<a class="jxr_linenumber" name="L1123" href="#L1123">1123</a>         assertEquals(indexForInitialBufferSize(41, 41, 68), lookahead.getValueStart());
-<a class="jxr_linenumber" name="L1124" href="#L1124">1124</a>         assertIonTypeId(IonType.SYMBOL, 0x1, lookahead.getValueTid());
-<a class="jxr_linenumber" name="L1125" href="#L1125">1125</a>         assertEquals(indexForInitialBufferSize(42, 42, 69), lookahead.getValueEnd());
-<a class="jxr_linenumber" name="L1126" href="#L1126">1126</a> 
-<a class="jxr_linenumber" name="L1127" href="#L1127">1127</a>         assertEquals(IonType.SYMBOL, reader.next());
-<a class="jxr_linenumber" name="L1128" href="#L1128">1128</a>         assertEquals(<span class="jxr_string">"d"</span>, reader.stringValue());
-<a class="jxr_linenumber" name="L1129" href="#L1129">1129</a> 
-<a class="jxr_linenumber" name="L1130" href="#L1130">1130</a>         assertTrue(lookahead.moreDataRequired());
-<a class="jxr_linenumber" name="L1131" href="#L1131">1131</a>         reader.close();
-<a class="jxr_linenumber" name="L1132" href="#L1132">1132</a>     }
-<a class="jxr_linenumber" name="L1133" href="#L1133">1133</a> 
-<a class="jxr_linenumber" name="L1134" href="#L1134">1134</a>     @Test
-<a class="jxr_linenumber" name="L1135" href="#L1135">1135</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> nopPadFollowedByValueThatOverflowsBufferNotOversized() <strong class="jxr_keyword">throws</strong> Exception {
-<a class="jxr_linenumber" name="L1136" href="#L1136">1136</a>         <strong class="jxr_keyword">if</strong> (initialBufferSize == <strong class="jxr_keyword">null</strong> || initialBufferSize != 1) {
-<a class="jxr_linenumber" name="L1137" href="#L1137">1137</a>             <strong class="jxr_keyword">return</strong>;
-<a class="jxr_linenumber" name="L1138" href="#L1138">1138</a>         }
-<a class="jxr_linenumber" name="L1139" href="#L1139">1139</a>         builder = IonBufferConfiguration.Builder.standard()
-<a class="jxr_linenumber" name="L1140" href="#L1140">1140</a>             .withInitialBufferSize(9)
-<a class="jxr_linenumber" name="L1141" href="#L1141">1141</a>             .withMaximumBufferSize(9);
-<a class="jxr_linenumber" name="L1142" href="#L1142">1142</a>         createCountingEventHandler(builder, <strong class="jxr_keyword">new</strong> AtomicLong());
-<a class="jxr_linenumber" name="L1143" href="#L1143">1143</a>         lookahead = bufferFor(
-<a class="jxr_linenumber" name="L1144" href="#L1144">1144</a>             0x03, 0x00, 0x00, 0x00, <em class="jxr_comment">// 4 byte NOP pad.</em>
-<a class="jxr_linenumber" name="L1145" href="#L1145">1145</a>             0x21, 0x01 <em class="jxr_comment">// Int 1.</em>
-<a class="jxr_linenumber" name="L1146" href="#L1146">1146</a>         );
-<a class="jxr_linenumber" name="L1147" href="#L1147">1147</a>         <em class="jxr_comment">// The IVM is 4 bytes and the NOP pad is 4 bytes. The first byte of the value is the 9th byte and fits in the</em>
-<a class="jxr_linenumber" name="L1148" href="#L1148">1148</a>         <em class="jxr_comment">// buffer. Even though there is a 10th byte, the value should not be considered oversize because the NOP pad</em>
-<a class="jxr_linenumber" name="L1149" href="#L1149">1149</a>         <em class="jxr_comment">// can be discarded.</em>
-<a class="jxr_linenumber" name="L1150" href="#L1150">1150</a>         lookahead.fillInput();
-<a class="jxr_linenumber" name="L1151" href="#L1151">1151</a>         assertFalse(lookahead.moreDataRequired());
-<a class="jxr_linenumber" name="L1152" href="#L1152">1152</a>         IonReader reader = lookahead.newIonReader(IonReaderBuilder.standard());
-<a class="jxr_linenumber" name="L1153" href="#L1153">1153</a>         lookahead.resetNopPadIndex();
-<a class="jxr_linenumber" name="L1154" href="#L1154">1154</a>         assertEquals(IonType.INT, reader.next());
-<a class="jxr_linenumber" name="L1155" href="#L1155">1155</a>         assertEquals(1, reader.intValue());
-<a class="jxr_linenumber" name="L1156" href="#L1156">1156</a>         reader.close();
-<a class="jxr_linenumber" name="L1157" href="#L1157">1157</a>     }
-<a class="jxr_linenumber" name="L1158" href="#L1158">1158</a> 
-<a class="jxr_linenumber" name="L1159" href="#L1159">1159</a>     @Test
-<a class="jxr_linenumber" name="L1160" href="#L1160">1160</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> nopPadsInterspersedWithSystemValuesDoNotCauseOversizedErrors() <strong class="jxr_keyword">throws</strong> Exception {
-<a class="jxr_linenumber" name="L1161" href="#L1161">1161</a>         <strong class="jxr_keyword">if</strong> (initialBufferSize == <strong class="jxr_keyword">null</strong> || initialBufferSize != 1) {
-<a class="jxr_linenumber" name="L1162" href="#L1162">1162</a>             <strong class="jxr_keyword">return</strong>;
-<a class="jxr_linenumber" name="L1163" href="#L1163">1163</a>         }
-<a class="jxr_linenumber" name="L1164" href="#L1164">1164</a>         <em class="jxr_comment">// Set the maximum size at 2 IVMs (8 bytes) + the symbol table (12 bytes) + the value (2 bytes).</em>
-<a class="jxr_linenumber" name="L1165" href="#L1165">1165</a>         builder = IonBufferConfiguration.Builder.standard()
-<a class="jxr_linenumber" name="L1166" href="#L1166">1166</a>             .withInitialBufferSize(22)
-<a class="jxr_linenumber" name="L1167" href="#L1167">1167</a>             .withMaximumBufferSize(22);
-<a class="jxr_linenumber" name="L1168" href="#L1168">1168</a>         createCountingEventHandler(builder, <strong class="jxr_keyword">new</strong> AtomicLong());
-<a class="jxr_linenumber" name="L1169" href="#L1169">1169</a>         lookahead = bufferFor(
-<a class="jxr_linenumber" name="L1170" href="#L1170">1170</a>             <em class="jxr_comment">// One byte no-op pad.</em>
-<a class="jxr_linenumber" name="L1171" href="#L1171">1171</a>             0x00,
-<a class="jxr_linenumber" name="L1172" href="#L1172">1172</a>             <em class="jxr_comment">// Two byte no-op pad.</em>
-<a class="jxr_linenumber" name="L1173" href="#L1173">1173</a>             0x01, 0xFF,
-<a class="jxr_linenumber" name="L1174" href="#L1174">1174</a>             <em class="jxr_comment">// Three byte no-op pad.</em>
-<a class="jxr_linenumber" name="L1175" href="#L1175">1175</a>             0x02, 0x99, 0x42,
-<a class="jxr_linenumber" name="L1176" href="#L1176">1176</a>             <em class="jxr_comment">// IVM 1.0</em>
-<a class="jxr_linenumber" name="L1177" href="#L1177">1177</a>             0xE0, 0x01, 0x00, 0xEA,
-<a class="jxr_linenumber" name="L1178" href="#L1178">1178</a>             <em class="jxr_comment">// 15-byte no-op pad.</em>
-<a class="jxr_linenumber" name="L1179" href="#L1179">1179</a>             0x0E, 0x8D,
-<a class="jxr_linenumber" name="L1180" href="#L1180">1180</a>             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-<a class="jxr_linenumber" name="L1181" href="#L1181">1181</a>             <em class="jxr_comment">// Symbol table with the symbol 'hello'.</em>
-<a class="jxr_linenumber" name="L1182" href="#L1182">1182</a>             0xEB, 0x81, 0x83, 0xD8, 0x87, 0xB6, 0x85, 'h', 'e', 'l', 'l', 'o',
-<a class="jxr_linenumber" name="L1183" href="#L1183">1183</a>             <em class="jxr_comment">// Three byte no-op pad.</em>
-<a class="jxr_linenumber" name="L1184" href="#L1184">1184</a>             0x02, 0x99, 0x42,
-<a class="jxr_linenumber" name="L1185" href="#L1185">1185</a>             <em class="jxr_comment">// Symbol 10 (hello)</em>
-<a class="jxr_linenumber" name="L1186" href="#L1186">1186</a>             0x71, 0x0A
-<a class="jxr_linenumber" name="L1187" href="#L1187">1187</a>         );
-<a class="jxr_linenumber" name="L1188" href="#L1188">1188</a> 
-<a class="jxr_linenumber" name="L1189" href="#L1189">1189</a>         lookahead.fillInput();
-<a class="jxr_linenumber" name="L1190" href="#L1190">1190</a>         assertFalse(lookahead.moreDataRequired());
-<a class="jxr_linenumber" name="L1191" href="#L1191">1191</a>         IonReader reader = lookahead.newIonReader(IonReaderBuilder.standard());
-<a class="jxr_linenumber" name="L1192" href="#L1192">1192</a>         assertEquals(IonType.SYMBOL, reader.next());
-<a class="jxr_linenumber" name="L1193" href="#L1193">1193</a>         assertEquals(<span class="jxr_string">"hello"</span>, reader.stringValue());
-<a class="jxr_linenumber" name="L1194" href="#L1194">1194</a>         assertNull(reader.next());
-<a class="jxr_linenumber" name="L1195" href="#L1195">1195</a>         reader.close();
-<a class="jxr_linenumber" name="L1196" href="#L1196">1196</a>     }
-<a class="jxr_linenumber" name="L1197" href="#L1197">1197</a> }
+<a class="jxr_linenumber" name="L1114" href="#L1114">1114</a>         assertEquals(<span class="jxr_string">"x"</span>, reader.stringValue());
+<a class="jxr_linenumber" name="L1115" href="#L1115">1115</a>         assertEquals(IonType.SYMBOL, reader.next());
+<a class="jxr_linenumber" name="L1116" href="#L1116">1116</a>         assertEquals(<span class="jxr_string">"y"</span>, reader.stringValue());
+<a class="jxr_linenumber" name="L1117" href="#L1117">1117</a> 
+<a class="jxr_linenumber" name="L1118" href="#L1118">1118</a>         lookahead.fillInput();
+<a class="jxr_linenumber" name="L1119" href="#L1119">1119</a>         symbolTableMarkers = lookahead.getSymbolTableMarkers();
+<a class="jxr_linenumber" name="L1120" href="#L1120">1120</a>         assertEquals(2, symbolTableMarkers.size());
+<a class="jxr_linenumber" name="L1121" href="#L1121">1121</a>         assertEquals(indexForInitialBufferSize(28, 28, 56), symbolTableMarkers.get(0).startIndex);
+<a class="jxr_linenumber" name="L1122" href="#L1122">1122</a>         assertEquals(indexForInitialBufferSize(32, 32, 60), symbolTableMarkers.get(0).endIndex);
+<a class="jxr_linenumber" name="L1123" href="#L1123">1123</a>         assertEquals(indexForInitialBufferSize(36, 36, 64), symbolTableMarkers.get(1).startIndex);
+<a class="jxr_linenumber" name="L1124" href="#L1124">1124</a>         assertEquals(indexForInitialBufferSize(40, 40, 68), symbolTableMarkers.get(1).endIndex);
+<a class="jxr_linenumber" name="L1125" href="#L1125">1125</a>         assertEquals(indexForInitialBufferSize(41, 41, 69), lookahead.getValueStart());
+<a class="jxr_linenumber" name="L1126" href="#L1126">1126</a>         assertIonTypeId(IonType.SYMBOL, 0x1, lookahead.getValueTid());
+<a class="jxr_linenumber" name="L1127" href="#L1127">1127</a>         assertEquals(indexForInitialBufferSize(42, 42, 70), lookahead.getValueEnd());
+<a class="jxr_linenumber" name="L1128" href="#L1128">1128</a> 
+<a class="jxr_linenumber" name="L1129" href="#L1129">1129</a>         assertEquals(IonType.SYMBOL, reader.next());
+<a class="jxr_linenumber" name="L1130" href="#L1130">1130</a>         assertEquals(<span class="jxr_string">"d"</span>, reader.stringValue());
+<a class="jxr_linenumber" name="L1131" href="#L1131">1131</a> 
+<a class="jxr_linenumber" name="L1132" href="#L1132">1132</a>         assertTrue(lookahead.moreDataRequired());
+<a class="jxr_linenumber" name="L1133" href="#L1133">1133</a>         reader.close();
+<a class="jxr_linenumber" name="L1134" href="#L1134">1134</a>     }
+<a class="jxr_linenumber" name="L1135" href="#L1135">1135</a> 
+<a class="jxr_linenumber" name="L1136" href="#L1136">1136</a>     @Test
+<a class="jxr_linenumber" name="L1137" href="#L1137">1137</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> nopPadFollowedByValueThatOverflowsBufferNotOversized() <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="L1138" href="#L1138">1138</a>         <strong class="jxr_keyword">if</strong> (initialBufferSize == <strong class="jxr_keyword">null</strong> || initialBufferSize != 1) {
+<a class="jxr_linenumber" name="L1139" href="#L1139">1139</a>             <strong class="jxr_keyword">return</strong>;
+<a class="jxr_linenumber" name="L1140" href="#L1140">1140</a>         }
+<a class="jxr_linenumber" name="L1141" href="#L1141">1141</a>         builder = IonBufferConfiguration.Builder.standard()
+<a class="jxr_linenumber" name="L1142" href="#L1142">1142</a>             .withInitialBufferSize(9)
+<a class="jxr_linenumber" name="L1143" href="#L1143">1143</a>             .withMaximumBufferSize(9);
+<a class="jxr_linenumber" name="L1144" href="#L1144">1144</a>         createCountingEventHandler(builder, <strong class="jxr_keyword">new</strong> AtomicLong());
+<a class="jxr_linenumber" name="L1145" href="#L1145">1145</a>         lookahead = bufferFor(
+<a class="jxr_linenumber" name="L1146" href="#L1146">1146</a>             0x03, 0x00, 0x00, 0x00, <em class="jxr_comment">// 4 byte NOP pad.</em>
+<a class="jxr_linenumber" name="L1147" href="#L1147">1147</a>             0x21, 0x01 <em class="jxr_comment">// Int 1.</em>
+<a class="jxr_linenumber" name="L1148" href="#L1148">1148</a>         );
+<a class="jxr_linenumber" name="L1149" href="#L1149">1149</a>         <em class="jxr_comment">// The IVM is 4 bytes and the NOP pad is 4 bytes. The first byte of the value is the 9th byte and fits in the</em>
+<a class="jxr_linenumber" name="L1150" href="#L1150">1150</a>         <em class="jxr_comment">// buffer. Even though there is a 10th byte, the value should not be considered oversize because the NOP pad</em>
+<a class="jxr_linenumber" name="L1151" href="#L1151">1151</a>         <em class="jxr_comment">// can be discarded.</em>
+<a class="jxr_linenumber" name="L1152" href="#L1152">1152</a>         lookahead.fillInput();
+<a class="jxr_linenumber" name="L1153" href="#L1153">1153</a>         assertFalse(lookahead.moreDataRequired());
+<a class="jxr_linenumber" name="L1154" href="#L1154">1154</a>         IonReader reader = lookahead.newIonReader(IonReaderBuilder.standard());
+<a class="jxr_linenumber" name="L1155" href="#L1155">1155</a>         lookahead.resetNopPadIndex();
+<a class="jxr_linenumber" name="L1156" href="#L1156">1156</a>         assertEquals(IonType.INT, reader.next());
+<a class="jxr_linenumber" name="L1157" href="#L1157">1157</a>         assertEquals(1, reader.intValue());
+<a class="jxr_linenumber" name="L1158" href="#L1158">1158</a>         reader.close();
+<a class="jxr_linenumber" name="L1159" href="#L1159">1159</a>     }
+<a class="jxr_linenumber" name="L1160" href="#L1160">1160</a> 
+<a class="jxr_linenumber" name="L1161" href="#L1161">1161</a>     @Test
+<a class="jxr_linenumber" name="L1162" href="#L1162">1162</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> nopPadsInterspersedWithSystemValuesDoNotCauseOversizedErrors() <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="L1163" href="#L1163">1163</a>         <strong class="jxr_keyword">if</strong> (initialBufferSize == <strong class="jxr_keyword">null</strong> || initialBufferSize != 1) {
+<a class="jxr_linenumber" name="L1164" href="#L1164">1164</a>             <strong class="jxr_keyword">return</strong>;
+<a class="jxr_linenumber" name="L1165" href="#L1165">1165</a>         }
+<a class="jxr_linenumber" name="L1166" href="#L1166">1166</a>         <em class="jxr_comment">// Set the maximum size at 2 IVMs (8 bytes) + the symbol table (12 bytes) + the value (2 bytes).</em>
+<a class="jxr_linenumber" name="L1167" href="#L1167">1167</a>         builder = IonBufferConfiguration.Builder.standard()
+<a class="jxr_linenumber" name="L1168" href="#L1168">1168</a>             .withInitialBufferSize(22)
+<a class="jxr_linenumber" name="L1169" href="#L1169">1169</a>             .withMaximumBufferSize(22);
+<a class="jxr_linenumber" name="L1170" href="#L1170">1170</a>         createCountingEventHandler(builder, <strong class="jxr_keyword">new</strong> AtomicLong());
+<a class="jxr_linenumber" name="L1171" href="#L1171">1171</a>         lookahead = bufferFor(
+<a class="jxr_linenumber" name="L1172" href="#L1172">1172</a>             <em class="jxr_comment">// One byte no-op pad.</em>
+<a class="jxr_linenumber" name="L1173" href="#L1173">1173</a>             0x00,
+<a class="jxr_linenumber" name="L1174" href="#L1174">1174</a>             <em class="jxr_comment">// Two byte no-op pad.</em>
+<a class="jxr_linenumber" name="L1175" href="#L1175">1175</a>             0x01, 0xFF,
+<a class="jxr_linenumber" name="L1176" href="#L1176">1176</a>             <em class="jxr_comment">// Three byte no-op pad.</em>
+<a class="jxr_linenumber" name="L1177" href="#L1177">1177</a>             0x02, 0x99, 0x42,
+<a class="jxr_linenumber" name="L1178" href="#L1178">1178</a>             <em class="jxr_comment">// IVM 1.0</em>
+<a class="jxr_linenumber" name="L1179" href="#L1179">1179</a>             0xE0, 0x01, 0x00, 0xEA,
+<a class="jxr_linenumber" name="L1180" href="#L1180">1180</a>             <em class="jxr_comment">// 15-byte no-op pad.</em>
+<a class="jxr_linenumber" name="L1181" href="#L1181">1181</a>             0x0E, 0x8D,
+<a class="jxr_linenumber" name="L1182" href="#L1182">1182</a>             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+<a class="jxr_linenumber" name="L1183" href="#L1183">1183</a>             <em class="jxr_comment">// Symbol table with the symbol 'hello'.</em>
+<a class="jxr_linenumber" name="L1184" href="#L1184">1184</a>             0xEB, 0x81, 0x83, 0xD8, 0x87, 0xB6, 0x85, 'h', 'e', 'l', 'l', 'o',
+<a class="jxr_linenumber" name="L1185" href="#L1185">1185</a>             <em class="jxr_comment">// Three byte no-op pad.</em>
+<a class="jxr_linenumber" name="L1186" href="#L1186">1186</a>             0x02, 0x99, 0x42,
+<a class="jxr_linenumber" name="L1187" href="#L1187">1187</a>             <em class="jxr_comment">// Symbol 10 (hello)</em>
+<a class="jxr_linenumber" name="L1188" href="#L1188">1188</a>             0x71, 0x0A
+<a class="jxr_linenumber" name="L1189" href="#L1189">1189</a>         );
+<a class="jxr_linenumber" name="L1190" href="#L1190">1190</a> 
+<a class="jxr_linenumber" name="L1191" href="#L1191">1191</a>         lookahead.fillInput();
+<a class="jxr_linenumber" name="L1192" href="#L1192">1192</a>         assertFalse(lookahead.moreDataRequired());
+<a class="jxr_linenumber" name="L1193" href="#L1193">1193</a>         IonReader reader = lookahead.newIonReader(IonReaderBuilder.standard());
+<a class="jxr_linenumber" name="L1194" href="#L1194">1194</a>         assertEquals(IonType.SYMBOL, reader.next());
+<a class="jxr_linenumber" name="L1195" href="#L1195">1195</a>         assertEquals(<span class="jxr_string">"hello"</span>, reader.stringValue());
+<a class="jxr_linenumber" name="L1196" href="#L1196">1196</a>         assertNull(reader.next());
+<a class="jxr_linenumber" name="L1197" href="#L1197">1197</a>         reader.close();
+<a class="jxr_linenumber" name="L1198" href="#L1198">1198</a>     }
+<a class="jxr_linenumber" name="L1199" href="#L1199">1199</a> 
+<a class="jxr_linenumber" name="L1200" href="#L1200">1200</a>     @Test
+<a class="jxr_linenumber" name="L1201" href="#L1201">1201</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> annotationMarkersAreCorrectlyShifted() <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="L1202" href="#L1202">1202</a>         <strong class="jxr_keyword">if</strong> (initialBufferSize == <strong class="jxr_keyword">null</strong> || initialBufferSize != 1) {
+<a class="jxr_linenumber" name="L1203" href="#L1203">1203</a>             <strong class="jxr_keyword">return</strong>;
+<a class="jxr_linenumber" name="L1204" href="#L1204">1204</a>         }
+<a class="jxr_linenumber" name="L1205" href="#L1205">1205</a>         <em class="jxr_comment">// Set the maximum size at 1 IVM (4 bytes) + the symbol table (12 bytes) + the value (2 bytes) + part of the</em>
+<a class="jxr_linenumber" name="L1206" href="#L1206">1206</a>         <em class="jxr_comment">// next value (3 bytes).</em>
+<a class="jxr_linenumber" name="L1207" href="#L1207">1207</a>         builder = IonBufferConfiguration.Builder.standard()
+<a class="jxr_linenumber" name="L1208" href="#L1208">1208</a>             .withInitialBufferSize(21)
+<a class="jxr_linenumber" name="L1209" href="#L1209">1209</a>             .withMaximumBufferSize(21);
+<a class="jxr_linenumber" name="L1210" href="#L1210">1210</a>         createCountingEventHandler(builder, <strong class="jxr_keyword">new</strong> AtomicLong());
+<a class="jxr_linenumber" name="L1211" href="#L1211">1211</a>         lookahead = bufferFor(
+<a class="jxr_linenumber" name="L1212" href="#L1212">1212</a>             <em class="jxr_comment">// Symbol table with the symbol 'hello'.</em>
+<a class="jxr_linenumber" name="L1213" href="#L1213">1213</a>             0xEB, 0x81, 0x83, 0xD8, 0x87, 0xB6, 0x85, 'h', 'e', 'l', 'l', 'o',
+<a class="jxr_linenumber" name="L1214" href="#L1214">1214</a>             <em class="jxr_comment">// Symbol 10 (hello)</em>
+<a class="jxr_linenumber" name="L1215" href="#L1215">1215</a>             0x71, 0x0A,
+<a class="jxr_linenumber" name="L1216" href="#L1216">1216</a>             <em class="jxr_comment">// name::hello</em>
+<a class="jxr_linenumber" name="L1217" href="#L1217">1217</a>             0xE4, 0x81, 0x84, 0x71, 0x0A
+<a class="jxr_linenumber" name="L1218" href="#L1218">1218</a>         );
+<a class="jxr_linenumber" name="L1219" href="#L1219">1219</a> 
+<a class="jxr_linenumber" name="L1220" href="#L1220">1220</a>         lookahead.fillInput();
+<a class="jxr_linenumber" name="L1221" href="#L1221">1221</a>         assertFalse(lookahead.moreDataRequired());
+<a class="jxr_linenumber" name="L1222" href="#L1222">1222</a>         IonReader reader = lookahead.newIonReader(IonReaderBuilder.standard());
+<a class="jxr_linenumber" name="L1223" href="#L1223">1223</a>         assertEquals(IonType.SYMBOL, reader.next());
+<a class="jxr_linenumber" name="L1224" href="#L1224">1224</a>         assertFalse(lookahead.hasAnnotations());
+<a class="jxr_linenumber" name="L1225" href="#L1225">1225</a>         <em class="jxr_comment">// The buffer will reach its maximum size after recording the annotation marker. The marker's indices will</em>
+<a class="jxr_linenumber" name="L1226" href="#L1226">1226</a>         <em class="jxr_comment">// be shifted left when space is reclaimed to fit the value.</em>
+<a class="jxr_linenumber" name="L1227" href="#L1227">1227</a>         lookahead.fillInput();
+<a class="jxr_linenumber" name="L1228" href="#L1228">1228</a>         assertFalse(lookahead.moreDataRequired());
+<a class="jxr_linenumber" name="L1229" href="#L1229">1229</a>         assertEquals(<span class="jxr_string">"hello"</span>, reader.stringValue());
+<a class="jxr_linenumber" name="L1230" href="#L1230">1230</a>         assertEquals(IonType.SYMBOL, reader.next());
+<a class="jxr_linenumber" name="L1231" href="#L1231">1231</a>         assertTrue(lookahead.hasAnnotations());
+<a class="jxr_linenumber" name="L1232" href="#L1232">1232</a>         assertEquals(2, lookahead.getAnnotationSidsMarker().startIndex);
+<a class="jxr_linenumber" name="L1233" href="#L1233">1233</a>         assertEquals(3, lookahead.getAnnotationSidsMarker().endIndex);
+<a class="jxr_linenumber" name="L1234" href="#L1234">1234</a>         assertNull(reader.next());
+<a class="jxr_linenumber" name="L1235" href="#L1235">1235</a>         reader.close();
+<a class="jxr_linenumber" name="L1236" href="#L1236">1236</a>     }
+<a class="jxr_linenumber" name="L1237" href="#L1237">1237</a> }
 </pre>
 <hr/>
 <div id="footer">Copyright &#169; 2022. All rights reserved.</div>

@@ -30,18 +30,28 @@ public class IntList {
 <span class="fc" id="L30">    }</span>
 
     /**
+     * Constructs a new IntList that contains all the elements of the given IntList.
+     * @param other the IntList to copy.
+     */
+<span class="fc" id="L36">    public IntList(final IntList other) {</span>
+<span class="fc" id="L37">        this.numberOfValues = other.numberOfValues;</span>
+<span class="fc" id="L38">        this.data = new int[other.data.length];</span>
+<span class="fc" id="L39">        System.arraycopy(other.data, 0, this.data, 0, numberOfValues);</span>
+<span class="fc" id="L40">    }</span>
+
+    /**
      * Accessor.
      * @return  The number of ints currently stored in the list.
      */
     public int size() {
-<span class="fc" id="L37">        return numberOfValues;</span>
+<span class="fc" id="L47">        return numberOfValues;</span>
     }
 
     /**
      * @return {@code true} if there are ints stored in the list.
      */
     public boolean isEmpty() {
-<span class="fc bfc" id="L44" title="All 2 branches covered.">        return numberOfValues == 0;</span>
+<span class="fc bfc" id="L54" title="All 2 branches covered.">        return numberOfValues == 0;</span>
     }
 
     /**
@@ -50,8 +60,8 @@ public class IntList {
      * Note that this method does not shrink the size of the backing data store.
      */
     public void clear() {
-<span class="fc" id="L53">        numberOfValues = 0;</span>
-<span class="fc" id="L54">    }</span>
+<span class="fc" id="L63">        numberOfValues = 0;</span>
+<span class="fc" id="L64">    }</span>
 
     /**
      * Returns the {@code index}th int in the list.
@@ -61,12 +71,12 @@ public class IntList {
      *                                      list.
      */
     public int get(int index) {
-<span class="pc bpc" id="L64" title="2 of 4 branches missed.">        if (index &lt; 0 || index &gt;= numberOfValues) {</span>
-<span class="nc" id="L65">            throw new IndexOutOfBoundsException(</span>
+<span class="pc bpc" id="L74" title="2 of 4 branches missed.">        if (index &lt; 0 || index &gt;= numberOfValues) {</span>
+<span class="nc" id="L75">            throw new IndexOutOfBoundsException(</span>
                     &quot;Invalid index &quot; + index + &quot; requested from IntList with &quot; + numberOfValues + &quot; values.&quot;
             );
         }
-<span class="fc" id="L69">        return data[index];</span>
+<span class="fc" id="L79">        return data[index];</span>
     }
 
     /**
@@ -74,33 +84,33 @@ public class IntList {
      * @param value     The int to add to the end of the list.
      */
     public void add(int value) {
-<span class="fc bfc" id="L77" title="All 2 branches covered.">        if (numberOfValues == data.length) {</span>
-<span class="fc" id="L78">            grow();</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">        if (numberOfValues == data.length) {</span>
+<span class="fc" id="L88">            grow();</span>
         }
-<span class="fc" id="L80">        data[numberOfValues] = value;</span>
-<span class="fc" id="L81">        numberOfValues += 1;</span>
-<span class="fc" id="L82">    }</span>
+<span class="fc" id="L90">        data[numberOfValues] = value;</span>
+<span class="fc" id="L91">        numberOfValues += 1;</span>
+<span class="fc" id="L92">    }</span>
 
     /**
      * Reallocates the backing array to accommodate storing more ints.
      */
     private void grow() {
-<span class="fc" id="L88">        int[] newData = new int[data.length * GROWTH_MULTIPLIER];</span>
-<span class="fc" id="L89">        System.arraycopy(data, 0, newData, 0, data.length);</span>
-<span class="fc" id="L90">        data = newData;</span>
-<span class="fc" id="L91">    }</span>
+<span class="fc" id="L98">        int[] newData = new int[data.length * GROWTH_MULTIPLIER];</span>
+<span class="fc" id="L99">        System.arraycopy(data, 0, newData, 0, data.length);</span>
+<span class="fc" id="L100">        data = newData;</span>
+<span class="fc" id="L101">    }</span>
 
     @Override
     public String toString() {
-<span class="nc" id="L95">        StringBuilder builder = new StringBuilder();</span>
-<span class="nc" id="L96">        builder.append(&quot;IntList{data=[&quot;);</span>
-<span class="nc bnc" id="L97" title="All 2 branches missed.">        if (numberOfValues &gt; 0) {</span>
-<span class="nc bnc" id="L98" title="All 2 branches missed.">            for (int m = 0; m &lt; numberOfValues; m++) {</span>
-<span class="nc" id="L99">                builder.append(data[m]).append(&quot;,&quot;);</span>
+<span class="nc" id="L105">        StringBuilder builder = new StringBuilder();</span>
+<span class="nc" id="L106">        builder.append(&quot;IntList{data=[&quot;);</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">        if (numberOfValues &gt; 0) {</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">            for (int m = 0; m &lt; numberOfValues; m++) {</span>
+<span class="nc" id="L109">                builder.append(data[m]).append(&quot;,&quot;);</span>
             }
         }
-<span class="nc" id="L102">        builder.append(&quot;]}&quot;);</span>
-<span class="nc" id="L103">        return builder.toString();</span>
+<span class="nc" id="L112">        builder.append(&quot;]}&quot;);</span>
+<span class="nc" id="L113">        return builder.toString();</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
