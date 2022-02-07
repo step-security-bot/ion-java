@@ -90,6 +90,21 @@ public final class IonBufferConfiguration extends BufferConfiguration&lt;IonBuff
         }
 
         /**
+         * Provides a new builder that would build IonBufferConfiguration instances with configuration identical to
+         * the given configuration.
+         * @param existingConfiguration an existing configuration.
+         * @return a new mutable builder.
+         */
+        public static Builder from(IonBufferConfiguration existingConfiguration) {
+<span class="fc" id="L99">            return IonBufferConfiguration.Builder.standard()</span>
+<span class="fc" id="L100">                .onData(existingConfiguration.getDataHandler())</span>
+<span class="fc" id="L101">                .onOversizedValue(existingConfiguration.getOversizedValueHandler())</span>
+<span class="fc" id="L102">                .onOversizedSymbolTable(existingConfiguration.getOversizedSymbolTableHandler())</span>
+<span class="fc" id="L103">                .withInitialBufferSize(existingConfiguration.getInitialBufferSize())</span>
+<span class="fc" id="L104">                .withMaximumBufferSize(existingConfiguration.getMaximumBufferSize());</span>
+        }
+
+        /**
          * Sets the handler that will be notified when oversized symbol tables are encountered. If the maximum buffer
          * size is finite (see {@link #withMaximumBufferSize(int)}, this handler is required to be non-null.
          *
@@ -97,42 +112,42 @@ public final class IonBufferConfiguration extends BufferConfiguration&lt;IonBuff
          * @return this builder.
          */
         public Builder onOversizedSymbolTable(OversizedSymbolTableHandler handler) {
-<span class="fc" id="L100">            oversizedSymbolTableHandler = handler;</span>
-<span class="fc" id="L101">            return this;</span>
+<span class="fc" id="L115">            oversizedSymbolTableHandler = handler;</span>
+<span class="fc" id="L116">            return this;</span>
         }
 
         /**
          * @return the handler that will be notified when oversized symbol tables are encountered.
          */
         public OversizedSymbolTableHandler getOversizedSymbolTableHandler() {
-<span class="fc" id="L108">            return oversizedSymbolTableHandler;</span>
+<span class="fc" id="L123">            return oversizedSymbolTableHandler;</span>
         }
 
         @Override
         public int getMinimumMaximumBufferSize() {
-<span class="fc" id="L113">            return MINIMUM_MAX_VALUE_SIZE;</span>
+<span class="fc" id="L128">            return MINIMUM_MAX_VALUE_SIZE;</span>
         }
 
         @Override
         public OversizedValueHandler getNoOpOversizedValueHandler() {
-<span class="fc" id="L118">            return NO_OP_OVERSIZED_VALUE_HANDLER;</span>
+<span class="fc" id="L133">            return NO_OP_OVERSIZED_VALUE_HANDLER;</span>
         }
 
         @Override
         public DataHandler getNoOpDataHandler() {
-<span class="fc" id="L123">            return NO_OP_DATA_HANDLER;</span>
+<span class="fc" id="L138">            return NO_OP_DATA_HANDLER;</span>
         }
 
         /**
          * @return an OversizedSymbolTableHandler that does nothing.
          */
         public OversizedSymbolTableHandler getNoOpOversizedSymbolTableHandler() {
-<span class="fc" id="L130">            return NO_OP_OVERSIZED_SYMBOL_TABLE_HANDLER;</span>
+<span class="fc" id="L145">            return NO_OP_OVERSIZED_SYMBOL_TABLE_HANDLER;</span>
         }
 
         @Override
         public IonBufferConfiguration build() {
-<span class="fc" id="L135">            return new IonBufferConfiguration(this);</span>
+<span class="fc" id="L150">            return new IonBufferConfiguration(this);</span>
         }
     }
 
@@ -146,20 +161,20 @@ public final class IonBufferConfiguration extends BufferConfiguration&lt;IonBuff
      * @param builder the builder containing the settings to apply to the new configuration.
      */
     private IonBufferConfiguration(Builder builder) {
-<span class="fc" id="L149">        super(builder);</span>
-<span class="fc bfc" id="L150" title="All 2 branches covered.">        if (builder.getOversizedSymbolTableHandler() == null) {</span>
-<span class="fc" id="L151">            requireUnlimitedBufferSize();</span>
-<span class="fc" id="L152">            oversizedSymbolTableHandler = builder.getNoOpOversizedSymbolTableHandler();</span>
+<span class="fc" id="L164">        super(builder);</span>
+<span class="fc bfc" id="L165" title="All 2 branches covered.">        if (builder.getOversizedSymbolTableHandler() == null) {</span>
+<span class="fc" id="L166">            requireUnlimitedBufferSize();</span>
+<span class="fc" id="L167">            oversizedSymbolTableHandler = builder.getNoOpOversizedSymbolTableHandler();</span>
         } else {
-<span class="fc" id="L154">            oversizedSymbolTableHandler = builder.getOversizedSymbolTableHandler();</span>
+<span class="fc" id="L169">            oversizedSymbolTableHandler = builder.getOversizedSymbolTableHandler();</span>
         }
-<span class="fc" id="L156">    }</span>
+<span class="fc" id="L171">    }</span>
 
     /**
      * @return the handler that will be notified when oversized symbol tables are encountered.
      */
     public OversizedSymbolTableHandler getOversizedSymbolTableHandler() {
-<span class="fc" id="L162">        return oversizedSymbolTableHandler;</span>
+<span class="fc" id="L177">        return oversizedSymbolTableHandler;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
