@@ -216,7 +216,7 @@ import java.util.GregorianCalendar;
 <span class="fc" id="L216">    private static final int[] LEAP_DAYS_IN_MONTH   = { 0,  31,  29,  31,  30,  31,  30,  31,  31,  30,  31,  30,  31 };</span>
 <span class="fc" id="L217">    private static final int[] NORMAL_DAYS_IN_MONTH = { 0,  31,  28,  31,  30,  31,  30,  31,  31,  30,  31,  30,  31 };</span>
 
-    private static int last_day_in_month(int year, int month) {
+    private static byte last_day_in_month(int year, int month) {
         boolean is_leap;
 <span class="fc bfc" id="L221" title="All 2 branches covered.">        if ((year % 4) == 0) {</span>
             // divisible by 4 (lower 2 bits are zero) - may be a leap year
@@ -237,7 +237,7 @@ import java.util.GregorianCalendar;
         else {
 <span class="fc" id="L238">            is_leap = false;</span>
         }
-<span class="fc bfc" id="L240" title="All 2 branches covered.">        return is_leap ? LEAP_DAYS_IN_MONTH[month] : NORMAL_DAYS_IN_MONTH[month];</span>
+<span class="fc bfc" id="L240" title="All 2 branches covered.">        return (byte) (is_leap ? LEAP_DAYS_IN_MONTH[month] : NORMAL_DAYS_IN_MONTH[month]);</span>
     }
 
     /**
@@ -256,19 +256,19 @@ import java.util.GregorianCalendar;
         }
         // To convert _to_ UTC you must SUBTRACT the local offset
 <span class="fc" id="L258">        offset = -offset;</span>
-<span class="fc" id="L259">        int hour_offset = offset / 60;</span>
-<span class="fc" id="L260">        int min_offset = offset - (hour_offset * 60);</span>
+<span class="fc" id="L259">        byte hour_offset = (byte) (offset / 60);</span>
+<span class="fc" id="L260">        byte min_offset = (byte) (offset - (hour_offset * 60));</span>
 
 <span class="fc bfc" id="L262" title="All 2 branches covered.">        if (offset &lt; 0) {</span>
 <span class="fc" id="L263">            _minute += min_offset;  // lower the minute value by adding a negative offset</span>
 <span class="fc" id="L264">            _hour += hour_offset;</span>
 <span class="fc bfc" id="L265" title="All 2 branches covered.">            if (_minute &lt; 0) {</span>
-<span class="fc" id="L266">                _minute += 60;</span>
+<span class="fc" id="L266">                _minute += (byte) 60;</span>
 <span class="fc" id="L267">                _hour -= 1;</span>
             }
 <span class="fc bfc" id="L269" title="All 2 branches covered.">            if (_hour &gt;= 0) return;  // hour is 0-23</span>
-<span class="fc" id="L270">            _hour += 24;</span>
-<span class="fc" id="L271">            _day -= 1;</span>
+<span class="fc" id="L270">            _hour += (byte) 24;</span>
+<span class="fc" id="L271">            _day -= (byte) 1;</span>
 <span class="fc bfc" id="L272" title="All 2 branches covered.">            if (_day &gt;= 1) return;  // day is 1-31</span>
             // we can't do this until we've figured out the month and year: _day += last_day_in_month(_year, _month);
 <span class="fc" id="L274">            _month -= 1;</span>
@@ -277,8 +277,8 @@ import java.util.GregorianCalendar;
 <span class="pc bpc" id="L277" title="2 of 4 branches missed.">                assert(_day == last_day_in_month(_year, _month));</span>
 <span class="fc" id="L278">                return;  // 1-12</span>
             }
-<span class="fc" id="L280">            _month += 12;</span>
-<span class="fc" id="L281">            _year -= 1;</span>
+<span class="fc" id="L280">            _month += (byte) 12;</span>
+<span class="fc" id="L281">            _year -= (short) 1;</span>
 <span class="pc bpc" id="L282" title="1 of 2 branches missed.">            if (_year &lt; 1) throw new IllegalArgumentException(&quot;year is less than 1&quot;);</span>
 <span class="fc" id="L283">            _day += last_day_in_month(_year, _month);  // and now we know, even if the year did change</span>
 <span class="pc bpc" id="L284" title="2 of 4 branches missed.">            assert(_day == last_day_in_month(_year, _month));</span>
@@ -287,21 +287,21 @@ import java.util.GregorianCalendar;
 <span class="fc" id="L287">            _minute += min_offset;  // lower the minute value by adding a negative offset</span>
 <span class="fc" id="L288">            _hour += hour_offset;</span>
 <span class="fc bfc" id="L289" title="All 2 branches covered.">            if (_minute &gt; 59) {</span>
-<span class="fc" id="L290">                _minute -= 60;</span>
-<span class="fc" id="L291">                _hour += 1;</span>
+<span class="fc" id="L290">                _minute -= (byte) 60;</span>
+<span class="fc" id="L291">                _hour += (byte) 1;</span>
             }
 <span class="fc bfc" id="L293" title="All 2 branches covered.">            if (_hour &lt; 24) return;  // hour is 0-23</span>
-<span class="fc" id="L294">            _hour -= 24;</span>
-<span class="fc" id="L295">            _day += 1;</span>
+<span class="fc" id="L294">            _hour -= (byte) 24;</span>
+<span class="fc" id="L295">            _day += (byte) 1;</span>
 <span class="fc bfc" id="L296" title="All 2 branches covered.">            if (_day &lt;= last_day_in_month(_year, _month)) return;  // day is 1-31</span>
             // we can't do this until we figure out the final month and year: _day -= last_day_in_month(_year, _month);
 <span class="fc" id="L298">            _day = 1; // this is always the case</span>
-<span class="fc" id="L299">            _month += 1;</span>
+<span class="fc" id="L299">            _month += (byte) 1;</span>
 <span class="fc bfc" id="L300" title="All 2 branches covered.">            if (_month &lt;= 12) {</span>
 <span class="fc" id="L301">                return;  // 1-12</span>
             }
-<span class="fc" id="L303">            _month -= 12;</span>
-<span class="fc" id="L304">            _year += 1;</span>
+<span class="fc" id="L303">            _month -= (byte) 12;</span>
+<span class="fc" id="L304">            _year += (short) 1;</span>
 <span class="pc bpc" id="L305" title="1 of 2 branches missed.">            if (_year &gt; 9999) throw new IllegalArgumentException(&quot;year exceeds 9999&quot;);</span>
         }
 <span class="fc" id="L307">    }</span>

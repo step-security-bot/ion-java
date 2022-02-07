@@ -224,7 +224,7 @@
 <a class="jxr_linenumber" name="L216" href="#L216">216</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong>[] LEAP_DAYS_IN_MONTH   = { 0,  31,  29,  31,  30,  31,  30,  31,  31,  30,  31,  30,  31 };
 <a class="jxr_linenumber" name="L217" href="#L217">217</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong>[] NORMAL_DAYS_IN_MONTH = { 0,  31,  28,  31,  30,  31,  30,  31,  31,  30,  31,  30,  31 };
 <a class="jxr_linenumber" name="L218" href="#L218">218</a> 
-<a class="jxr_linenumber" name="L219" href="#L219">219</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">int</strong> last_day_in_month(<strong class="jxr_keyword">int</strong> year, <strong class="jxr_keyword">int</strong> month) {
+<a class="jxr_linenumber" name="L219" href="#L219">219</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> byte last_day_in_month(<strong class="jxr_keyword">int</strong> year, <strong class="jxr_keyword">int</strong> month) {
 <a class="jxr_linenumber" name="L220" href="#L220">220</a>         <strong class="jxr_keyword">boolean</strong> is_leap;
 <a class="jxr_linenumber" name="L221" href="#L221">221</a>         <strong class="jxr_keyword">if</strong> ((year % 4) == 0) {
 <a class="jxr_linenumber" name="L222" href="#L222">222</a>             <em class="jxr_comment">// divisible by 4 (lower 2 bits are zero) - may be a leap year</em>
@@ -245,7 +245,7 @@
 <a class="jxr_linenumber" name="L237" href="#L237">237</a>         <strong class="jxr_keyword">else</strong> {
 <a class="jxr_linenumber" name="L238" href="#L238">238</a>             is_leap = false;
 <a class="jxr_linenumber" name="L239" href="#L239">239</a>         }
-<a class="jxr_linenumber" name="L240" href="#L240">240</a>         <strong class="jxr_keyword">return</strong> is_leap ? LEAP_DAYS_IN_MONTH[month] : NORMAL_DAYS_IN_MONTH[month];
+<a class="jxr_linenumber" name="L240" href="#L240">240</a>         <strong class="jxr_keyword">return</strong> (byte) (is_leap ? LEAP_DAYS_IN_MONTH[month] : NORMAL_DAYS_IN_MONTH[month]);
 <a class="jxr_linenumber" name="L241" href="#L241">241</a>     }
 <a class="jxr_linenumber" name="L242" href="#L242">242</a> 
 <a class="jxr_linenumber" name="L243" href="#L243">243</a>     <em class="jxr_javadoccomment">/**</em>
@@ -264,19 +264,19 @@
 <a class="jxr_linenumber" name="L256" href="#L256">256</a>         }
 <a class="jxr_linenumber" name="L257" href="#L257">257</a>         <em class="jxr_comment">// To convert _to_ UTC you must SUBTRACT the local offset</em>
 <a class="jxr_linenumber" name="L258" href="#L258">258</a>         offset = -offset;
-<a class="jxr_linenumber" name="L259" href="#L259">259</a>         <strong class="jxr_keyword">int</strong> hour_offset = offset / 60;
-<a class="jxr_linenumber" name="L260" href="#L260">260</a>         <strong class="jxr_keyword">int</strong> min_offset = offset - (hour_offset * 60);
+<a class="jxr_linenumber" name="L259" href="#L259">259</a>         byte hour_offset = (byte) (offset / 60);
+<a class="jxr_linenumber" name="L260" href="#L260">260</a>         byte min_offset = (byte) (offset - (hour_offset * 60));
 <a class="jxr_linenumber" name="L261" href="#L261">261</a> 
 <a class="jxr_linenumber" name="L262" href="#L262">262</a>         <strong class="jxr_keyword">if</strong> (offset &lt; 0) {
 <a class="jxr_linenumber" name="L263" href="#L263">263</a>             _minute += min_offset;  <em class="jxr_comment">// lower the minute value by adding a negative offset</em>
 <a class="jxr_linenumber" name="L264" href="#L264">264</a>             _hour += hour_offset;
 <a class="jxr_linenumber" name="L265" href="#L265">265</a>             <strong class="jxr_keyword">if</strong> (_minute &lt; 0) {
-<a class="jxr_linenumber" name="L266" href="#L266">266</a>                 _minute += 60;
+<a class="jxr_linenumber" name="L266" href="#L266">266</a>                 _minute += (byte) 60;
 <a class="jxr_linenumber" name="L267" href="#L267">267</a>                 _hour -= 1;
 <a class="jxr_linenumber" name="L268" href="#L268">268</a>             }
 <a class="jxr_linenumber" name="L269" href="#L269">269</a>             <strong class="jxr_keyword">if</strong> (_hour &gt;= 0) <strong class="jxr_keyword">return</strong>;  <em class="jxr_comment">// hour is 0-23</em>
-<a class="jxr_linenumber" name="L270" href="#L270">270</a>             _hour += 24;
-<a class="jxr_linenumber" name="L271" href="#L271">271</a>             _day -= 1;
+<a class="jxr_linenumber" name="L270" href="#L270">270</a>             _hour += (byte) 24;
+<a class="jxr_linenumber" name="L271" href="#L271">271</a>             _day -= (byte) 1;
 <a class="jxr_linenumber" name="L272" href="#L272">272</a>             <strong class="jxr_keyword">if</strong> (_day &gt;= 1) <strong class="jxr_keyword">return</strong>;  <em class="jxr_comment">// day is 1-31</em>
 <a class="jxr_linenumber" name="L273" href="#L273">273</a>             <em class="jxr_comment">// we can't do this until we've figured out the month and year: _day += last_day_in_month(_year, _month);</em>
 <a class="jxr_linenumber" name="L274" href="#L274">274</a>             _month -= 1;
@@ -285,8 +285,8 @@
 <a class="jxr_linenumber" name="L277" href="#L277">277</a>                 assert(_day == last_day_in_month(_year, _month));
 <a class="jxr_linenumber" name="L278" href="#L278">278</a>                 <strong class="jxr_keyword">return</strong>;  <em class="jxr_comment">// 1-12</em>
 <a class="jxr_linenumber" name="L279" href="#L279">279</a>             }
-<a class="jxr_linenumber" name="L280" href="#L280">280</a>             _month += 12;
-<a class="jxr_linenumber" name="L281" href="#L281">281</a>             _year -= 1;
+<a class="jxr_linenumber" name="L280" href="#L280">280</a>             _month += (byte) 12;
+<a class="jxr_linenumber" name="L281" href="#L281">281</a>             _year -= (<strong class="jxr_keyword">short</strong>) 1;
 <a class="jxr_linenumber" name="L282" href="#L282">282</a>             <strong class="jxr_keyword">if</strong> (_year &lt; 1) <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> IllegalArgumentException(<span class="jxr_string">"year is less than 1"</span>);
 <a class="jxr_linenumber" name="L283" href="#L283">283</a>             _day += last_day_in_month(_year, _month);  <em class="jxr_comment">// and now we know, even if the year did change</em>
 <a class="jxr_linenumber" name="L284" href="#L284">284</a>             assert(_day == last_day_in_month(_year, _month));
@@ -295,21 +295,21 @@
 <a class="jxr_linenumber" name="L287" href="#L287">287</a>             _minute += min_offset;  <em class="jxr_comment">// lower the minute value by adding a negative offset</em>
 <a class="jxr_linenumber" name="L288" href="#L288">288</a>             _hour += hour_offset;
 <a class="jxr_linenumber" name="L289" href="#L289">289</a>             <strong class="jxr_keyword">if</strong> (_minute &gt; 59) {
-<a class="jxr_linenumber" name="L290" href="#L290">290</a>                 _minute -= 60;
-<a class="jxr_linenumber" name="L291" href="#L291">291</a>                 _hour += 1;
+<a class="jxr_linenumber" name="L290" href="#L290">290</a>                 _minute -= (byte) 60;
+<a class="jxr_linenumber" name="L291" href="#L291">291</a>                 _hour += (byte) 1;
 <a class="jxr_linenumber" name="L292" href="#L292">292</a>             }
 <a class="jxr_linenumber" name="L293" href="#L293">293</a>             <strong class="jxr_keyword">if</strong> (_hour &lt; 24) <strong class="jxr_keyword">return</strong>;  <em class="jxr_comment">// hour is 0-23</em>
-<a class="jxr_linenumber" name="L294" href="#L294">294</a>             _hour -= 24;
-<a class="jxr_linenumber" name="L295" href="#L295">295</a>             _day += 1;
+<a class="jxr_linenumber" name="L294" href="#L294">294</a>             _hour -= (byte) 24;
+<a class="jxr_linenumber" name="L295" href="#L295">295</a>             _day += (byte) 1;
 <a class="jxr_linenumber" name="L296" href="#L296">296</a>             <strong class="jxr_keyword">if</strong> (_day &lt;= last_day_in_month(_year, _month)) <strong class="jxr_keyword">return</strong>;  <em class="jxr_comment">// day is 1-31</em>
 <a class="jxr_linenumber" name="L297" href="#L297">297</a>             <em class="jxr_comment">// we can't do this until we figure out the final month and year: _day -= last_day_in_month(_year, _month);</em>
 <a class="jxr_linenumber" name="L298" href="#L298">298</a>             _day = 1; <em class="jxr_comment">// this is always the case</em>
-<a class="jxr_linenumber" name="L299" href="#L299">299</a>             _month += 1;
+<a class="jxr_linenumber" name="L299" href="#L299">299</a>             _month += (byte) 1;
 <a class="jxr_linenumber" name="L300" href="#L300">300</a>             <strong class="jxr_keyword">if</strong> (_month &lt;= 12) {
 <a class="jxr_linenumber" name="L301" href="#L301">301</a>                 <strong class="jxr_keyword">return</strong>;  <em class="jxr_comment">// 1-12</em>
 <a class="jxr_linenumber" name="L302" href="#L302">302</a>             }
-<a class="jxr_linenumber" name="L303" href="#L303">303</a>             _month -= 12;
-<a class="jxr_linenumber" name="L304" href="#L304">304</a>             _year += 1;
+<a class="jxr_linenumber" name="L303" href="#L303">303</a>             _month -= (byte) 12;
+<a class="jxr_linenumber" name="L304" href="#L304">304</a>             _year += (<strong class="jxr_keyword">short</strong>) 1;
 <a class="jxr_linenumber" name="L305" href="#L305">305</a>             <strong class="jxr_keyword">if</strong> (_year &gt; 9999) <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> IllegalArgumentException(<span class="jxr_string">"year exceeds 9999"</span>);
 <a class="jxr_linenumber" name="L306" href="#L306">306</a>         }
 <a class="jxr_linenumber" name="L307" href="#L307">307</a>     }
