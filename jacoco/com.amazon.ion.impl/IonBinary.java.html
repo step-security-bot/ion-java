@@ -205,14 +205,14 @@ import java.util.Stack;
 <span class="pc bpc" id="L205" title="2 of 4 branches missed.">        assert len == IonBinary.lenVarUInt(value);</span>
 <span class="pc bpc" id="L206" title="2 of 4 branches missed.">        assert value &gt;= 0;</span>
 
-<span class="pc bpc" id="L208" title="9 of 12 branches missed.">        switch (len - 1) {</span>
+<span class="pc bpc" id="L208" title="8 of 12 branches missed.">        switch (len - 1) {</span>
 <span class="nc" id="L209">        case 9: userstream.write((byte)((value &gt;&gt; (7*9)) &amp; mask));</span>
 <span class="nc" id="L210">        case 8: userstream.write((byte)((value &gt;&gt; (7*8)) &amp; mask));</span>
 <span class="nc" id="L211">        case 7: userstream.write((byte)((value &gt;&gt; (7*7)) &amp; mask));</span>
 <span class="nc" id="L212">        case 6: userstream.write((byte)((value &gt;&gt; (7*6)) &amp; mask));</span>
 <span class="nc" id="L213">        case 5: userstream.write((byte)((value &gt;&gt; (7*5)) &amp; mask));</span>
-<span class="nc" id="L214">        case 4: userstream.write((byte)((value &gt;&gt; (7*4)) &amp; mask));</span>
-<span class="nc" id="L215">        case 3: userstream.write((byte)((value &gt;&gt; (7*3)) &amp; mask));</span>
+<span class="fc" id="L214">        case 4: userstream.write((byte)((value &gt;&gt; (7*4)) &amp; mask));</span>
+<span class="fc" id="L215">        case 3: userstream.write((byte)((value &gt;&gt; (7*3)) &amp; mask));</span>
 <span class="fc" id="L216">        case 2: userstream.write((byte)((value &gt;&gt; (7*2)) &amp; mask));</span>
 <span class="fc" id="L217">        case 1: userstream.write((byte)((value &gt;&gt; (7*1)) &amp; mask));</span>
 <span class="fc" id="L218">        case 0: userstream.write((byte)((value &amp; mask) | 0x80L));</span>
@@ -445,9 +445,9 @@ import java.util.Stack;
 <span class="pc bpc" id="L445" title="2 of 4 branches missed.">        assert longVal &gt;= 0;</span>
 <span class="fc bfc" id="L446" title="All 2 branches covered.">        if (longVal &lt; (1L &lt;&lt; (7 * 1))) return 1;  // 7  bits</span>
 <span class="fc bfc" id="L447" title="All 2 branches covered.">        if (longVal &lt; (1L &lt;&lt; (7 * 2))) return 2;  // 14 bits</span>
-<span class="pc bpc" id="L448" title="1 of 2 branches missed.">        if (longVal &lt; (1L &lt;&lt; (7 * 3))) return 3;  // 21 bits</span>
-<span class="nc bnc" id="L449" title="All 2 branches missed.">        if (longVal &lt; (1L &lt;&lt; (7 * 4))) return 4;  // 28 bits</span>
-<span class="nc bnc" id="L450" title="All 2 branches missed.">        if (longVal &lt; (1L &lt;&lt; (7 * 5))) return 5;  // 35 bits</span>
+<span class="fc bfc" id="L448" title="All 2 branches covered.">        if (longVal &lt; (1L &lt;&lt; (7 * 3))) return 3;  // 21 bits</span>
+<span class="pc bpc" id="L449" title="1 of 2 branches missed.">        if (longVal &lt; (1L &lt;&lt; (7 * 4))) return 4;  // 28 bits</span>
+<span class="pc bpc" id="L450" title="1 of 2 branches missed.">        if (longVal &lt; (1L &lt;&lt; (7 * 5))) return 5;  // 35 bits</span>
 <span class="nc bnc" id="L451" title="All 2 branches missed.">        if (longVal &lt; (1L &lt;&lt; (7 * 6))) return 6;  // 42 bits</span>
 <span class="nc bnc" id="L452" title="All 2 branches missed.">        if (longVal &lt; (1L &lt;&lt; (7 * 7))) return 7;  // 49 bits</span>
 <span class="nc bnc" id="L453" title="All 2 branches missed.">        if (longVal &lt; (1L &lt;&lt; (7 * 8))) return 8;  // 56 bits</span>

@@ -189,7 +189,7 @@ import java.util.Iterator;
 <span class="fc" id="L189">                _v.setAuthoritativeType(AS_TYPE.int_value);</span>
 <span class="fc" id="L190">            }</span>
 <span class="fc bfc" id="L191" title="All 2 branches covered.">            else if (_value_len &lt;= MAX_BINARY_LENGTH_LONG) {</span>
-<span class="fc" id="L192">                long v = readULong(_value_len);</span>
+<span class="fc" id="L192">                long v = readULong((int) _value_len);</span>
 
 <span class="fc bfc" id="L194" title="All 2 branches covered.">                if (v &lt; 0) {</span>
                     // we probably can't fit this magnitude properly into a Java long
@@ -222,7 +222,7 @@ import java.util.Iterator;
                 }
 <span class="fc" id="L223">            }</span>
             else {
-<span class="fc" id="L225">                BigInteger v = readBigInteger(_value_len, is_negative);</span>
+<span class="fc" id="L225">                BigInteger v = readBigInteger((int) _value_len, is_negative);</span>
 <span class="fc" id="L226">                _v.setValue(v);</span>
 <span class="fc" id="L227">                _v.setAuthoritativeType(AS_TYPE.bigInteger_value);</span>
             }
@@ -233,24 +233,24 @@ import java.util.Iterator;
 <span class="fc" id="L233">                d = 0.0;</span>
             }
             else {
-<span class="fc" id="L236">                d = readFloat(_value_len);</span>
+<span class="fc" id="L236">                d = readFloat((int) _value_len);</span>
             }
 <span class="fc" id="L238">            _v.setValue(d);</span>
 <span class="fc" id="L239">            _v.setAuthoritativeType(AS_TYPE.double_value);</span>
 <span class="fc" id="L240">            break;</span>
         case DECIMAL:
-<span class="fc" id="L242">            Decimal dec = readDecimal(_value_len);</span>
+<span class="fc" id="L242">            Decimal dec = readDecimal((int) _value_len);</span>
 <span class="fc" id="L243">            _v.setValue(dec);</span>
 <span class="fc" id="L244">            _v.setAuthoritativeType(AS_TYPE.decimal_value);</span>
 <span class="fc" id="L245">            break;</span>
         case TIMESTAMP:
             // TODO: it looks like a 0 length return a null timestamp - is that right?
-<span class="fc" id="L248">            Timestamp t = readTimestamp(_value_len);</span>
+<span class="fc" id="L248">            Timestamp t = readTimestamp((int) _value_len);</span>
 <span class="fc" id="L249">            _v.setValue(t);</span>
 <span class="fc" id="L250">            _v.setAuthoritativeType(AS_TYPE.timestamp_value);</span>
 <span class="fc" id="L251">            break;</span>
         case SYMBOL:
-<span class="fc" id="L253">            long sid = readULong(_value_len);</span>
+<span class="fc" id="L253">            long sid = readULong((int) _value_len);</span>
 <span class="pc bpc" id="L254" title="2 of 4 branches missed.">            if (sid &lt; 0 || sid &gt; Integer.MAX_VALUE) {</span>
 <span class="nc" id="L255">                String message = &quot;symbol id [&quot;</span>
                                + sid
@@ -265,7 +265,7 @@ import java.util.Iterator;
 <span class="fc" id="L265">            _v.setAuthoritativeType(AS_TYPE.int_value);</span>
 <span class="fc" id="L266">            break;</span>
         case STRING:
-<span class="fc" id="L268">            String s = readString(_value_len);</span>
+<span class="fc" id="L268">            String s = readString((int) _value_len);</span>
 <span class="fc" id="L269">            _v.setValue(s);</span>
 <span class="fc" id="L270">            _v.setAuthoritativeType(AS_TYPE.string_value);</span>
             break;

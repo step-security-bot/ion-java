@@ -377,10 +377,10 @@ import java.io.Reader;
 <span class="fc" id="L377">            _pos += ready;</span>
 <span class="fc" id="L378">            offset += ready;</span>
 <span class="fc" id="L379">            remaining -= ready;</span>
-<span class="pc bpc" id="L380" title="2 of 6 branches missed.">            if (remaining == 0 || _pos &lt; _limit || refill_helper()) {</span>
+<span class="pc bpc" id="L380" title="1 of 6 branches missed.">            if (remaining == 0 || _pos &lt; _limit || refill_helper()) {</span>
 <span class="fc" id="L381">                break;</span>
             }
-<span class="nc" id="L383">        }</span>
+<span class="fc" id="L383">        }</span>
 <span class="fc" id="L384">        return length - remaining;</span>
     }
     private int read_utf8(int c) throws IOException
