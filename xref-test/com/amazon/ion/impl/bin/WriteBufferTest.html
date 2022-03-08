@@ -1081,7 +1081,27 @@
 <a class="jxr_linenumber" name="L1073" href="#L1073">1073</a>         buf.shiftBytesLeft(1, 6);
 <a class="jxr_linenumber" name="L1074" href="#L1074">1074</a>         assertBuffer(<span class="jxr_string">"ABCDE01234B"</span>.getBytes());
 <a class="jxr_linenumber" name="L1075" href="#L1075">1075</a>     }
-<a class="jxr_linenumber" name="L1076" href="#L1076">1076</a> }
+<a class="jxr_linenumber" name="L1076" href="#L1076">1076</a> 
+<a class="jxr_linenumber" name="L1077" href="#L1077">1077</a>     @Test
+<a class="jxr_linenumber" name="L1078" href="#L1078">1078</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> shiftBytesLeftWithLengthZero() {
+<a class="jxr_linenumber" name="L1079" href="#L1079">1079</a>         assertEquals(11, ALLOCATOR.getBlockSize());
+<a class="jxr_linenumber" name="L1080" href="#L1080">1080</a>         buf.writeBytes(<span class="jxr_string">"012345"</span>.getBytes());
+<a class="jxr_linenumber" name="L1081" href="#L1081">1081</a>         <em class="jxr_comment">// Shift left by two, retaining zero bytes (i.e. truncate).</em>
+<a class="jxr_linenumber" name="L1082" href="#L1082">1082</a>         <em class="jxr_comment">// In Ion, this situation occurs when a length bytes are preallocated for containers that end up being empty.</em>
+<a class="jxr_linenumber" name="L1083" href="#L1083">1083</a>         buf.shiftBytesLeft(0, 2);
+<a class="jxr_linenumber" name="L1084" href="#L1084">1084</a>         assertBuffer(<span class="jxr_string">"0123"</span>.getBytes());
+<a class="jxr_linenumber" name="L1085" href="#L1085">1085</a>     }
+<a class="jxr_linenumber" name="L1086" href="#L1086">1086</a> 
+<a class="jxr_linenumber" name="L1087" href="#L1087">1087</a>     @Test
+<a class="jxr_linenumber" name="L1088" href="#L1088">1088</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> shiftBytesLeftWithLengthZeroAcrossBlocks() {
+<a class="jxr_linenumber" name="L1089" href="#L1089">1089</a>         assertEquals(11, ALLOCATOR.getBlockSize());
+<a class="jxr_linenumber" name="L1090" href="#L1090">1090</a>         buf.writeBytes(<span class="jxr_string">"0123456789|0"</span>.getBytes());
+<a class="jxr_linenumber" name="L1091" href="#L1091">1091</a>         <em class="jxr_comment">// Shift left by two, retaining zero bytes (i.e. truncate).</em>
+<a class="jxr_linenumber" name="L1092" href="#L1092">1092</a>         <em class="jxr_comment">// In Ion, this situation occurs when a length bytes are preallocated for containers that end up being empty.</em>
+<a class="jxr_linenumber" name="L1093" href="#L1093">1093</a>         buf.shiftBytesLeft(0, 2);
+<a class="jxr_linenumber" name="L1094" href="#L1094">1094</a>         assertBuffer(<span class="jxr_string">"0123456789"</span>.getBytes());
+<a class="jxr_linenumber" name="L1095" href="#L1095">1095</a>     }
+<a class="jxr_linenumber" name="L1096" href="#L1096">1096</a> }
 </pre>
 <hr/>
 <div id="footer">Copyright &#169; 2022. All rights reserved.</div>
