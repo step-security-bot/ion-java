@@ -61,7 +61,7 @@ com.amazon.ion:ion-java,com.amazon.ion.impl,IonTypeID,0,273,0,62,0,38,0,34,0,3
 com.amazon.ion:ion-java,com.amazon.ion.impl,SimpleByteBuffer.UserByteWriter,238,0,8,0,63,0,25,0,21,0
 com.amazon.ion:ion-java,com.amazon.ion.impl,SubstituteSymbolTable,24,161,6,26,6,49,10,28,4,18
 com.amazon.ion:ion-java,com.amazon.ion.impl,UnifiedDataPageX.Bytes,48,25,4,0,10,8,6,2,4,2
-com.amazon.ion:ion-java,com.amazon.ion.impl,BlockedBuffer,745,1651,158,232,101,345,151,79,7,28
+com.amazon.ion:ion-java,com.amazon.ion.impl,BlockedBuffer,750,1646,156,234,104,342,149,81,7,28
 com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_SymtabExtendsCache,7,58,5,11,0,12,5,6,0,3
 com.amazon.ion:ion-java,com.amazon.ion.impl,LocalSymbolTable.Factory,0,36,0,2,0,8,0,3,0,2
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderLookaheadBuffer.VarUInt.Location,0,44,0,0,0,5,0,1,0,1
