@@ -730,7 +730,7 @@ static final boolean test_with_no_version_checking = false;
     bbBlock remove(Object caller, int version, bbBlock curr, int pos, int len)
     {
 <span class="pc bpc" id="L732" title="2 of 4 branches missed.">        assert mutation_in_progress(caller, version);</span>
-<span class="fc bfc" id="L733" title="All 2 branches covered.">        if (len == 0) return curr;</span>
+<span class="pc bpc" id="L733" title="1 of 2 branches missed.">        if (len == 0) return curr;</span>
 <span class="pc bpc" id="L734" title="2 of 4 branches missed.">        if (len &lt; 0 || (pos + len) &gt; this._buf_limit) {</span>
 <span class="nc" id="L735">            throw new IllegalArgumentException();</span>
         }
@@ -743,7 +743,7 @@ static final boolean test_with_no_version_checking = false;
 <span class="pc bpc" id="L743" title="2 of 4 branches missed.">        assert (pos - curr._offset &lt;= curr._limit);</span>
 <span class="pc bpc" id="L744" title="2 of 4 branches missed.">        assert _validate();</span>
         // this is to simply eliminate a big edge case
-<span class="fc bfc" id="L746" title="All 4 branches covered.">        if (pos == 0 &amp;&amp; len == this._buf_limit) {</span>
+<span class="pc bpc" id="L746" title="1 of 4 branches missed.">        if (pos == 0 &amp;&amp; len == this._buf_limit) {</span>
 <span class="fc" id="L747">            this.clear(caller, version);</span>
 <span class="fc" id="L748">            notifyRemove(0, len);</span>
 <span class="fc" id="L749">            return null;</span>
@@ -752,9 +752,9 @@ static final boolean test_with_no_version_checking = false;
 <span class="fc" id="L752">        int currBlockPosition = currBlock.blockOffsetFromAbsolute(pos);</span>
 <span class="fc" id="L753">        int removedFromThisBlock = currBlock._limit - currBlockPosition;</span>
 <span class="fc bfc" id="L754" title="All 2 branches covered.">        if (removedFromThisBlock &gt; amountToRemove) removedFromThisBlock = amountToRemove;</span>
-<span class="fc bfc" id="L755" title="All 2 branches covered.">        if (removedFromThisBlock == currBlock._limit) {</span>
+<span class="pc bpc" id="L755" title="1 of 2 branches missed.">        if (removedFromThisBlock == currBlock._limit) {</span>
             // we'll be removing the whole block in the whole block loop below
-<span class="fc" id="L757">            startingIdx--;  // so we have to back up on to fix the next block that will</span>
+<span class="nc" id="L757">            startingIdx--;  // so we have to back up on to fix the next block that will</span>
                             // &quot;fall&quot; down into the soon to be emptied slot here
         }
         else {
@@ -1481,7 +1481,7 @@ static final boolean test_with_no_version_checking = false;
 <span class="fc" id="L1481">                    writeInThisBlock = end_b - off;</span>
                 }
 <span class="pc bpc" id="L1483" title="2 of 4 branches missed.">                assert writeInThisBlock &gt;= 0;</span>
-<span class="pc bpc" id="L1484" title="1 of 2 branches missed.">                if (writeInThisBlock &gt; 0) {</span>
+<span class="fc bfc" id="L1484" title="All 2 branches covered.">                if (writeInThisBlock &gt; 0) {</span>
 <span class="fc" id="L1485">                    System.arraycopy(b, off, _curr._buffer, _blockPosition, writeInThisBlock);</span>
 <span class="fc" id="L1486">                    off += writeInThisBlock;</span>
 <span class="fc" id="L1487">                    _pos += writeInThisBlock;</span>
