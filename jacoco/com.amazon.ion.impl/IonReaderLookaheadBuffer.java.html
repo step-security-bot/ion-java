@@ -516,29 +516,30 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
 <span class="fc" id="L516">        peekIndex = Math.max(peekIndex - shiftAmount, 0);</span>
 <span class="fc" id="L517">        valuePreHeaderIndex -= shiftAmount;</span>
 <span class="fc" id="L518">        valuePostHeaderIndex -= shiftAmount;</span>
-<span class="fc bfc" id="L519" title="All 2 branches covered.">        for (Marker symbolTableMarker : symbolTableMarkers) {</span>
-<span class="fc bfc" id="L520" title="All 2 branches covered.">            if (symbolTableMarker.startIndex &gt; afterIndex) {</span>
-<span class="fc" id="L521">                symbolTableMarker.startIndex -= shiftAmount;</span>
-<span class="fc" id="L522">                symbolTableMarker.endIndex -= shiftAmount;</span>
+<span class="fc" id="L519">        valueStartWriteIndex -= shiftAmount;</span>
+<span class="fc bfc" id="L520" title="All 2 branches covered.">        for (Marker symbolTableMarker : symbolTableMarkers) {</span>
+<span class="fc bfc" id="L521" title="All 2 branches covered.">            if (symbolTableMarker.startIndex &gt; afterIndex) {</span>
+<span class="fc" id="L522">                symbolTableMarker.startIndex -= shiftAmount;</span>
+<span class="fc" id="L523">                symbolTableMarker.endIndex -= shiftAmount;</span>
             }
-<span class="fc" id="L524">        }</span>
-<span class="fc bfc" id="L525" title="All 2 branches covered.">        if (annotationSidsMarker.startIndex &gt; afterIndex) {</span>
-<span class="fc" id="L526">            annotationSidsMarker.startIndex -= shiftAmount;</span>
-<span class="fc" id="L527">            annotationSidsMarker.endIndex -= shiftAmount;</span>
+<span class="fc" id="L525">        }</span>
+<span class="fc bfc" id="L526" title="All 2 branches covered.">        if (annotationSidsMarker.startIndex &gt; afterIndex) {</span>
+<span class="fc" id="L527">            annotationSidsMarker.startIndex -= shiftAmount;</span>
+<span class="fc" id="L528">            annotationSidsMarker.endIndex -= shiftAmount;</span>
         }
-<span class="fc bfc" id="L529" title="All 2 branches covered.">        if (ivmSecondByteIndex &gt; afterIndex) {</span>
-<span class="fc" id="L530">            ivmSecondByteIndex -= shiftAmount;</span>
+<span class="fc bfc" id="L530" title="All 2 branches covered.">        if (ivmSecondByteIndex &gt; afterIndex) {</span>
+<span class="fc" id="L531">            ivmSecondByteIndex -= shiftAmount;</span>
         }
-<span class="fc" id="L532">    }</span>
+<span class="fc" id="L533">    }</span>
 
     /**
      * Reclaim the NOP padding that occurred before the current value, making space for the value in the buffer.
      */
     private void reclaimNopPadding() {
-<span class="fc" id="L538">        pipe.consolidate(valuePreHeaderIndex, nopPadStartIndex);</span>
-<span class="fc" id="L539">        shiftIndicesLeft(nopPadStartIndex, valuePreHeaderIndex - nopPadStartIndex);</span>
-<span class="fc" id="L540">        resetNopPadIndex();</span>
-<span class="fc" id="L541">    }</span>
+<span class="fc" id="L539">        pipe.consolidate(valuePreHeaderIndex, nopPadStartIndex);</span>
+<span class="fc" id="L540">        shiftIndicesLeft(nopPadStartIndex, valuePreHeaderIndex - nopPadStartIndex);</span>
+<span class="fc" id="L541">        resetNopPadIndex();</span>
+<span class="fc" id="L542">    }</span>
 
     /**
      * Skip bytes from the underlying InputStream without ever buffering them.
@@ -548,11 +549,11 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
      */
     private long skipBytesFromInput(long numberOfBytesToSkip) throws IOException {
         try {
-<span class="fc" id="L551">            return getInput().skip(numberOfBytesToSkip);</span>
-<span class="nc" id="L552">        } catch (EOFException e) {</span>
+<span class="fc" id="L552">            return getInput().skip(numberOfBytesToSkip);</span>
+<span class="nc" id="L553">        } catch (EOFException e) {</span>
             // Certain InputStream implementations (e.g. GZIPInputStream) throw EOFException if more bytes are requested
             // to skip than are currently available (e.g. if a header or trailer is incomplete).
-<span class="nc" id="L555">            return 0;</span>
+<span class="nc" id="L556">            return 0;</span>
         }
     }
 
@@ -564,38 +565,38 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
      * @throws Exception if thrown by the underlying InputStream.
      */
     private int fillPage(int numberOfBytesRequested) throws Exception {
-<span class="fc" id="L567">        int amountToFill = pipe.capacity() - pipe.size();</span>
-<span class="fc bfc" id="L568" title="All 2 branches covered.">        if (amountToFill &lt;= 0) {</span>
+<span class="fc" id="L568">        int amountToFill = pipe.capacity() - pipe.size();</span>
+<span class="fc bfc" id="L569" title="All 2 branches covered.">        if (amountToFill &lt;= 0) {</span>
             // Try to fill the remainder of the existing buffer to avoid growing unnecessarily. If there is no
             // space, that indicates that a single value exceeds the size of a page. In that case, fill another page,
             // growing the buffer only up to the configured maximum size.
-<span class="fc" id="L572">            int spaceAvailable = getMaximumBufferSize() - pipe.capacity();</span>
-<span class="fc bfc" id="L573" title="All 2 branches covered.">            if (numberOfBytesRequested &gt; spaceAvailable) {</span>
-<span class="pc bpc" id="L574" title="1 of 4 branches missed.">                if (nopPadStartIndex &gt; -1 &amp;&amp; valuePreHeaderIndex - nopPadStartIndex &gt;= numberOfBytesRequested) {</span>
+<span class="fc" id="L573">            int spaceAvailable = getMaximumBufferSize() - pipe.capacity();</span>
+<span class="fc bfc" id="L574" title="All 2 branches covered.">            if (numberOfBytesRequested &gt; spaceAvailable) {</span>
+<span class="pc bpc" id="L575" title="1 of 4 branches missed.">                if (nopPadStartIndex &gt; -1 &amp;&amp; valuePreHeaderIndex - nopPadStartIndex &gt;= numberOfBytesRequested) {</span>
                     // Reclaim the NOP pad space if doing so would allow the value to fit.
-<span class="fc" id="L576">                    reclaimNopPadding();</span>
+<span class="fc" id="L577">                    reclaimNopPadding();</span>
                 } else {
-<span class="fc" id="L578">                    startSkippingValue();</span>
+<span class="fc" id="L579">                    startSkippingValue();</span>
                 }
-<span class="fc" id="L580">                amountToFill = numberOfBytesRequested;</span>
+<span class="fc" id="L581">                amountToFill = numberOfBytesRequested;</span>
             } else {
-<span class="fc" id="L582">                amountToFill = Math.min(pageSize, spaceAvailable);</span>
+<span class="fc" id="L583">                amountToFill = Math.min(pageSize, spaceAvailable);</span>
             }
         }
         int received;
-<span class="fc bfc" id="L586" title="All 2 branches covered.">        if (isSkippingCurrentValue()) {</span>
-<span class="fc bfc" id="L587" title="All 2 branches covered.">            if (state == State.SKIPPING_VALUE) {</span>
+<span class="fc bfc" id="L587" title="All 2 branches covered.">        if (isSkippingCurrentValue()) {</span>
+<span class="fc bfc" id="L588" title="All 2 branches covered.">            if (state == State.SKIPPING_VALUE) {</span>
                 // This is a seek operation, meaning that the bytes don't need to be interpreted.
-<span class="fc" id="L589">                received = (int) skipBytesFromInput(amountToFill);</span>
+<span class="fc" id="L590">                received = (int) skipBytesFromInput(amountToFill);</span>
             } else {
                 // The bytes need to be interpreted, so they cannot be skipped. The caller must retrieve them from
                 // the input.
-<span class="fc" id="L593">                received = amountToFill;</span>
+<span class="fc" id="L594">                received = amountToFill;</span>
             }
         } else {
-<span class="fc" id="L596">            received = pipe.receive(getInput(), amountToFill);</span>
+<span class="fc" id="L597">            received = pipe.receive(getInput(), amountToFill);</span>
         }
-<span class="fc" id="L598">        return received;</span>
+<span class="fc" id="L599">        return received;</span>
     }
 
     /**
@@ -603,19 +604,19 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
      * @throws Exception if thrown by the handler.
      */
     private void notifyHandlerOfOversizedValue() throws Exception {
-<span class="fc bfc" id="L606" title="All 2 branches covered.">        if (handlerNeedsToBeNotifiedOfOversizedValue) {</span>
-<span class="fc bfc" id="L607" title="All 2 branches covered.">            if (isSystemValue) {</span>
+<span class="fc bfc" id="L607" title="All 2 branches covered.">        if (handlerNeedsToBeNotifiedOfOversizedValue) {</span>
+<span class="fc bfc" id="L608" title="All 2 branches covered.">            if (isSystemValue) {</span>
                 // Processing cannot continue after system values (symbol tables) are truncated because subsequent
                 // values may be unreadable. Notify the user.
-<span class="fc" id="L610">                oversizedSymbolTableHandler.onOversizedSymbolTable();</span>
+<span class="fc" id="L611">                oversizedSymbolTableHandler.onOversizedSymbolTable();</span>
             } else {
                 // An oversized user value has been encountered. Notify the user so they can decide whether to continue
                 // or abort.
-<span class="fc" id="L614">                oversizedValueHandler.onOversizedValue();</span>
+<span class="fc" id="L615">                oversizedValueHandler.onOversizedValue();</span>
             }
         }
-<span class="fc" id="L617">        handlerNeedsToBeNotifiedOfOversizedValue = false;</span>
-<span class="fc" id="L618">    }</span>
+<span class="fc" id="L618">        handlerNeedsToBeNotifiedOfOversizedValue = false;</span>
+<span class="fc" id="L619">    }</span>
 
     /**
      * Attempt to retrieve at least `additionalBytesNeeded` bytes from the input and either buffer them (if the value
@@ -626,33 +627,33 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
     private long fillOrSkip() throws Exception {
         // Clamping at the number of buffered bytes available guarantees that the buffer
         // will never grow beyond its initial size.
-<span class="fc" id="L629">        long bytesRequested = additionalBytesNeeded - pipe.availableBeyondBoundary();</span>
+<span class="fc" id="L630">        long bytesRequested = additionalBytesNeeded - pipe.availableBeyondBoundary();</span>
         long bytesFilled;
-<span class="fc bfc" id="L631" title="All 2 branches covered.">        if (isSkippingCurrentValue()) {</span>
-<span class="fc" id="L632">            bytesFilled = skipBytesFromInput(bytesRequested);</span>
+<span class="fc bfc" id="L632" title="All 2 branches covered.">        if (isSkippingCurrentValue()) {</span>
+<span class="fc" id="L633">            bytesFilled = skipBytesFromInput(bytesRequested);</span>
         } else {
-<span class="fc bfc" id="L634" title="All 2 branches covered.">            if (additionalBytesNeeded &gt; MAXIMUM_VALUE_SIZE) {</span>
-<span class="fc" id="L635">                throw new IonException(&quot;The size of the value exceeds the limits of the implementation.&quot;);</span>
+<span class="fc bfc" id="L635" title="All 2 branches covered.">            if (additionalBytesNeeded &gt; MAXIMUM_VALUE_SIZE) {</span>
+<span class="fc" id="L636">                throw new IonException(&quot;The size of the value exceeds the limits of the implementation.&quot;);</span>
             }
-<span class="fc" id="L637">            bytesFilled = fillPage((int) bytesRequested);</span>
+<span class="fc" id="L638">            bytesFilled = fillPage((int) bytesRequested);</span>
         }
-<span class="fc bfc" id="L639" title="All 2 branches covered.">        if (bytesFilled &lt; 1) {</span>
-<span class="fc" id="L640">            return 0;</span>
+<span class="fc bfc" id="L640" title="All 2 branches covered.">        if (bytesFilled &lt; 1) {</span>
+<span class="fc" id="L641">            return 0;</span>
         }
-<span class="fc bfc" id="L642" title="All 2 branches covered.">        if (isSkippingCurrentValue()) {</span>
+<span class="fc bfc" id="L643" title="All 2 branches covered.">        if (isSkippingCurrentValue()) {</span>
             // The user cannot be notified of a size violation until it has been determined whether
             // the value is a symbol table or user value, which is only true in the SKIPPING_VALUE
             // state.
-<span class="fc" id="L646">            notifyHandlerOfOversizedValue();</span>
+<span class="fc" id="L647">            notifyHandlerOfOversizedValue();</span>
             // Skip all of the bytes skipped from the InputStream as well as all bytes previously
             // buffered.
-<span class="fc" id="L649">            bytesFilled = bytesFilled + ((int) additionalBytesNeeded - bytesRequested);</span>
+<span class="fc" id="L650">            bytesFilled = bytesFilled + ((int) additionalBytesNeeded - bytesRequested);</span>
         } else {
-<span class="fc" id="L651">            bytesFilled = Math.min(additionalBytesNeeded, bytesFilled);</span>
-<span class="fc" id="L652">            pipe.extendBoundary((int) bytesFilled);</span>
-<span class="fc" id="L653">            peekIndex += (int) bytesFilled;</span>
+<span class="fc" id="L652">            bytesFilled = Math.min(additionalBytesNeeded, bytesFilled);</span>
+<span class="fc" id="L653">            pipe.extendBoundary((int) bytesFilled);</span>
+<span class="fc" id="L654">            peekIndex += (int) bytesFilled;</span>
         }
-<span class="fc" id="L655">        return bytesFilled;</span>
+<span class="fc" id="L656">        return bytesFilled;</span>
     }
 
     /**
@@ -663,22 +664,22 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
      */
     private long skip(long numberOfBytesToSkip) throws Exception {
         long numberOfBytesSkipped;
-<span class="fc bfc" id="L666" title="All 2 branches covered.">        if (pipe.availableBeyondBoundary() &gt;= numberOfBytesToSkip) {</span>
-<span class="fc" id="L667">            numberOfBytesSkipped = (int) numberOfBytesToSkip;</span>
-<span class="fc" id="L668">            pipe.extendBoundary((int) numberOfBytesSkipped);</span>
-<span class="fc" id="L669">            peekIndex += (int) numberOfBytesSkipped;</span>
+<span class="fc bfc" id="L667" title="All 2 branches covered.">        if (pipe.availableBeyondBoundary() &gt;= numberOfBytesToSkip) {</span>
+<span class="fc" id="L668">            numberOfBytesSkipped = (int) numberOfBytesToSkip;</span>
+<span class="fc" id="L669">            pipe.extendBoundary((int) numberOfBytesSkipped);</span>
+<span class="fc" id="L670">            peekIndex += (int) numberOfBytesSkipped;</span>
         } else {
-<span class="fc" id="L671">            numberOfBytesSkipped = fillOrSkip();</span>
+<span class="fc" id="L672">            numberOfBytesSkipped = fillOrSkip();</span>
         }
-<span class="fc bfc" id="L673" title="All 2 branches covered.">        if (numberOfBytesSkipped &gt; 0) {</span>
-<span class="fc" id="L674">            long numberOfBytesToReport = numberOfBytesSkipped;</span>
-<span class="fc bfc" id="L675" title="All 2 branches covered.">            while (numberOfBytesToReport &gt; 0) {</span>
-<span class="fc" id="L676">                int numberOfBytesToReportThisIteration = (int) Math.min(Integer.MAX_VALUE, numberOfBytesToReport);</span>
-<span class="fc" id="L677">                dataHandler.onData(numberOfBytesToReportThisIteration);</span>
-<span class="fc" id="L678">                numberOfBytesToReport -= numberOfBytesToReportThisIteration;</span>
-<span class="fc" id="L679">            }</span>
+<span class="fc bfc" id="L674" title="All 2 branches covered.">        if (numberOfBytesSkipped &gt; 0) {</span>
+<span class="fc" id="L675">            long numberOfBytesToReport = numberOfBytesSkipped;</span>
+<span class="fc bfc" id="L676" title="All 2 branches covered.">            while (numberOfBytesToReport &gt; 0) {</span>
+<span class="fc" id="L677">                int numberOfBytesToReportThisIteration = (int) Math.min(Integer.MAX_VALUE, numberOfBytesToReport);</span>
+<span class="fc" id="L678">                dataHandler.onData(numberOfBytesToReportThisIteration);</span>
+<span class="fc" id="L679">                numberOfBytesToReport -= numberOfBytesToReportThisIteration;</span>
+<span class="fc" id="L680">            }</span>
         }
-<span class="fc" id="L681">        return numberOfBytesSkipped;</span>
+<span class="fc" id="L682">        return numberOfBytesSkipped;</span>
     }
 
     /*
@@ -731,103 +732,103 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
     @Override
     protected void fillInputHelper() throws Exception {
         while (true) {
-<span class="fc bfc" id="L734" title="All 4 branches covered.">            if (state == State.BEFORE_TYPE_ID || state == State.READING_TYPE_ID) {</span>
-<span class="fc" id="L735">                reset();</span>
-<span class="fc" id="L736">                state = State.READING_TYPE_ID;</span>
-<span class="fc bfc" id="L737" title="All 2 branches covered.">                if (readTypeID(true) != ReadTypeIdResult.NO_DATA) {</span>
+<span class="fc bfc" id="L735" title="All 4 branches covered.">            if (state == State.BEFORE_TYPE_ID || state == State.READING_TYPE_ID) {</span>
+<span class="fc" id="L736">                reset();</span>
+<span class="fc" id="L737">                state = State.READING_TYPE_ID;</span>
+<span class="fc bfc" id="L738" title="All 2 branches covered.">                if (readTypeID(true) != ReadTypeIdResult.NO_DATA) {</span>
                     // The previous line transfers at most one byte, so the pre-header index is the write index minus
                     // one.
-<span class="fc" id="L740">                    valuePostHeaderIndex = peekIndex;</span>
-<span class="fc" id="L741">                    valuePreHeaderIndex = valuePostHeaderIndex - 1;</span>
-<span class="fc" id="L742">                    valueStartWriteIndex = valuePreHeaderIndex;</span>
+<span class="fc" id="L741">                    valuePostHeaderIndex = peekIndex;</span>
+<span class="fc" id="L742">                    valuePreHeaderIndex = valuePostHeaderIndex - 1;</span>
+<span class="fc" id="L743">                    valueStartWriteIndex = valuePreHeaderIndex;</span>
                 }
             }
-<span class="fc bfc" id="L745" title="All 2 branches covered.">            if (state == State.READING_HEADER) {</span>
-<span class="fc" id="L746">                readHeader();</span>
-<span class="fc bfc" id="L747" title="All 2 branches covered.">                if (!inProgressVarUInt.isComplete) {</span>
-<span class="fc" id="L748">                    return;</span>
+<span class="fc bfc" id="L746" title="All 2 branches covered.">            if (state == State.READING_HEADER) {</span>
+<span class="fc" id="L747">                readHeader();</span>
+<span class="fc bfc" id="L748" title="All 2 branches covered.">                if (!inProgressVarUInt.isComplete) {</span>
+<span class="fc" id="L749">                    return;</span>
                 }
-<span class="fc" id="L750">                valuePostHeaderIndex = peekIndex;</span>
+<span class="fc" id="L751">                valuePostHeaderIndex = peekIndex;</span>
             }
-<span class="fc bfc" id="L752" title="All 2 branches covered.">            if (state == State.READING_VALUE_WITH_SYMBOL_TABLE_ANNOTATION) {</span>
+<span class="fc bfc" id="L753" title="All 2 branches covered.">            if (state == State.READING_VALUE_WITH_SYMBOL_TABLE_ANNOTATION) {</span>
                 // Skip annotations until positioned on the value's type ID.
-<span class="fc bfc" id="L754" title="All 2 branches covered.">                while (numberOfAnnotationSidBytesRemaining &gt; 0) {</span>
-<span class="fc" id="L755">                    long numberOfBytesSkipped = skip(numberOfAnnotationSidBytesRemaining);</span>
-<span class="pc bpc" id="L756" title="1 of 2 branches missed.">                    if (numberOfBytesSkipped &lt; 1) {</span>
-<span class="nc" id="L757">                        return;</span>
+<span class="fc bfc" id="L755" title="All 2 branches covered.">                while (numberOfAnnotationSidBytesRemaining &gt; 0) {</span>
+<span class="fc" id="L756">                    long numberOfBytesSkipped = skip(numberOfAnnotationSidBytesRemaining);</span>
+<span class="pc bpc" id="L757" title="1 of 2 branches missed.">                    if (numberOfBytesSkipped &lt; 1) {</span>
+<span class="nc" id="L758">                        return;</span>
                     }
-<span class="fc" id="L759">                    numberOfAnnotationSidBytesRemaining -= numberOfBytesSkipped;</span>
-<span class="fc" id="L760">                    additionalBytesNeeded -= numberOfBytesSkipped;</span>
-<span class="fc" id="L761">                }</span>
-<span class="fc" id="L762">                ReadTypeIdResult result = readTypeID(false);</span>
-<span class="fc bfc" id="L763" title="All 2 branches covered.">                if (result == ReadTypeIdResult.NO_DATA) {</span>
-<span class="fc" id="L764">                    return;</span>
+<span class="fc" id="L760">                    numberOfAnnotationSidBytesRemaining -= numberOfBytesSkipped;</span>
+<span class="fc" id="L761">                    additionalBytesNeeded -= numberOfBytesSkipped;</span>
+<span class="fc" id="L762">                }</span>
+<span class="fc" id="L763">                ReadTypeIdResult result = readTypeID(false);</span>
+<span class="fc bfc" id="L764" title="All 2 branches covered.">                if (result == ReadTypeIdResult.NO_DATA) {</span>
+<span class="fc" id="L765">                    return;</span>
                 }
                 // When successful, readTypeID reads exactly one byte.
-<span class="fc" id="L767">                additionalBytesNeeded--;</span>
-<span class="fc bfc" id="L768" title="All 2 branches covered.">                if (result == ReadTypeIdResult.STRUCT) {</span>
-<span class="fc" id="L769">                    state = State.READING_SYMBOL_TABLE_LENGTH;</span>
+<span class="fc" id="L768">                additionalBytesNeeded--;</span>
+<span class="fc bfc" id="L769" title="All 2 branches covered.">                if (result == ReadTypeIdResult.STRUCT) {</span>
+<span class="fc" id="L770">                    state = State.READING_SYMBOL_TABLE_LENGTH;</span>
                 } else {
-<span class="fc" id="L771">                    state = State.SKIPPING_VALUE;</span>
+<span class="fc" id="L772">                    state = State.SKIPPING_VALUE;</span>
                 }
             }
-<span class="fc bfc" id="L774" title="All 2 branches covered.">            if (state == State.READING_SYMBOL_TABLE_LENGTH) {</span>
-<span class="fc" id="L775">                isSystemValue = true;</span>
-<span class="fc bfc" id="L776" title="All 2 branches covered.">                if (inProgressVarUInt.location == VarUInt.Location.VALUE_LENGTH) {</span>
-<span class="fc" id="L777">                    readVarUInt();</span>
-<span class="fc bfc" id="L778" title="All 2 branches covered.">                    if (!inProgressVarUInt.isComplete) {</span>
-<span class="fc" id="L779">                        return;</span>
+<span class="fc bfc" id="L775" title="All 2 branches covered.">            if (state == State.READING_SYMBOL_TABLE_LENGTH) {</span>
+<span class="fc" id="L776">                isSystemValue = true;</span>
+<span class="fc bfc" id="L777" title="All 2 branches covered.">                if (inProgressVarUInt.location == VarUInt.Location.VALUE_LENGTH) {</span>
+<span class="fc" id="L778">                    readVarUInt();</span>
+<span class="fc bfc" id="L779" title="All 2 branches covered.">                    if (!inProgressVarUInt.isComplete) {</span>
+<span class="fc" id="L780">                        return;</span>
                     }
-<span class="fc" id="L781">                    additionalBytesNeeded = inProgressVarUInt.value;</span>
+<span class="fc" id="L782">                    additionalBytesNeeded = inProgressVarUInt.value;</span>
                 }
-<span class="fc" id="L783">                symbolTableMarkers.add(new Marker(peekIndex, (int) additionalBytesNeeded));</span>
-<span class="fc" id="L784">                state = State.SKIPPING_VALUE;</span>
+<span class="fc" id="L784">                symbolTableMarkers.add(new Marker(peekIndex, (int) additionalBytesNeeded));</span>
+<span class="fc" id="L785">                state = State.SKIPPING_VALUE;</span>
             }
-<span class="fc bfc" id="L786" title="All 2 branches covered.">            if (state == State.SKIPPING_VALUE) {</span>
-<span class="fc bfc" id="L787" title="All 2 branches covered.">                if (valueTid.isNopPad) {</span>
-<span class="fc bfc" id="L788" title="All 2 branches covered.">                    if (pipe.availableBeyondBoundary() &lt;= additionalBytesNeeded) {</span>
+<span class="fc bfc" id="L787" title="All 2 branches covered.">            if (state == State.SKIPPING_VALUE) {</span>
+<span class="fc bfc" id="L788" title="All 2 branches covered.">                if (valueTid.isNopPad) {</span>
+<span class="fc bfc" id="L789" title="All 2 branches covered.">                    if (pipe.availableBeyondBoundary() &lt;= additionalBytesNeeded) {</span>
                         // There cannot be any meaningful data beyond the NOP pad, so the buffer can be truncated
                         // immediately and the rest of the NOP pad skipped.
-<span class="fc" id="L791">                        additionalBytesNeeded -= pipe.availableBeyondBoundary();</span>
-<span class="fc" id="L792">                        startSkippingValue();</span>
+<span class="fc" id="L792">                        additionalBytesNeeded -= pipe.availableBeyondBoundary();</span>
+<span class="fc" id="L793">                        startSkippingValue();</span>
                         // NOP padding will not be buffered, so it is never considered oversized.
-<span class="fc" id="L794">                        handlerNeedsToBeNotifiedOfOversizedValue = false;</span>
+<span class="fc" id="L795">                        handlerNeedsToBeNotifiedOfOversizedValue = false;</span>
                     }
                     // Else, the rest of the NOP pad is already buffered, and there is a value at least partially
                     // buffered beyond it. The NOP pad will only be deleted from the buffer if the next value is
                     // large enough that it doesn't fit within the buffer's configured maximum size.
                 }
-<span class="fc bfc" id="L800" title="All 2 branches covered.">                while (additionalBytesNeeded &gt; 0) {</span>
-<span class="fc" id="L801">                    long numberOfBytesSkipped = skip(additionalBytesNeeded);</span>
-<span class="fc bfc" id="L802" title="All 2 branches covered.">                    if (numberOfBytesSkipped &lt; 1) {</span>
-<span class="fc" id="L803">                        return;</span>
+<span class="fc bfc" id="L801" title="All 2 branches covered.">                while (additionalBytesNeeded &gt; 0) {</span>
+<span class="fc" id="L802">                    long numberOfBytesSkipped = skip(additionalBytesNeeded);</span>
+<span class="fc bfc" id="L803" title="All 2 branches covered.">                    if (numberOfBytesSkipped &lt; 1) {</span>
+<span class="fc" id="L804">                        return;</span>
                     }
-<span class="fc" id="L805">                    additionalBytesNeeded -= numberOfBytesSkipped;</span>
-<span class="fc" id="L806">                }</span>
-<span class="fc" id="L807">                state = State.BEFORE_TYPE_ID;</span>
+<span class="fc" id="L806">                    additionalBytesNeeded -= numberOfBytesSkipped;</span>
+<span class="fc" id="L807">                }</span>
+<span class="fc" id="L808">                state = State.BEFORE_TYPE_ID;</span>
             }
-<span class="fc bfc" id="L809" title="All 2 branches covered.">            if (state == State.BEFORE_TYPE_ID) {</span>
-<span class="fc" id="L810">                valueEndIndex = peekIndex;</span>
-<span class="fc bfc" id="L811" title="All 6 branches covered.">                if (isSystemValue || isSkippingCurrentValue() || valueTid.isNopPad) {</span>
-<span class="fc bfc" id="L812" title="All 4 branches covered.">                    if (valueTid.isNopPad &amp;&amp; nopPadStartIndex &lt; 0) {</span>
+<span class="fc bfc" id="L810" title="All 2 branches covered.">            if (state == State.BEFORE_TYPE_ID) {</span>
+<span class="fc" id="L811">                valueEndIndex = peekIndex;</span>
+<span class="fc bfc" id="L812" title="All 6 branches covered.">                if (isSystemValue || isSkippingCurrentValue() || valueTid.isNopPad) {</span>
+<span class="fc bfc" id="L813" title="All 4 branches covered.">                    if (valueTid.isNopPad &amp;&amp; nopPadStartIndex &lt; 0) {</span>
                         // This is the first NOP before the next value. Mark the start index in case the space needs to
                         // be reclaimed later.
-<span class="fc" id="L815">                        nopPadStartIndex = valuePreHeaderIndex;</span>
+<span class="fc" id="L816">                        nopPadStartIndex = valuePreHeaderIndex;</span>
                     }
-<span class="fc bfc" id="L817" title="All 4 branches covered.">                    if (isSystemValue &amp;&amp; isSkippingCurrentValue()) {</span>
+<span class="fc bfc" id="L818" title="All 4 branches covered.">                    if (isSystemValue &amp;&amp; isSkippingCurrentValue()) {</span>
                         // The symbol table(s) currently buffered exceed the maximum buffer size. This is not
                         // recoverable; future invocations of fillInput() will do nothing.
-<span class="fc" id="L820">                        reset();</span>
-<span class="fc" id="L821">                        state = State.DONE;</span>
+<span class="fc" id="L821">                        reset();</span>
+<span class="fc" id="L822">                        state = State.DONE;</span>
                     } else {
-<span class="fc bfc" id="L823" title="All 4 branches covered.">                        if (isSystemValue &amp;&amp; nopPadStartIndex &gt; -1) {</span>
+<span class="fc bfc" id="L824" title="All 4 branches covered.">                        if (isSystemValue &amp;&amp; nopPadStartIndex &gt; -1) {</span>
                             // Reclaim any NOP pad space that precedes system values. This will usually not be strictly
                             // necessary, but it simplifies the implementation and will be rare in practice. Without
                             // this simplification, we would need to keep track of a list of NOP pad start/end indexes
                             // as we do with the symbol table markers. This way, we know that there can only be one
                             // uninterrupted run of NOP pad bytes immediately preceding any user value, making it easy
                             // to reclaim this space if necessary.
-<span class="fc" id="L830">                            reclaimNopPadding();</span>
+<span class="fc" id="L831">                            reclaimNopPadding();</span>
                         }
                         // Just skipped over system value or an oversized value. Consume the next value too so that a
                         // call to reader.next() won't return null.
@@ -837,18 +838,18 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
             }
             break;
         }
-<span class="fc" id="L840">    }</span>
+<span class="fc" id="L841">    }</span>
 
     @Override
     void truncateToEndOfPreviousValue() {
-<span class="fc" id="L844">        peekIndex = valueStartWriteIndex;</span>
-<span class="fc" id="L845">        pipe.truncate(valueStartWriteIndex, valueStartAvailable);</span>
-<span class="fc" id="L846">        handlerNeedsToBeNotifiedOfOversizedValue = true;</span>
-<span class="fc" id="L847">    }</span>
+<span class="fc" id="L845">        peekIndex = valueStartWriteIndex;</span>
+<span class="fc" id="L846">        pipe.truncate(valueStartWriteIndex, valueStartAvailable);</span>
+<span class="fc" id="L847">        handlerNeedsToBeNotifiedOfOversizedValue = true;</span>
+<span class="fc" id="L848">    }</span>
 
     @Override
     public boolean moreDataRequired() {
-<span class="fc bfc" id="L851" title="All 4 branches covered.">        return pipe.available() &lt;= 0 || state != State.BEFORE_TYPE_ID;</span>
+<span class="fc bfc" id="L852" title="All 4 branches covered.">        return pipe.available() &lt;= 0 || state != State.BEFORE_TYPE_ID;</span>
     }
 
     /**
@@ -863,63 +864,63 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
      *   as a result of calling this method before {@code IonReader.next()} was called.
      */
     public void rewindToValueStart() {
-<span class="fc bfc" id="L866" title="All 2 branches covered.">        if (valuePreHeaderIndex &lt; 0) {</span>
-<span class="fc" id="L867">            throw new IllegalStateException(&quot;A value must be buffered before calling rewindToValueStart().&quot;);</span>
+<span class="fc bfc" id="L867" title="All 2 branches covered.">        if (valuePreHeaderIndex &lt; 0) {</span>
+<span class="fc" id="L868">            throw new IllegalStateException(&quot;A value must be buffered before calling rewindToValueStart().&quot;);</span>
         }
-<span class="fc" id="L869">        int availableAtValueStart = pipe.getBoundary() - valuePreHeaderIndex;</span>
+<span class="fc" id="L870">        int availableAtValueStart = pipe.getBoundary() - valuePreHeaderIndex;</span>
         // If rewinding would reduce the amount of data available, that indicates that system value data would be lost.
-<span class="fc bfc" id="L871" title="All 2 branches covered.">        if (availableAtValueStart &lt; available()) {</span>
-<span class="fc" id="L872">            throw new IllegalStateException(</span>
+<span class="fc bfc" id="L872" title="All 2 branches covered.">        if (availableAtValueStart &lt; available()) {</span>
+<span class="fc" id="L873">            throw new IllegalStateException(</span>
                 &quot;IonReader.next() must be called on the current value before calling rewindToValueStart().&quot;
             );
         }
-<span class="fc" id="L876">        pipe.rewind(valuePreHeaderIndex, availableAtValueStart);</span>
-<span class="fc" id="L877">        peekIndex = valuePreHeaderIndex;</span>
-<span class="fc" id="L878">    }</span>
+<span class="fc" id="L877">        pipe.rewind(valuePreHeaderIndex, availableAtValueStart);</span>
+<span class="fc" id="L878">        peekIndex = valuePreHeaderIndex;</span>
+<span class="fc" id="L879">    }</span>
 
     /**
      * @return the index of the second byte of the IVM.
      */
     int getIvmIndex() {
-<span class="fc" id="L884">        return ivmSecondByteIndex;</span>
+<span class="fc" id="L885">        return ivmSecondByteIndex;</span>
     }
 
     /**
      * Clears the IVM index. Should be called between user values.
      */
     void resetIvmIndex() {
-<span class="fc" id="L891">        ivmSecondByteIndex = -1;</span>
-<span class="fc" id="L892">    }</span>
+<span class="fc" id="L892">        ivmSecondByteIndex = -1;</span>
+<span class="fc" id="L893">    }</span>
 
     /**
      * Clears the NOP pad index. Should be called between user values.
      */
     void resetNopPadIndex() {
-<span class="fc" id="L898">        nopPadStartIndex = -1;</span>
-<span class="fc" id="L899">    }</span>
+<span class="fc" id="L899">        nopPadStartIndex = -1;</span>
+<span class="fc" id="L900">    }</span>
 
     /**
      * @return the index of the first byte of the value representation (past the type ID and the optional length field).
      */
     int getValueStart() {
-<span class="fc bfc" id="L905" title="All 2 branches covered.">        if (hasAnnotations()) {</span>
-<span class="fc" id="L906">            return annotationSidsMarker.endIndex;</span>
+<span class="fc bfc" id="L906" title="All 2 branches covered.">        if (hasAnnotations()) {</span>
+<span class="fc" id="L907">            return annotationSidsMarker.endIndex;</span>
         }
-<span class="fc" id="L908">        return valuePostHeaderIndex;</span>
+<span class="fc" id="L909">        return valuePostHeaderIndex;</span>
     }
 
     /**
      * @return the type ID of the current value.
      */
     IonTypeID getValueTid() {
-<span class="fc" id="L915">        return valueTid;</span>
+<span class="fc" id="L916">        return valueTid;</span>
     }
 
     /**
      * @return the index of the first byte after the end of the current value.
      */
     int getValueEnd() {
-<span class="fc" id="L922">        return valueEndIndex;</span>
+<span class="fc" id="L923">        return valueEndIndex;</span>
     }
 
     /**
@@ -929,21 +930,21 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
      * @return the markers.
      */
     List&lt;Marker&gt; getSymbolTableMarkers() {
-<span class="fc" id="L932">        return symbolTableMarkers;</span>
+<span class="fc" id="L933">        return symbolTableMarkers;</span>
     }
 
     /**
      * Clears the symbol table markers.
      */
     void resetSymbolTableMarkers() {
-<span class="fc" id="L939">        symbolTableMarkers.clear();</span>
-<span class="fc" id="L940">    }</span>
+<span class="fc" id="L940">        symbolTableMarkers.clear();</span>
+<span class="fc" id="L941">    }</span>
 
     /**
      * @return true if the current value has annotations; otherwise, false.
      */
     boolean hasAnnotations() {
-<span class="fc bfc" id="L946" title="All 2 branches covered.">        return annotationSidsMarker.startIndex &gt;= 0;</span>
+<span class="fc bfc" id="L947" title="All 2 branches covered.">        return annotationSidsMarker.startIndex &gt;= 0;</span>
     }
     /**
      * Returns the marker for the sequence of annotation symbol IDs on the current value. The startIndex of the
@@ -952,7 +953,7 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
      * @return  the marker.
      */
     Marker getAnnotationSidsMarker() {
-<span class="fc" id="L955">        return annotationSidsMarker;</span>
+<span class="fc" id="L956">        return annotationSidsMarker;</span>
     }
 
 }

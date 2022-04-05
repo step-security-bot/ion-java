@@ -524,446 +524,447 @@
 <a class="jxr_linenumber" name="L516" href="#L516">516</a>         peekIndex = Math.max(peekIndex - shiftAmount, 0);
 <a class="jxr_linenumber" name="L517" href="#L517">517</a>         valuePreHeaderIndex -= shiftAmount;
 <a class="jxr_linenumber" name="L518" href="#L518">518</a>         valuePostHeaderIndex -= shiftAmount;
-<a class="jxr_linenumber" name="L519" href="#L519">519</a>         <strong class="jxr_keyword">for</strong> (Marker symbolTableMarker : symbolTableMarkers) {
-<a class="jxr_linenumber" name="L520" href="#L520">520</a>             <strong class="jxr_keyword">if</strong> (symbolTableMarker.startIndex &gt; afterIndex) {
-<a class="jxr_linenumber" name="L521" href="#L521">521</a>                 symbolTableMarker.startIndex -= shiftAmount;
-<a class="jxr_linenumber" name="L522" href="#L522">522</a>                 symbolTableMarker.endIndex -= shiftAmount;
-<a class="jxr_linenumber" name="L523" href="#L523">523</a>             }
-<a class="jxr_linenumber" name="L524" href="#L524">524</a>         }
-<a class="jxr_linenumber" name="L525" href="#L525">525</a>         <strong class="jxr_keyword">if</strong> (annotationSidsMarker.startIndex &gt; afterIndex) {
-<a class="jxr_linenumber" name="L526" href="#L526">526</a>             annotationSidsMarker.startIndex -= shiftAmount;
-<a class="jxr_linenumber" name="L527" href="#L527">527</a>             annotationSidsMarker.endIndex -= shiftAmount;
-<a class="jxr_linenumber" name="L528" href="#L528">528</a>         }
-<a class="jxr_linenumber" name="L529" href="#L529">529</a>         <strong class="jxr_keyword">if</strong> (ivmSecondByteIndex &gt; afterIndex) {
-<a class="jxr_linenumber" name="L530" href="#L530">530</a>             ivmSecondByteIndex -= shiftAmount;
-<a class="jxr_linenumber" name="L531" href="#L531">531</a>         }
-<a class="jxr_linenumber" name="L532" href="#L532">532</a>     }
-<a class="jxr_linenumber" name="L533" href="#L533">533</a> 
-<a class="jxr_linenumber" name="L534" href="#L534">534</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L535" href="#L535">535</a> <em class="jxr_javadoccomment">     * Reclaim the NOP padding that occurred before the current value, making space for the value in the buffer.</em>
-<a class="jxr_linenumber" name="L536" href="#L536">536</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L537" href="#L537">537</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> reclaimNopPadding() {
-<a class="jxr_linenumber" name="L538" href="#L538">538</a>         pipe.consolidate(valuePreHeaderIndex, nopPadStartIndex);
-<a class="jxr_linenumber" name="L539" href="#L539">539</a>         shiftIndicesLeft(nopPadStartIndex, valuePreHeaderIndex - nopPadStartIndex);
-<a class="jxr_linenumber" name="L540" href="#L540">540</a>         resetNopPadIndex();
-<a class="jxr_linenumber" name="L541" href="#L541">541</a>     }
-<a class="jxr_linenumber" name="L542" href="#L542">542</a> 
-<a class="jxr_linenumber" name="L543" href="#L543">543</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L544" href="#L544">544</a> <em class="jxr_javadoccomment">     * Skip bytes from the underlying InputStream without ever buffering them.</em>
-<a class="jxr_linenumber" name="L545" href="#L545">545</a> <em class="jxr_javadoccomment">     * @param numberOfBytesToSkip the number of bytes to attempt to skip.</em>
-<a class="jxr_linenumber" name="L546" href="#L546">546</a> <em class="jxr_javadoccomment">     * @return the number of bytes actually skipped.</em>
-<a class="jxr_linenumber" name="L547" href="#L547">547</a> <em class="jxr_javadoccomment">     * @throws IOException if thrown by the underlying InputStream.</em>
-<a class="jxr_linenumber" name="L548" href="#L548">548</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L549" href="#L549">549</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">long</strong> skipBytesFromInput(<strong class="jxr_keyword">long</strong> numberOfBytesToSkip) <strong class="jxr_keyword">throws</strong> IOException {
-<a class="jxr_linenumber" name="L550" href="#L550">550</a>         <strong class="jxr_keyword">try</strong> {
-<a class="jxr_linenumber" name="L551" href="#L551">551</a>             <strong class="jxr_keyword">return</strong> getInput().skip(numberOfBytesToSkip);
-<a class="jxr_linenumber" name="L552" href="#L552">552</a>         } <strong class="jxr_keyword">catch</strong> (EOFException e) {
-<a class="jxr_linenumber" name="L553" href="#L553">553</a>             <em class="jxr_comment">// Certain InputStream implementations (e.g. GZIPInputStream) throw EOFException if more bytes are requested</em>
-<a class="jxr_linenumber" name="L554" href="#L554">554</a>             <em class="jxr_comment">// to skip than are currently available (e.g. if a header or trailer is incomplete).</em>
-<a class="jxr_linenumber" name="L555" href="#L555">555</a>             <strong class="jxr_keyword">return</strong> 0;
-<a class="jxr_linenumber" name="L556" href="#L556">556</a>         }
-<a class="jxr_linenumber" name="L557" href="#L557">557</a>     }
-<a class="jxr_linenumber" name="L558" href="#L558">558</a> 
-<a class="jxr_linenumber" name="L559" href="#L559">559</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L560" href="#L560">560</a> <em class="jxr_javadoccomment">     * Retrieve and buffer up to {@link #pageSize} bytes from the input.</em>
-<a class="jxr_linenumber" name="L561" href="#L561">561</a> <em class="jxr_javadoccomment">     * @param numberOfBytesRequested the minimum amount of space that must be available before the buffer reaches</em>
-<a class="jxr_linenumber" name="L562" href="#L562">562</a> <em class="jxr_javadoccomment">     *                               its configured maximum size.</em>
-<a class="jxr_linenumber" name="L563" href="#L563">563</a> <em class="jxr_javadoccomment">     * @return the number of bytes buffered by this operation.</em>
-<a class="jxr_linenumber" name="L564" href="#L564">564</a> <em class="jxr_javadoccomment">     * @throws Exception if thrown by the underlying InputStream.</em>
-<a class="jxr_linenumber" name="L565" href="#L565">565</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L566" href="#L566">566</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">int</strong> fillPage(<strong class="jxr_keyword">int</strong> numberOfBytesRequested) <strong class="jxr_keyword">throws</strong> Exception {
-<a class="jxr_linenumber" name="L567" href="#L567">567</a>         <strong class="jxr_keyword">int</strong> amountToFill = pipe.capacity() - pipe.size();
-<a class="jxr_linenumber" name="L568" href="#L568">568</a>         <strong class="jxr_keyword">if</strong> (amountToFill &lt;= 0) {
-<a class="jxr_linenumber" name="L569" href="#L569">569</a>             <em class="jxr_comment">// Try to fill the remainder of the existing buffer to avoid growing unnecessarily. If there is no</em>
-<a class="jxr_linenumber" name="L570" href="#L570">570</a>             <em class="jxr_comment">// space, that indicates that a single value exceeds the size of a page. In that case, fill another page,</em>
-<a class="jxr_linenumber" name="L571" href="#L571">571</a>             <em class="jxr_comment">// growing the buffer only up to the configured maximum size.</em>
-<a class="jxr_linenumber" name="L572" href="#L572">572</a>             <strong class="jxr_keyword">int</strong> spaceAvailable = getMaximumBufferSize() - pipe.capacity();
-<a class="jxr_linenumber" name="L573" href="#L573">573</a>             <strong class="jxr_keyword">if</strong> (numberOfBytesRequested &gt; spaceAvailable) {
-<a class="jxr_linenumber" name="L574" href="#L574">574</a>                 <strong class="jxr_keyword">if</strong> (nopPadStartIndex &gt; -1 &amp;&amp; valuePreHeaderIndex - nopPadStartIndex &gt;= numberOfBytesRequested) {
-<a class="jxr_linenumber" name="L575" href="#L575">575</a>                     <em class="jxr_comment">// Reclaim the NOP pad space if doing so would allow the value to fit.</em>
-<a class="jxr_linenumber" name="L576" href="#L576">576</a>                     reclaimNopPadding();
-<a class="jxr_linenumber" name="L577" href="#L577">577</a>                 } <strong class="jxr_keyword">else</strong> {
-<a class="jxr_linenumber" name="L578" href="#L578">578</a>                     startSkippingValue();
-<a class="jxr_linenumber" name="L579" href="#L579">579</a>                 }
-<a class="jxr_linenumber" name="L580" href="#L580">580</a>                 amountToFill = numberOfBytesRequested;
-<a class="jxr_linenumber" name="L581" href="#L581">581</a>             } <strong class="jxr_keyword">else</strong> {
-<a class="jxr_linenumber" name="L582" href="#L582">582</a>                 amountToFill = Math.min(pageSize, spaceAvailable);
-<a class="jxr_linenumber" name="L583" href="#L583">583</a>             }
-<a class="jxr_linenumber" name="L584" href="#L584">584</a>         }
-<a class="jxr_linenumber" name="L585" href="#L585">585</a>         <strong class="jxr_keyword">int</strong> received;
-<a class="jxr_linenumber" name="L586" href="#L586">586</a>         <strong class="jxr_keyword">if</strong> (isSkippingCurrentValue()) {
-<a class="jxr_linenumber" name="L587" href="#L587">587</a>             <strong class="jxr_keyword">if</strong> (state == State.SKIPPING_VALUE) {
-<a class="jxr_linenumber" name="L588" href="#L588">588</a>                 <em class="jxr_comment">// This is a seek operation, meaning that the bytes don't need to be interpreted.</em>
-<a class="jxr_linenumber" name="L589" href="#L589">589</a>                 received = (<strong class="jxr_keyword">int</strong>) skipBytesFromInput(amountToFill);
-<a class="jxr_linenumber" name="L590" href="#L590">590</a>             } <strong class="jxr_keyword">else</strong> {
-<a class="jxr_linenumber" name="L591" href="#L591">591</a>                 <em class="jxr_comment">// The bytes need to be interpreted, so they cannot be skipped. The caller must retrieve them from</em>
-<a class="jxr_linenumber" name="L592" href="#L592">592</a>                 <em class="jxr_comment">// the input.</em>
-<a class="jxr_linenumber" name="L593" href="#L593">593</a>                 received = amountToFill;
-<a class="jxr_linenumber" name="L594" href="#L594">594</a>             }
-<a class="jxr_linenumber" name="L595" href="#L595">595</a>         } <strong class="jxr_keyword">else</strong> {
-<a class="jxr_linenumber" name="L596" href="#L596">596</a>             received = pipe.receive(getInput(), amountToFill);
-<a class="jxr_linenumber" name="L597" href="#L597">597</a>         }
-<a class="jxr_linenumber" name="L598" href="#L598">598</a>         <strong class="jxr_keyword">return</strong> received;
-<a class="jxr_linenumber" name="L599" href="#L599">599</a>     }
-<a class="jxr_linenumber" name="L600" href="#L600">600</a> 
-<a class="jxr_linenumber" name="L601" href="#L601">601</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L602" href="#L602">602</a> <em class="jxr_javadoccomment">     * Notifies the event handler that the current value is oversized, if the handler has not already been notified.</em>
-<a class="jxr_linenumber" name="L603" href="#L603">603</a> <em class="jxr_javadoccomment">     * @throws Exception if thrown by the handler.</em>
-<a class="jxr_linenumber" name="L604" href="#L604">604</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L605" href="#L605">605</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> notifyHandlerOfOversizedValue() <strong class="jxr_keyword">throws</strong> Exception {
-<a class="jxr_linenumber" name="L606" href="#L606">606</a>         <strong class="jxr_keyword">if</strong> (handlerNeedsToBeNotifiedOfOversizedValue) {
-<a class="jxr_linenumber" name="L607" href="#L607">607</a>             <strong class="jxr_keyword">if</strong> (isSystemValue) {
-<a class="jxr_linenumber" name="L608" href="#L608">608</a>                 <em class="jxr_comment">// Processing cannot continue after system values (symbol tables) are truncated because subsequent</em>
-<a class="jxr_linenumber" name="L609" href="#L609">609</a>                 <em class="jxr_comment">// values may be unreadable. Notify the user.</em>
-<a class="jxr_linenumber" name="L610" href="#L610">610</a>                 oversizedSymbolTableHandler.onOversizedSymbolTable();
-<a class="jxr_linenumber" name="L611" href="#L611">611</a>             } <strong class="jxr_keyword">else</strong> {
-<a class="jxr_linenumber" name="L612" href="#L612">612</a>                 <em class="jxr_comment">// An oversized user value has been encountered. Notify the user so they can decide whether to continue</em>
-<a class="jxr_linenumber" name="L613" href="#L613">613</a>                 <em class="jxr_comment">// or abort.</em>
-<a class="jxr_linenumber" name="L614" href="#L614">614</a>                 oversizedValueHandler.onOversizedValue();
-<a class="jxr_linenumber" name="L615" href="#L615">615</a>             }
-<a class="jxr_linenumber" name="L616" href="#L616">616</a>         }
-<a class="jxr_linenumber" name="L617" href="#L617">617</a>         handlerNeedsToBeNotifiedOfOversizedValue = false;
-<a class="jxr_linenumber" name="L618" href="#L618">618</a>     }
-<a class="jxr_linenumber" name="L619" href="#L619">619</a> 
-<a class="jxr_linenumber" name="L620" href="#L620">620</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L621" href="#L621">621</a> <em class="jxr_javadoccomment">     * Attempt to retrieve at least `additionalBytesNeeded` bytes from the input and either buffer them (if the value</em>
-<a class="jxr_linenumber" name="L622" href="#L622">622</a> <em class="jxr_javadoccomment">     * is being consumed) or skip them (if the value is being skipped due to being oversize).</em>
-<a class="jxr_linenumber" name="L623" href="#L623">623</a> <em class="jxr_javadoccomment">     * @return the number of bytes filled or skipped.</em>
-<a class="jxr_linenumber" name="L624" href="#L624">624</a> <em class="jxr_javadoccomment">     * @throws Exception if thrown by the event handler.</em>
-<a class="jxr_linenumber" name="L625" href="#L625">625</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L626" href="#L626">626</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">long</strong> fillOrSkip() <strong class="jxr_keyword">throws</strong> Exception {
-<a class="jxr_linenumber" name="L627" href="#L627">627</a>         <em class="jxr_comment">// Clamping at the number of buffered bytes available guarantees that the buffer</em>
-<a class="jxr_linenumber" name="L628" href="#L628">628</a>         <em class="jxr_comment">// will never grow beyond its initial size.</em>
-<a class="jxr_linenumber" name="L629" href="#L629">629</a>         <strong class="jxr_keyword">long</strong> bytesRequested = additionalBytesNeeded - pipe.availableBeyondBoundary();
-<a class="jxr_linenumber" name="L630" href="#L630">630</a>         <strong class="jxr_keyword">long</strong> bytesFilled;
-<a class="jxr_linenumber" name="L631" href="#L631">631</a>         <strong class="jxr_keyword">if</strong> (isSkippingCurrentValue()) {
-<a class="jxr_linenumber" name="L632" href="#L632">632</a>             bytesFilled = skipBytesFromInput(bytesRequested);
-<a class="jxr_linenumber" name="L633" href="#L633">633</a>         } <strong class="jxr_keyword">else</strong> {
-<a class="jxr_linenumber" name="L634" href="#L634">634</a>             <strong class="jxr_keyword">if</strong> (additionalBytesNeeded &gt; MAXIMUM_VALUE_SIZE) {
-<a class="jxr_linenumber" name="L635" href="#L635">635</a>                 <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> <a name="IonException" href="../../../../com/amazon/ion/IonException.html#IonException">IonException</a>(<span class="jxr_string">"The size of the value exceeds the limits of the implementation."</span>);
-<a class="jxr_linenumber" name="L636" href="#L636">636</a>             }
-<a class="jxr_linenumber" name="L637" href="#L637">637</a>             bytesFilled = fillPage((<strong class="jxr_keyword">int</strong>) bytesRequested);
-<a class="jxr_linenumber" name="L638" href="#L638">638</a>         }
-<a class="jxr_linenumber" name="L639" href="#L639">639</a>         <strong class="jxr_keyword">if</strong> (bytesFilled &lt; 1) {
-<a class="jxr_linenumber" name="L640" href="#L640">640</a>             <strong class="jxr_keyword">return</strong> 0;
-<a class="jxr_linenumber" name="L641" href="#L641">641</a>         }
-<a class="jxr_linenumber" name="L642" href="#L642">642</a>         <strong class="jxr_keyword">if</strong> (isSkippingCurrentValue()) {
-<a class="jxr_linenumber" name="L643" href="#L643">643</a>             <em class="jxr_comment">// The user cannot be notified of a size violation until it has been determined whether</em>
-<a class="jxr_linenumber" name="L644" href="#L644">644</a>             <em class="jxr_comment">// the value is a symbol table or user value, which is only true in the SKIPPING_VALUE</em>
-<a class="jxr_linenumber" name="L645" href="#L645">645</a>             <em class="jxr_comment">// state.</em>
-<a class="jxr_linenumber" name="L646" href="#L646">646</a>             notifyHandlerOfOversizedValue();
-<a class="jxr_linenumber" name="L647" href="#L647">647</a>             <em class="jxr_comment">// Skip all of the bytes skipped from the InputStream as well as all bytes previously</em>
-<a class="jxr_linenumber" name="L648" href="#L648">648</a>             <em class="jxr_comment">// buffered.</em>
-<a class="jxr_linenumber" name="L649" href="#L649">649</a>             bytesFilled = bytesFilled + ((<strong class="jxr_keyword">int</strong>) additionalBytesNeeded - bytesRequested);
-<a class="jxr_linenumber" name="L650" href="#L650">650</a>         } <strong class="jxr_keyword">else</strong> {
-<a class="jxr_linenumber" name="L651" href="#L651">651</a>             bytesFilled = Math.min(additionalBytesNeeded, bytesFilled);
-<a class="jxr_linenumber" name="L652" href="#L652">652</a>             pipe.extendBoundary((<strong class="jxr_keyword">int</strong>) bytesFilled);
-<a class="jxr_linenumber" name="L653" href="#L653">653</a>             peekIndex += (<strong class="jxr_keyword">int</strong>) bytesFilled;
-<a class="jxr_linenumber" name="L654" href="#L654">654</a>         }
-<a class="jxr_linenumber" name="L655" href="#L655">655</a>         <strong class="jxr_keyword">return</strong> bytesFilled;
-<a class="jxr_linenumber" name="L656" href="#L656">656</a>     }
-<a class="jxr_linenumber" name="L657" href="#L657">657</a> 
-<a class="jxr_linenumber" name="L658" href="#L658">658</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L659" href="#L659">659</a> <em class="jxr_javadoccomment">     * Attempts to skip the requested number of bytes.</em>
-<a class="jxr_linenumber" name="L660" href="#L660">660</a> <em class="jxr_javadoccomment">     * @param numberOfBytesToSkip the number of bytes to attempt to skip.</em>
-<a class="jxr_linenumber" name="L661" href="#L661">661</a> <em class="jxr_javadoccomment">     * @return the number of bytes actually skipped.</em>
-<a class="jxr_linenumber" name="L662" href="#L662">662</a> <em class="jxr_javadoccomment">     * @throws Exception if thrown by the event handler.</em>
-<a class="jxr_linenumber" name="L663" href="#L663">663</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L664" href="#L664">664</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">long</strong> skip(<strong class="jxr_keyword">long</strong> numberOfBytesToSkip) <strong class="jxr_keyword">throws</strong> Exception {
-<a class="jxr_linenumber" name="L665" href="#L665">665</a>         <strong class="jxr_keyword">long</strong> numberOfBytesSkipped;
-<a class="jxr_linenumber" name="L666" href="#L666">666</a>         <strong class="jxr_keyword">if</strong> (pipe.availableBeyondBoundary() &gt;= numberOfBytesToSkip) {
-<a class="jxr_linenumber" name="L667" href="#L667">667</a>             numberOfBytesSkipped = (<strong class="jxr_keyword">int</strong>) numberOfBytesToSkip;
-<a class="jxr_linenumber" name="L668" href="#L668">668</a>             pipe.extendBoundary((<strong class="jxr_keyword">int</strong>) numberOfBytesSkipped);
-<a class="jxr_linenumber" name="L669" href="#L669">669</a>             peekIndex += (<strong class="jxr_keyword">int</strong>) numberOfBytesSkipped;
-<a class="jxr_linenumber" name="L670" href="#L670">670</a>         } <strong class="jxr_keyword">else</strong> {
-<a class="jxr_linenumber" name="L671" href="#L671">671</a>             numberOfBytesSkipped = fillOrSkip();
-<a class="jxr_linenumber" name="L672" href="#L672">672</a>         }
-<a class="jxr_linenumber" name="L673" href="#L673">673</a>         <strong class="jxr_keyword">if</strong> (numberOfBytesSkipped &gt; 0) {
-<a class="jxr_linenumber" name="L674" href="#L674">674</a>             <strong class="jxr_keyword">long</strong> numberOfBytesToReport = numberOfBytesSkipped;
-<a class="jxr_linenumber" name="L675" href="#L675">675</a>             <strong class="jxr_keyword">while</strong> (numberOfBytesToReport &gt; 0) {
-<a class="jxr_linenumber" name="L676" href="#L676">676</a>                 <strong class="jxr_keyword">int</strong> numberOfBytesToReportThisIteration = (<strong class="jxr_keyword">int</strong>) Math.min(Integer.MAX_VALUE, numberOfBytesToReport);
-<a class="jxr_linenumber" name="L677" href="#L677">677</a>                 dataHandler.onData(numberOfBytesToReportThisIteration);
-<a class="jxr_linenumber" name="L678" href="#L678">678</a>                 numberOfBytesToReport -= numberOfBytesToReportThisIteration;
-<a class="jxr_linenumber" name="L679" href="#L679">679</a>             }
-<a class="jxr_linenumber" name="L680" href="#L680">680</a>         }
-<a class="jxr_linenumber" name="L681" href="#L681">681</a>         <strong class="jxr_keyword">return</strong> numberOfBytesSkipped;
-<a class="jxr_linenumber" name="L682" href="#L682">682</a>     }
-<a class="jxr_linenumber" name="L683" href="#L683">683</a> 
-<a class="jxr_linenumber" name="L684" href="#L684">684</a>     <em class="jxr_comment">/*</em>
-<a class="jxr_linenumber" name="L685" href="#L685">685</a> <em class="jxr_comment">     * The state transitions of the fillInput() method are summarized by the following diagram.</em>
-<a class="jxr_linenumber" name="L686" href="#L686">686</a> <em class="jxr_comment">     *</em>
-<a class="jxr_linenumber" name="L687" href="#L687">687</a> <em class="jxr_comment">     *                                 fillInput()</em>
-<a class="jxr_linenumber" name="L688" href="#L688">688</a> <em class="jxr_comment">     *                                       |</em>
-<a class="jxr_linenumber" name="L689" href="#L689">689</a> <em class="jxr_comment">     *                                       |   +----------------------------------------------------+</em>
-<a class="jxr_linenumber" name="L690" href="#L690">690</a> <em class="jxr_comment">     *                                       |   |                                                    |</em>
-<a class="jxr_linenumber" name="L691" href="#L691">691</a> <em class="jxr_comment">     *       Read first byte of IVM +--------v---v-+                                                  |</em>
-<a class="jxr_linenumber" name="L692" href="#L692">692</a> <em class="jxr_comment">     *   +--------------------------+BEFORE_TYPE_ID&lt;--+                                               |</em>
-<a class="jxr_linenumber" name="L693" href="#L693">693</a> <em class="jxr_comment">     *   |   Or length was inferred |              +--+1-byte value(null or bool) read                |</em>
-<a class="jxr_linenumber" name="L694" href="#L694">694</a> <em class="jxr_comment">     *   |    from the type ID    +&gt;+------+-------+                                                  |</em>
-<a class="jxr_linenumber" name="L695" href="#L695">695</a> <em class="jxr_comment">     *   |                        |        |                                                          |</em>
-<a class="jxr_linenumber" name="L696" href="#L696">696</a> <em class="jxr_comment">     *   |                        |        |No bytes available                                        |</em>
-<a class="jxr_linenumber" name="L697" href="#L697">697</a> <em class="jxr_comment">     *   |           1-byte value |        v                                                          |</em>
-<a class="jxr_linenumber" name="L698" href="#L698">698</a> <em class="jxr_comment">     *   |                        | +----------------+                                                |</em>
-<a class="jxr_linenumber" name="L699" href="#L699">699</a> <em class="jxr_comment">     *   |                        +-+READING_TYPE_ID &lt;-+                                              |</em>
-<a class="jxr_linenumber" name="L700" href="#L700">700</a> <em class="jxr_comment">     *   |                          |                +-+No bytes available                            |</em>
-<a class="jxr_linenumber" name="L701" href="#L701">701</a> <em class="jxr_comment">     *   |                          +------+---------+                                                |</em>
-<a class="jxr_linenumber" name="L702" href="#L702">702</a> <em class="jxr_comment">     *   |                                 |Read type-id of multi-byte value                          |</em>
-<a class="jxr_linenumber" name="L703" href="#L703">703</a> <em class="jxr_comment">     *   |                                 v                                                          |</em>
-<a class="jxr_linenumber" name="L704" href="#L704">704</a> <em class="jxr_comment">     *   |      Finished header     +----------------+                                                |</em>
-<a class="jxr_linenumber" name="L705" href="#L705">705</a> <em class="jxr_comment">     *   | +------------------------+READING_HEADER  &lt;--+                                             |</em>
-<a class="jxr_linenumber" name="L706" href="#L706">706</a> <em class="jxr_comment">     *   | |                        |                +--+Not enough bytes to complete header          |</em>
-<a class="jxr_linenumber" name="L707" href="#L707">707</a> <em class="jxr_comment">     *   | |                        +------+---------+                                                |</em>
-<a class="jxr_linenumber" name="L708" href="#L708">708</a> <em class="jxr_comment">     *   | |                               |Read annotation wrapper with symbol table annotation      |</em>
-<a class="jxr_linenumber" name="L709" href="#L709">709</a> <em class="jxr_comment">     *   | |                               v                                                          |</em>
-<a class="jxr_linenumber" name="L710" href="#L710">710</a> <em class="jxr_comment">     *   | |             +---------------------------------------------+                              |</em>
-<a class="jxr_linenumber" name="L711" href="#L711">711</a> <em class="jxr_comment">     *   | |             |READING_VALUE_WITH_SYMBOL_TABLE_ANNOTATION   &lt;--+                           |</em>
-<a class="jxr_linenumber" name="L712" href="#L712">712</a> <em class="jxr_comment">     *   | |             |                                             +--+No bytes available         |</em>
-<a class="jxr_linenumber" name="L713" href="#L713">713</a> <em class="jxr_comment">     *   | |             +--+--------------+---------------------------+                              |</em>
-<a class="jxr_linenumber" name="L714" href="#L714">714</a> <em class="jxr_comment">     *   | |                |              |The wrapped value is a struct                             |</em>
-<a class="jxr_linenumber" name="L715" href="#L715">715</a> <em class="jxr_comment">     *   | | The wrapped    |              v                                                          |</em>
-<a class="jxr_linenumber" name="L716" href="#L716">716</a> <em class="jxr_comment">     *   | |  value is not  |  +-----------------------------+                                        |</em>
-<a class="jxr_linenumber" name="L717" href="#L717">717</a> <em class="jxr_comment">     *   | |   a struct     |  | READING_SYMBOL_TABLE_LENGTH &lt;--+                                     |</em>
-<a class="jxr_linenumber" name="L718" href="#L718">718</a> <em class="jxr_comment">     *   | |                |  |                             +--+Not enough bytes to complete length  |</em>
-<a class="jxr_linenumber" name="L719" href="#L719">719</a> <em class="jxr_comment">     *   | |                |  +-----------+-----------------+                                        |</em>
-<a class="jxr_linenumber" name="L720" href="#L720">720</a> <em class="jxr_comment">     *   | |                |              |Read length                                               |</em>
-<a class="jxr_linenumber" name="L721" href="#L721">721</a> <em class="jxr_comment">     *   | |                |              v                                                          |</em>
-<a class="jxr_linenumber" name="L722" href="#L722">722</a> <em class="jxr_comment">     *   | |                |      +-----------------+                                                |</em>
-<a class="jxr_linenumber" name="L723" href="#L723">723</a> <em class="jxr_comment">     *   | +---------------&gt;+-----&gt;| SKIPPING_VALUE  &lt;--+                                             |</em>
-<a class="jxr_linenumber" name="L724" href="#L724">724</a> <em class="jxr_comment">     *   |                         |                 +--+More bytes needed to complete skip           |</em>
-<a class="jxr_linenumber" name="L725" href="#L725">725</a> <em class="jxr_comment">     *   +------------------------&gt;+-------+---------+                                                |</em>
-<a class="jxr_linenumber" name="L726" href="#L726">726</a> <em class="jxr_comment">     *                                     |                                                          |</em>
-<a class="jxr_linenumber" name="L727" href="#L727">727</a> <em class="jxr_comment">     *                                     |All bytes skipped                                         |</em>
-<a class="jxr_linenumber" name="L728" href="#L728">728</a> <em class="jxr_comment">     *                                     |                                                          |</em>
-<a class="jxr_linenumber" name="L729" href="#L729">729</a> <em class="jxr_comment">     *                                     +----------------------------------------------------------+</em>
-<a class="jxr_linenumber" name="L730" href="#L730">730</a> <em class="jxr_comment">     */</em>
-<a class="jxr_linenumber" name="L731" href="#L731">731</a>     @Override
-<a class="jxr_linenumber" name="L732" href="#L732">732</a>     <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">void</strong> fillInputHelper() <strong class="jxr_keyword">throws</strong> Exception {
-<a class="jxr_linenumber" name="L733" href="#L733">733</a>         <strong class="jxr_keyword">while</strong> (<strong class="jxr_keyword">true</strong>) {
-<a class="jxr_linenumber" name="L734" href="#L734">734</a>             <strong class="jxr_keyword">if</strong> (state == State.BEFORE_TYPE_ID || state == State.READING_TYPE_ID) {
-<a class="jxr_linenumber" name="L735" href="#L735">735</a>                 reset();
-<a class="jxr_linenumber" name="L736" href="#L736">736</a>                 state = State.READING_TYPE_ID;
-<a class="jxr_linenumber" name="L737" href="#L737">737</a>                 <strong class="jxr_keyword">if</strong> (readTypeID(<strong class="jxr_keyword">true</strong>) != ReadTypeIdResult.NO_DATA) {
-<a class="jxr_linenumber" name="L738" href="#L738">738</a>                     <em class="jxr_comment">// The previous line transfers at most one byte, so the pre-header index is the write index minus</em>
-<a class="jxr_linenumber" name="L739" href="#L739">739</a>                     <em class="jxr_comment">// one.</em>
-<a class="jxr_linenumber" name="L740" href="#L740">740</a>                     valuePostHeaderIndex = peekIndex;
-<a class="jxr_linenumber" name="L741" href="#L741">741</a>                     valuePreHeaderIndex = valuePostHeaderIndex - 1;
-<a class="jxr_linenumber" name="L742" href="#L742">742</a>                     valueStartWriteIndex = valuePreHeaderIndex;
-<a class="jxr_linenumber" name="L743" href="#L743">743</a>                 }
-<a class="jxr_linenumber" name="L744" href="#L744">744</a>             }
-<a class="jxr_linenumber" name="L745" href="#L745">745</a>             <strong class="jxr_keyword">if</strong> (state == State.READING_HEADER) {
-<a class="jxr_linenumber" name="L746" href="#L746">746</a>                 readHeader();
-<a class="jxr_linenumber" name="L747" href="#L747">747</a>                 <strong class="jxr_keyword">if</strong> (!inProgressVarUInt.isComplete) {
-<a class="jxr_linenumber" name="L748" href="#L748">748</a>                     <strong class="jxr_keyword">return</strong>;
-<a class="jxr_linenumber" name="L749" href="#L749">749</a>                 }
-<a class="jxr_linenumber" name="L750" href="#L750">750</a>                 valuePostHeaderIndex = peekIndex;
-<a class="jxr_linenumber" name="L751" href="#L751">751</a>             }
-<a class="jxr_linenumber" name="L752" href="#L752">752</a>             <strong class="jxr_keyword">if</strong> (state == State.READING_VALUE_WITH_SYMBOL_TABLE_ANNOTATION) {
-<a class="jxr_linenumber" name="L753" href="#L753">753</a>                 <em class="jxr_comment">// Skip annotations until positioned on the value's type ID.</em>
-<a class="jxr_linenumber" name="L754" href="#L754">754</a>                 <strong class="jxr_keyword">while</strong> (numberOfAnnotationSidBytesRemaining &gt; 0) {
-<a class="jxr_linenumber" name="L755" href="#L755">755</a>                     <strong class="jxr_keyword">long</strong> numberOfBytesSkipped = skip(numberOfAnnotationSidBytesRemaining);
-<a class="jxr_linenumber" name="L756" href="#L756">756</a>                     <strong class="jxr_keyword">if</strong> (numberOfBytesSkipped &lt; 1) {
-<a class="jxr_linenumber" name="L757" href="#L757">757</a>                         <strong class="jxr_keyword">return</strong>;
-<a class="jxr_linenumber" name="L758" href="#L758">758</a>                     }
-<a class="jxr_linenumber" name="L759" href="#L759">759</a>                     numberOfAnnotationSidBytesRemaining -= numberOfBytesSkipped;
-<a class="jxr_linenumber" name="L760" href="#L760">760</a>                     additionalBytesNeeded -= numberOfBytesSkipped;
-<a class="jxr_linenumber" name="L761" href="#L761">761</a>                 }
-<a class="jxr_linenumber" name="L762" href="#L762">762</a>                 ReadTypeIdResult result = readTypeID(false);
-<a class="jxr_linenumber" name="L763" href="#L763">763</a>                 <strong class="jxr_keyword">if</strong> (result == ReadTypeIdResult.NO_DATA) {
-<a class="jxr_linenumber" name="L764" href="#L764">764</a>                     <strong class="jxr_keyword">return</strong>;
-<a class="jxr_linenumber" name="L765" href="#L765">765</a>                 }
-<a class="jxr_linenumber" name="L766" href="#L766">766</a>                 <em class="jxr_comment">// When successful, readTypeID reads exactly one byte.</em>
-<a class="jxr_linenumber" name="L767" href="#L767">767</a>                 additionalBytesNeeded--;
-<a class="jxr_linenumber" name="L768" href="#L768">768</a>                 <strong class="jxr_keyword">if</strong> (result == ReadTypeIdResult.STRUCT) {
-<a class="jxr_linenumber" name="L769" href="#L769">769</a>                     state = State.READING_SYMBOL_TABLE_LENGTH;
-<a class="jxr_linenumber" name="L770" href="#L770">770</a>                 } <strong class="jxr_keyword">else</strong> {
-<a class="jxr_linenumber" name="L771" href="#L771">771</a>                     state = State.SKIPPING_VALUE;
-<a class="jxr_linenumber" name="L772" href="#L772">772</a>                 }
-<a class="jxr_linenumber" name="L773" href="#L773">773</a>             }
-<a class="jxr_linenumber" name="L774" href="#L774">774</a>             <strong class="jxr_keyword">if</strong> (state == State.READING_SYMBOL_TABLE_LENGTH) {
-<a class="jxr_linenumber" name="L775" href="#L775">775</a>                 isSystemValue = <strong class="jxr_keyword">true</strong>;
-<a class="jxr_linenumber" name="L776" href="#L776">776</a>                 <strong class="jxr_keyword">if</strong> (inProgressVarUInt.location == VarUInt.Location.VALUE_LENGTH) {
-<a class="jxr_linenumber" name="L777" href="#L777">777</a>                     readVarUInt();
-<a class="jxr_linenumber" name="L778" href="#L778">778</a>                     <strong class="jxr_keyword">if</strong> (!inProgressVarUInt.isComplete) {
-<a class="jxr_linenumber" name="L779" href="#L779">779</a>                         <strong class="jxr_keyword">return</strong>;
-<a class="jxr_linenumber" name="L780" href="#L780">780</a>                     }
-<a class="jxr_linenumber" name="L781" href="#L781">781</a>                     additionalBytesNeeded = inProgressVarUInt.value;
-<a class="jxr_linenumber" name="L782" href="#L782">782</a>                 }
-<a class="jxr_linenumber" name="L783" href="#L783">783</a>                 symbolTableMarkers.add(<strong class="jxr_keyword">new</strong> Marker(peekIndex, (<strong class="jxr_keyword">int</strong>) additionalBytesNeeded));
-<a class="jxr_linenumber" name="L784" href="#L784">784</a>                 state = State.SKIPPING_VALUE;
-<a class="jxr_linenumber" name="L785" href="#L785">785</a>             }
-<a class="jxr_linenumber" name="L786" href="#L786">786</a>             <strong class="jxr_keyword">if</strong> (state == State.SKIPPING_VALUE) {
-<a class="jxr_linenumber" name="L787" href="#L787">787</a>                 <strong class="jxr_keyword">if</strong> (valueTid.isNopPad) {
-<a class="jxr_linenumber" name="L788" href="#L788">788</a>                     <strong class="jxr_keyword">if</strong> (pipe.availableBeyondBoundary() &lt;= additionalBytesNeeded) {
-<a class="jxr_linenumber" name="L789" href="#L789">789</a>                         <em class="jxr_comment">// There cannot be any meaningful data beyond the NOP pad, so the buffer can be truncated</em>
-<a class="jxr_linenumber" name="L790" href="#L790">790</a>                         <em class="jxr_comment">// immediately and the rest of the NOP pad skipped.</em>
-<a class="jxr_linenumber" name="L791" href="#L791">791</a>                         additionalBytesNeeded -= pipe.availableBeyondBoundary();
-<a class="jxr_linenumber" name="L792" href="#L792">792</a>                         startSkippingValue();
-<a class="jxr_linenumber" name="L793" href="#L793">793</a>                         <em class="jxr_comment">// NOP padding will not be buffered, so it is never considered oversized.</em>
-<a class="jxr_linenumber" name="L794" href="#L794">794</a>                         handlerNeedsToBeNotifiedOfOversizedValue = false;
-<a class="jxr_linenumber" name="L795" href="#L795">795</a>                     }
-<a class="jxr_linenumber" name="L796" href="#L796">796</a>                     <em class="jxr_comment">// Else, the rest of the NOP pad is already buffered, and there is a value at least partially</em>
-<a class="jxr_linenumber" name="L797" href="#L797">797</a>                     <em class="jxr_comment">// buffered beyond it. The NOP pad will only be deleted from the buffer if the next value is</em>
-<a class="jxr_linenumber" name="L798" href="#L798">798</a>                     <em class="jxr_comment">// large enough that it doesn't fit within the buffer's configured maximum size.</em>
-<a class="jxr_linenumber" name="L799" href="#L799">799</a>                 }
-<a class="jxr_linenumber" name="L800" href="#L800">800</a>                 <strong class="jxr_keyword">while</strong> (additionalBytesNeeded &gt; 0) {
-<a class="jxr_linenumber" name="L801" href="#L801">801</a>                     <strong class="jxr_keyword">long</strong> numberOfBytesSkipped = skip(additionalBytesNeeded);
-<a class="jxr_linenumber" name="L802" href="#L802">802</a>                     <strong class="jxr_keyword">if</strong> (numberOfBytesSkipped &lt; 1) {
-<a class="jxr_linenumber" name="L803" href="#L803">803</a>                         <strong class="jxr_keyword">return</strong>;
-<a class="jxr_linenumber" name="L804" href="#L804">804</a>                     }
-<a class="jxr_linenumber" name="L805" href="#L805">805</a>                     additionalBytesNeeded -= numberOfBytesSkipped;
-<a class="jxr_linenumber" name="L806" href="#L806">806</a>                 }
-<a class="jxr_linenumber" name="L807" href="#L807">807</a>                 state = State.BEFORE_TYPE_ID;
-<a class="jxr_linenumber" name="L808" href="#L808">808</a>             }
-<a class="jxr_linenumber" name="L809" href="#L809">809</a>             <strong class="jxr_keyword">if</strong> (state == State.BEFORE_TYPE_ID) {
-<a class="jxr_linenumber" name="L810" href="#L810">810</a>                 valueEndIndex = peekIndex;
-<a class="jxr_linenumber" name="L811" href="#L811">811</a>                 <strong class="jxr_keyword">if</strong> (isSystemValue || isSkippingCurrentValue() || valueTid.isNopPad) {
-<a class="jxr_linenumber" name="L812" href="#L812">812</a>                     <strong class="jxr_keyword">if</strong> (valueTid.isNopPad &amp;&amp; nopPadStartIndex &lt; 0) {
-<a class="jxr_linenumber" name="L813" href="#L813">813</a>                         <em class="jxr_comment">// This is the first NOP before the next value. Mark the start index in case the space needs to</em>
-<a class="jxr_linenumber" name="L814" href="#L814">814</a>                         <em class="jxr_comment">// be reclaimed later.</em>
-<a class="jxr_linenumber" name="L815" href="#L815">815</a>                         nopPadStartIndex = valuePreHeaderIndex;
-<a class="jxr_linenumber" name="L816" href="#L816">816</a>                     }
-<a class="jxr_linenumber" name="L817" href="#L817">817</a>                     <strong class="jxr_keyword">if</strong> (isSystemValue &amp;&amp; isSkippingCurrentValue()) {
-<a class="jxr_linenumber" name="L818" href="#L818">818</a>                         <em class="jxr_comment">// The symbol table(s) currently buffered exceed the maximum buffer size. This is not</em>
-<a class="jxr_linenumber" name="L819" href="#L819">819</a>                         <em class="jxr_comment">// recoverable; future invocations of fillInput() will do nothing.</em>
-<a class="jxr_linenumber" name="L820" href="#L820">820</a>                         reset();
-<a class="jxr_linenumber" name="L821" href="#L821">821</a>                         state = State.DONE;
-<a class="jxr_linenumber" name="L822" href="#L822">822</a>                     } <strong class="jxr_keyword">else</strong> {
-<a class="jxr_linenumber" name="L823" href="#L823">823</a>                         <strong class="jxr_keyword">if</strong> (isSystemValue &amp;&amp; nopPadStartIndex &gt; -1) {
-<a class="jxr_linenumber" name="L824" href="#L824">824</a>                             <em class="jxr_comment">// Reclaim any NOP pad space that precedes system values. This will usually not be strictly</em>
-<a class="jxr_linenumber" name="L825" href="#L825">825</a>                             <em class="jxr_comment">// necessary, but it simplifies the implementation and will be rare in practice. Without</em>
-<a class="jxr_linenumber" name="L826" href="#L826">826</a>                             <em class="jxr_comment">// this simplification, we would need to keep track of a list of NOP pad start/end indexes</em>
-<a class="jxr_linenumber" name="L827" href="#L827">827</a>                             <em class="jxr_comment">// as we do with the symbol table markers. This way, we know that there can only be one</em>
-<a class="jxr_linenumber" name="L828" href="#L828">828</a>                             <em class="jxr_comment">// uninterrupted run of NOP pad bytes immediately preceding any user value, making it easy</em>
-<a class="jxr_linenumber" name="L829" href="#L829">829</a>                             <em class="jxr_comment">// to reclaim this space if necessary.</em>
-<a class="jxr_linenumber" name="L830" href="#L830">830</a>                             reclaimNopPadding();
-<a class="jxr_linenumber" name="L831" href="#L831">831</a>                         }
-<a class="jxr_linenumber" name="L832" href="#L832">832</a>                         <em class="jxr_comment">// Just skipped over system value or an oversized value. Consume the next value too so that a</em>
-<a class="jxr_linenumber" name="L833" href="#L833">833</a>                         <em class="jxr_comment">// call to reader.next() won't return null.</em>
-<a class="jxr_linenumber" name="L834" href="#L834">834</a>                         <strong class="jxr_keyword">continue</strong>;
-<a class="jxr_linenumber" name="L835" href="#L835">835</a>                     }
-<a class="jxr_linenumber" name="L836" href="#L836">836</a>                 }
-<a class="jxr_linenumber" name="L837" href="#L837">837</a>             }
-<a class="jxr_linenumber" name="L838" href="#L838">838</a>             <strong class="jxr_keyword">break</strong>;
-<a class="jxr_linenumber" name="L839" href="#L839">839</a>         }
-<a class="jxr_linenumber" name="L840" href="#L840">840</a>     }
-<a class="jxr_linenumber" name="L841" href="#L841">841</a> 
-<a class="jxr_linenumber" name="L842" href="#L842">842</a>     @Override
-<a class="jxr_linenumber" name="L843" href="#L843">843</a>     <strong class="jxr_keyword">void</strong> truncateToEndOfPreviousValue() {
-<a class="jxr_linenumber" name="L844" href="#L844">844</a>         peekIndex = valueStartWriteIndex;
-<a class="jxr_linenumber" name="L845" href="#L845">845</a>         pipe.truncate(valueStartWriteIndex, valueStartAvailable);
-<a class="jxr_linenumber" name="L846" href="#L846">846</a>         handlerNeedsToBeNotifiedOfOversizedValue = <strong class="jxr_keyword">true</strong>;
-<a class="jxr_linenumber" name="L847" href="#L847">847</a>     }
-<a class="jxr_linenumber" name="L848" href="#L848">848</a> 
-<a class="jxr_linenumber" name="L849" href="#L849">849</a>     @Override
-<a class="jxr_linenumber" name="L850" href="#L850">850</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">boolean</strong> moreDataRequired() {
-<a class="jxr_linenumber" name="L851" href="#L851">851</a>         <strong class="jxr_keyword">return</strong> pipe.available() &lt;= 0 || state != State.BEFORE_TYPE_ID;
-<a class="jxr_linenumber" name="L852" href="#L852">852</a>     }
-<a class="jxr_linenumber" name="L853" href="#L853">853</a> 
-<a class="jxr_linenumber" name="L854" href="#L854">854</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L855" href="#L855">855</a> <em class="jxr_javadoccomment">     * Rewinds to the start of the value currently buffered. Does not include any system values that may precede</em>
-<a class="jxr_linenumber" name="L856" href="#L856">856</a> <em class="jxr_javadoccomment">     * the value. This method is not called in conjunction with {@link #mark()} / {@link #rewind()}, which may be</em>
-<a class="jxr_linenumber" name="L857" href="#L857">857</a> <em class="jxr_javadoccomment">     * used if the caller wants to rewind to the start of any system values that precede the current value. This</em>
-<a class="jxr_linenumber" name="L858" href="#L858">858</a> <em class="jxr_javadoccomment">     * method may be used to re-read the current value and may only be called after {@code IonReader.next()}</em>
-<a class="jxr_linenumber" name="L859" href="#L859">859</a> <em class="jxr_javadoccomment">     * has been called on the current value; otherwise, the data representing any system values that precede the</em>
-<a class="jxr_linenumber" name="L860" href="#L860">860</a> <em class="jxr_javadoccomment">     * current value would be lost.</em>
-<a class="jxr_linenumber" name="L861" href="#L861">861</a> <em class="jxr_javadoccomment">     *</em>
-<a class="jxr_linenumber" name="L862" href="#L862">862</a> <em class="jxr_javadoccomment">     * @throws IllegalStateException if there is no value currently buffered or if system value data would be lost</em>
-<a class="jxr_linenumber" name="L863" href="#L863">863</a> <em class="jxr_javadoccomment">     *   as a result of calling this method before {@code IonReader.next()} was called.</em>
-<a class="jxr_linenumber" name="L864" href="#L864">864</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L865" href="#L865">865</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> rewindToValueStart() {
-<a class="jxr_linenumber" name="L866" href="#L866">866</a>         <strong class="jxr_keyword">if</strong> (valuePreHeaderIndex &lt; 0) {
-<a class="jxr_linenumber" name="L867" href="#L867">867</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> IllegalStateException(<span class="jxr_string">"A value must be buffered before calling rewindToValueStart()."</span>);
-<a class="jxr_linenumber" name="L868" href="#L868">868</a>         }
-<a class="jxr_linenumber" name="L869" href="#L869">869</a>         <strong class="jxr_keyword">int</strong> availableAtValueStart = pipe.getBoundary() - valuePreHeaderIndex;
-<a class="jxr_linenumber" name="L870" href="#L870">870</a>         <em class="jxr_comment">// If rewinding would reduce the amount of data available, that indicates that system value data would be lost.</em>
-<a class="jxr_linenumber" name="L871" href="#L871">871</a>         <strong class="jxr_keyword">if</strong> (availableAtValueStart &lt; available()) {
-<a class="jxr_linenumber" name="L872" href="#L872">872</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> IllegalStateException(
-<a class="jxr_linenumber" name="L873" href="#L873">873</a>                 <span class="jxr_string">"IonReader.next() must be called on the current value before calling rewindToValueStart()."</span>
-<a class="jxr_linenumber" name="L874" href="#L874">874</a>             );
-<a class="jxr_linenumber" name="L875" href="#L875">875</a>         }
-<a class="jxr_linenumber" name="L876" href="#L876">876</a>         pipe.rewind(valuePreHeaderIndex, availableAtValueStart);
-<a class="jxr_linenumber" name="L877" href="#L877">877</a>         peekIndex = valuePreHeaderIndex;
-<a class="jxr_linenumber" name="L878" href="#L878">878</a>     }
-<a class="jxr_linenumber" name="L879" href="#L879">879</a> 
-<a class="jxr_linenumber" name="L880" href="#L880">880</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L881" href="#L881">881</a> <em class="jxr_javadoccomment">     * @return the index of the second byte of the IVM.</em>
-<a class="jxr_linenumber" name="L882" href="#L882">882</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L883" href="#L883">883</a>     <strong class="jxr_keyword">int</strong> getIvmIndex() {
-<a class="jxr_linenumber" name="L884" href="#L884">884</a>         <strong class="jxr_keyword">return</strong> ivmSecondByteIndex;
-<a class="jxr_linenumber" name="L885" href="#L885">885</a>     }
-<a class="jxr_linenumber" name="L886" href="#L886">886</a> 
-<a class="jxr_linenumber" name="L887" href="#L887">887</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L888" href="#L888">888</a> <em class="jxr_javadoccomment">     * Clears the IVM index. Should be called between user values.</em>
-<a class="jxr_linenumber" name="L889" href="#L889">889</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L890" href="#L890">890</a>     <strong class="jxr_keyword">void</strong> resetIvmIndex() {
-<a class="jxr_linenumber" name="L891" href="#L891">891</a>         ivmSecondByteIndex = -1;
-<a class="jxr_linenumber" name="L892" href="#L892">892</a>     }
-<a class="jxr_linenumber" name="L893" href="#L893">893</a> 
-<a class="jxr_linenumber" name="L894" href="#L894">894</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L895" href="#L895">895</a> <em class="jxr_javadoccomment">     * Clears the NOP pad index. Should be called between user values.</em>
-<a class="jxr_linenumber" name="L896" href="#L896">896</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L897" href="#L897">897</a>     <strong class="jxr_keyword">void</strong> resetNopPadIndex() {
-<a class="jxr_linenumber" name="L898" href="#L898">898</a>         nopPadStartIndex = -1;
-<a class="jxr_linenumber" name="L899" href="#L899">899</a>     }
-<a class="jxr_linenumber" name="L900" href="#L900">900</a> 
-<a class="jxr_linenumber" name="L901" href="#L901">901</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L902" href="#L902">902</a> <em class="jxr_javadoccomment">     * @return the index of the first byte of the value representation (past the type ID and the optional length field).</em>
-<a class="jxr_linenumber" name="L903" href="#L903">903</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L904" href="#L904">904</a>     <strong class="jxr_keyword">int</strong> getValueStart() {
-<a class="jxr_linenumber" name="L905" href="#L905">905</a>         <strong class="jxr_keyword">if</strong> (hasAnnotations()) {
-<a class="jxr_linenumber" name="L906" href="#L906">906</a>             <strong class="jxr_keyword">return</strong> annotationSidsMarker.endIndex;
-<a class="jxr_linenumber" name="L907" href="#L907">907</a>         }
-<a class="jxr_linenumber" name="L908" href="#L908">908</a>         <strong class="jxr_keyword">return</strong> valuePostHeaderIndex;
-<a class="jxr_linenumber" name="L909" href="#L909">909</a>     }
-<a class="jxr_linenumber" name="L910" href="#L910">910</a> 
-<a class="jxr_linenumber" name="L911" href="#L911">911</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L912" href="#L912">912</a> <em class="jxr_javadoccomment">     * @return the type ID of the current value.</em>
-<a class="jxr_linenumber" name="L913" href="#L913">913</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L914" href="#L914">914</a>     <a name="IonTypeID" href="../../../../com/amazon/ion/impl/IonTypeID.html#IonTypeID">IonTypeID</a> getValueTid() {
-<a class="jxr_linenumber" name="L915" href="#L915">915</a>         <strong class="jxr_keyword">return</strong> valueTid;
-<a class="jxr_linenumber" name="L916" href="#L916">916</a>     }
-<a class="jxr_linenumber" name="L917" href="#L917">917</a> 
-<a class="jxr_linenumber" name="L918" href="#L918">918</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L919" href="#L919">919</a> <em class="jxr_javadoccomment">     * @return the index of the first byte after the end of the current value.</em>
-<a class="jxr_linenumber" name="L920" href="#L920">920</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L921" href="#L921">921</a>     <strong class="jxr_keyword">int</strong> getValueEnd() {
-<a class="jxr_linenumber" name="L922" href="#L922">922</a>         <strong class="jxr_keyword">return</strong> valueEndIndex;
-<a class="jxr_linenumber" name="L923" href="#L923">923</a>     }
-<a class="jxr_linenumber" name="L924" href="#L924">924</a> 
-<a class="jxr_linenumber" name="L925" href="#L925">925</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L926" href="#L926">926</a> <em class="jxr_javadoccomment">     * Returns markers for any symbol tables that occurred in the stream between the last value and the current value.</em>
-<a class="jxr_linenumber" name="L927" href="#L927">927</a> <em class="jxr_javadoccomment">     * The startIndex of the returned markers is the index of the first byte of the symbol table struct's contents.</em>
-<a class="jxr_linenumber" name="L928" href="#L928">928</a> <em class="jxr_javadoccomment">     * The endIndex of the returned markers is the index of the first byte after the end of the symbol table.</em>
-<a class="jxr_linenumber" name="L929" href="#L929">929</a> <em class="jxr_javadoccomment">     * @return the markers.</em>
-<a class="jxr_linenumber" name="L930" href="#L930">930</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L931" href="#L931">931</a>     List&lt;Marker&gt; getSymbolTableMarkers() {
-<a class="jxr_linenumber" name="L932" href="#L932">932</a>         <strong class="jxr_keyword">return</strong> symbolTableMarkers;
-<a class="jxr_linenumber" name="L933" href="#L933">933</a>     }
-<a class="jxr_linenumber" name="L934" href="#L934">934</a> 
-<a class="jxr_linenumber" name="L935" href="#L935">935</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L936" href="#L936">936</a> <em class="jxr_javadoccomment">     * Clears the symbol table markers.</em>
-<a class="jxr_linenumber" name="L937" href="#L937">937</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L938" href="#L938">938</a>     <strong class="jxr_keyword">void</strong> resetSymbolTableMarkers() {
-<a class="jxr_linenumber" name="L939" href="#L939">939</a>         symbolTableMarkers.clear();
-<a class="jxr_linenumber" name="L940" href="#L940">940</a>     }
-<a class="jxr_linenumber" name="L941" href="#L941">941</a> 
-<a class="jxr_linenumber" name="L942" href="#L942">942</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L943" href="#L943">943</a> <em class="jxr_javadoccomment">     * @return true if the current value has annotations; otherwise, false.</em>
-<a class="jxr_linenumber" name="L944" href="#L944">944</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L945" href="#L945">945</a>     <strong class="jxr_keyword">boolean</strong> hasAnnotations() {
-<a class="jxr_linenumber" name="L946" href="#L946">946</a>         <strong class="jxr_keyword">return</strong> annotationSidsMarker.startIndex &gt;= 0;
-<a class="jxr_linenumber" name="L947" href="#L947">947</a>     }
-<a class="jxr_linenumber" name="L948" href="#L948">948</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L949" href="#L949">949</a> <em class="jxr_javadoccomment">     * Returns the marker for the sequence of annotation symbol IDs on the current value. The startIndex of the</em>
-<a class="jxr_linenumber" name="L950" href="#L950">950</a> <em class="jxr_javadoccomment">     * returned marker is the index of the first byte of the first annotation symbol ID in the sequence. The endIndex</em>
-<a class="jxr_linenumber" name="L951" href="#L951">951</a> <em class="jxr_javadoccomment">     * of the returned marker is the index of the type ID byte of the value to which the annotations are applied.</em>
-<a class="jxr_linenumber" name="L952" href="#L952">952</a> <em class="jxr_javadoccomment">     * @return  the marker.</em>
-<a class="jxr_linenumber" name="L953" href="#L953">953</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L954" href="#L954">954</a>     Marker getAnnotationSidsMarker() {
-<a class="jxr_linenumber" name="L955" href="#L955">955</a>         <strong class="jxr_keyword">return</strong> annotationSidsMarker;
-<a class="jxr_linenumber" name="L956" href="#L956">956</a>     }
-<a class="jxr_linenumber" name="L957" href="#L957">957</a> 
-<a class="jxr_linenumber" name="L958" href="#L958">958</a> }
+<a class="jxr_linenumber" name="L519" href="#L519">519</a>         valueStartWriteIndex -= shiftAmount;
+<a class="jxr_linenumber" name="L520" href="#L520">520</a>         <strong class="jxr_keyword">for</strong> (Marker symbolTableMarker : symbolTableMarkers) {
+<a class="jxr_linenumber" name="L521" href="#L521">521</a>             <strong class="jxr_keyword">if</strong> (symbolTableMarker.startIndex &gt; afterIndex) {
+<a class="jxr_linenumber" name="L522" href="#L522">522</a>                 symbolTableMarker.startIndex -= shiftAmount;
+<a class="jxr_linenumber" name="L523" href="#L523">523</a>                 symbolTableMarker.endIndex -= shiftAmount;
+<a class="jxr_linenumber" name="L524" href="#L524">524</a>             }
+<a class="jxr_linenumber" name="L525" href="#L525">525</a>         }
+<a class="jxr_linenumber" name="L526" href="#L526">526</a>         <strong class="jxr_keyword">if</strong> (annotationSidsMarker.startIndex &gt; afterIndex) {
+<a class="jxr_linenumber" name="L527" href="#L527">527</a>             annotationSidsMarker.startIndex -= shiftAmount;
+<a class="jxr_linenumber" name="L528" href="#L528">528</a>             annotationSidsMarker.endIndex -= shiftAmount;
+<a class="jxr_linenumber" name="L529" href="#L529">529</a>         }
+<a class="jxr_linenumber" name="L530" href="#L530">530</a>         <strong class="jxr_keyword">if</strong> (ivmSecondByteIndex &gt; afterIndex) {
+<a class="jxr_linenumber" name="L531" href="#L531">531</a>             ivmSecondByteIndex -= shiftAmount;
+<a class="jxr_linenumber" name="L532" href="#L532">532</a>         }
+<a class="jxr_linenumber" name="L533" href="#L533">533</a>     }
+<a class="jxr_linenumber" name="L534" href="#L534">534</a> 
+<a class="jxr_linenumber" name="L535" href="#L535">535</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L536" href="#L536">536</a> <em class="jxr_javadoccomment">     * Reclaim the NOP padding that occurred before the current value, making space for the value in the buffer.</em>
+<a class="jxr_linenumber" name="L537" href="#L537">537</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L538" href="#L538">538</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> reclaimNopPadding() {
+<a class="jxr_linenumber" name="L539" href="#L539">539</a>         pipe.consolidate(valuePreHeaderIndex, nopPadStartIndex);
+<a class="jxr_linenumber" name="L540" href="#L540">540</a>         shiftIndicesLeft(nopPadStartIndex, valuePreHeaderIndex - nopPadStartIndex);
+<a class="jxr_linenumber" name="L541" href="#L541">541</a>         resetNopPadIndex();
+<a class="jxr_linenumber" name="L542" href="#L542">542</a>     }
+<a class="jxr_linenumber" name="L543" href="#L543">543</a> 
+<a class="jxr_linenumber" name="L544" href="#L544">544</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L545" href="#L545">545</a> <em class="jxr_javadoccomment">     * Skip bytes from the underlying InputStream without ever buffering them.</em>
+<a class="jxr_linenumber" name="L546" href="#L546">546</a> <em class="jxr_javadoccomment">     * @param numberOfBytesToSkip the number of bytes to attempt to skip.</em>
+<a class="jxr_linenumber" name="L547" href="#L547">547</a> <em class="jxr_javadoccomment">     * @return the number of bytes actually skipped.</em>
+<a class="jxr_linenumber" name="L548" href="#L548">548</a> <em class="jxr_javadoccomment">     * @throws IOException if thrown by the underlying InputStream.</em>
+<a class="jxr_linenumber" name="L549" href="#L549">549</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L550" href="#L550">550</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">long</strong> skipBytesFromInput(<strong class="jxr_keyword">long</strong> numberOfBytesToSkip) <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="L551" href="#L551">551</a>         <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="L552" href="#L552">552</a>             <strong class="jxr_keyword">return</strong> getInput().skip(numberOfBytesToSkip);
+<a class="jxr_linenumber" name="L553" href="#L553">553</a>         } <strong class="jxr_keyword">catch</strong> (EOFException e) {
+<a class="jxr_linenumber" name="L554" href="#L554">554</a>             <em class="jxr_comment">// Certain InputStream implementations (e.g. GZIPInputStream) throw EOFException if more bytes are requested</em>
+<a class="jxr_linenumber" name="L555" href="#L555">555</a>             <em class="jxr_comment">// to skip than are currently available (e.g. if a header or trailer is incomplete).</em>
+<a class="jxr_linenumber" name="L556" href="#L556">556</a>             <strong class="jxr_keyword">return</strong> 0;
+<a class="jxr_linenumber" name="L557" href="#L557">557</a>         }
+<a class="jxr_linenumber" name="L558" href="#L558">558</a>     }
+<a class="jxr_linenumber" name="L559" href="#L559">559</a> 
+<a class="jxr_linenumber" name="L560" href="#L560">560</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L561" href="#L561">561</a> <em class="jxr_javadoccomment">     * Retrieve and buffer up to {@link #pageSize} bytes from the input.</em>
+<a class="jxr_linenumber" name="L562" href="#L562">562</a> <em class="jxr_javadoccomment">     * @param numberOfBytesRequested the minimum amount of space that must be available before the buffer reaches</em>
+<a class="jxr_linenumber" name="L563" href="#L563">563</a> <em class="jxr_javadoccomment">     *                               its configured maximum size.</em>
+<a class="jxr_linenumber" name="L564" href="#L564">564</a> <em class="jxr_javadoccomment">     * @return the number of bytes buffered by this operation.</em>
+<a class="jxr_linenumber" name="L565" href="#L565">565</a> <em class="jxr_javadoccomment">     * @throws Exception if thrown by the underlying InputStream.</em>
+<a class="jxr_linenumber" name="L566" href="#L566">566</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L567" href="#L567">567</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">int</strong> fillPage(<strong class="jxr_keyword">int</strong> numberOfBytesRequested) <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="L568" href="#L568">568</a>         <strong class="jxr_keyword">int</strong> amountToFill = pipe.capacity() - pipe.size();
+<a class="jxr_linenumber" name="L569" href="#L569">569</a>         <strong class="jxr_keyword">if</strong> (amountToFill &lt;= 0) {
+<a class="jxr_linenumber" name="L570" href="#L570">570</a>             <em class="jxr_comment">// Try to fill the remainder of the existing buffer to avoid growing unnecessarily. If there is no</em>
+<a class="jxr_linenumber" name="L571" href="#L571">571</a>             <em class="jxr_comment">// space, that indicates that a single value exceeds the size of a page. In that case, fill another page,</em>
+<a class="jxr_linenumber" name="L572" href="#L572">572</a>             <em class="jxr_comment">// growing the buffer only up to the configured maximum size.</em>
+<a class="jxr_linenumber" name="L573" href="#L573">573</a>             <strong class="jxr_keyword">int</strong> spaceAvailable = getMaximumBufferSize() - pipe.capacity();
+<a class="jxr_linenumber" name="L574" href="#L574">574</a>             <strong class="jxr_keyword">if</strong> (numberOfBytesRequested &gt; spaceAvailable) {
+<a class="jxr_linenumber" name="L575" href="#L575">575</a>                 <strong class="jxr_keyword">if</strong> (nopPadStartIndex &gt; -1 &amp;&amp; valuePreHeaderIndex - nopPadStartIndex &gt;= numberOfBytesRequested) {
+<a class="jxr_linenumber" name="L576" href="#L576">576</a>                     <em class="jxr_comment">// Reclaim the NOP pad space if doing so would allow the value to fit.</em>
+<a class="jxr_linenumber" name="L577" href="#L577">577</a>                     reclaimNopPadding();
+<a class="jxr_linenumber" name="L578" href="#L578">578</a>                 } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="L579" href="#L579">579</a>                     startSkippingValue();
+<a class="jxr_linenumber" name="L580" href="#L580">580</a>                 }
+<a class="jxr_linenumber" name="L581" href="#L581">581</a>                 amountToFill = numberOfBytesRequested;
+<a class="jxr_linenumber" name="L582" href="#L582">582</a>             } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="L583" href="#L583">583</a>                 amountToFill = Math.min(pageSize, spaceAvailable);
+<a class="jxr_linenumber" name="L584" href="#L584">584</a>             }
+<a class="jxr_linenumber" name="L585" href="#L585">585</a>         }
+<a class="jxr_linenumber" name="L586" href="#L586">586</a>         <strong class="jxr_keyword">int</strong> received;
+<a class="jxr_linenumber" name="L587" href="#L587">587</a>         <strong class="jxr_keyword">if</strong> (isSkippingCurrentValue()) {
+<a class="jxr_linenumber" name="L588" href="#L588">588</a>             <strong class="jxr_keyword">if</strong> (state == State.SKIPPING_VALUE) {
+<a class="jxr_linenumber" name="L589" href="#L589">589</a>                 <em class="jxr_comment">// This is a seek operation, meaning that the bytes don't need to be interpreted.</em>
+<a class="jxr_linenumber" name="L590" href="#L590">590</a>                 received = (<strong class="jxr_keyword">int</strong>) skipBytesFromInput(amountToFill);
+<a class="jxr_linenumber" name="L591" href="#L591">591</a>             } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="L592" href="#L592">592</a>                 <em class="jxr_comment">// The bytes need to be interpreted, so they cannot be skipped. The caller must retrieve them from</em>
+<a class="jxr_linenumber" name="L593" href="#L593">593</a>                 <em class="jxr_comment">// the input.</em>
+<a class="jxr_linenumber" name="L594" href="#L594">594</a>                 received = amountToFill;
+<a class="jxr_linenumber" name="L595" href="#L595">595</a>             }
+<a class="jxr_linenumber" name="L596" href="#L596">596</a>         } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="L597" href="#L597">597</a>             received = pipe.receive(getInput(), amountToFill);
+<a class="jxr_linenumber" name="L598" href="#L598">598</a>         }
+<a class="jxr_linenumber" name="L599" href="#L599">599</a>         <strong class="jxr_keyword">return</strong> received;
+<a class="jxr_linenumber" name="L600" href="#L600">600</a>     }
+<a class="jxr_linenumber" name="L601" href="#L601">601</a> 
+<a class="jxr_linenumber" name="L602" href="#L602">602</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L603" href="#L603">603</a> <em class="jxr_javadoccomment">     * Notifies the event handler that the current value is oversized, if the handler has not already been notified.</em>
+<a class="jxr_linenumber" name="L604" href="#L604">604</a> <em class="jxr_javadoccomment">     * @throws Exception if thrown by the handler.</em>
+<a class="jxr_linenumber" name="L605" href="#L605">605</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L606" href="#L606">606</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> notifyHandlerOfOversizedValue() <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="L607" href="#L607">607</a>         <strong class="jxr_keyword">if</strong> (handlerNeedsToBeNotifiedOfOversizedValue) {
+<a class="jxr_linenumber" name="L608" href="#L608">608</a>             <strong class="jxr_keyword">if</strong> (isSystemValue) {
+<a class="jxr_linenumber" name="L609" href="#L609">609</a>                 <em class="jxr_comment">// Processing cannot continue after system values (symbol tables) are truncated because subsequent</em>
+<a class="jxr_linenumber" name="L610" href="#L610">610</a>                 <em class="jxr_comment">// values may be unreadable. Notify the user.</em>
+<a class="jxr_linenumber" name="L611" href="#L611">611</a>                 oversizedSymbolTableHandler.onOversizedSymbolTable();
+<a class="jxr_linenumber" name="L612" href="#L612">612</a>             } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="L613" href="#L613">613</a>                 <em class="jxr_comment">// An oversized user value has been encountered. Notify the user so they can decide whether to continue</em>
+<a class="jxr_linenumber" name="L614" href="#L614">614</a>                 <em class="jxr_comment">// or abort.</em>
+<a class="jxr_linenumber" name="L615" href="#L615">615</a>                 oversizedValueHandler.onOversizedValue();
+<a class="jxr_linenumber" name="L616" href="#L616">616</a>             }
+<a class="jxr_linenumber" name="L617" href="#L617">617</a>         }
+<a class="jxr_linenumber" name="L618" href="#L618">618</a>         handlerNeedsToBeNotifiedOfOversizedValue = false;
+<a class="jxr_linenumber" name="L619" href="#L619">619</a>     }
+<a class="jxr_linenumber" name="L620" href="#L620">620</a> 
+<a class="jxr_linenumber" name="L621" href="#L621">621</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L622" href="#L622">622</a> <em class="jxr_javadoccomment">     * Attempt to retrieve at least `additionalBytesNeeded` bytes from the input and either buffer them (if the value</em>
+<a class="jxr_linenumber" name="L623" href="#L623">623</a> <em class="jxr_javadoccomment">     * is being consumed) or skip them (if the value is being skipped due to being oversize).</em>
+<a class="jxr_linenumber" name="L624" href="#L624">624</a> <em class="jxr_javadoccomment">     * @return the number of bytes filled or skipped.</em>
+<a class="jxr_linenumber" name="L625" href="#L625">625</a> <em class="jxr_javadoccomment">     * @throws Exception if thrown by the event handler.</em>
+<a class="jxr_linenumber" name="L626" href="#L626">626</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L627" href="#L627">627</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">long</strong> fillOrSkip() <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="L628" href="#L628">628</a>         <em class="jxr_comment">// Clamping at the number of buffered bytes available guarantees that the buffer</em>
+<a class="jxr_linenumber" name="L629" href="#L629">629</a>         <em class="jxr_comment">// will never grow beyond its initial size.</em>
+<a class="jxr_linenumber" name="L630" href="#L630">630</a>         <strong class="jxr_keyword">long</strong> bytesRequested = additionalBytesNeeded - pipe.availableBeyondBoundary();
+<a class="jxr_linenumber" name="L631" href="#L631">631</a>         <strong class="jxr_keyword">long</strong> bytesFilled;
+<a class="jxr_linenumber" name="L632" href="#L632">632</a>         <strong class="jxr_keyword">if</strong> (isSkippingCurrentValue()) {
+<a class="jxr_linenumber" name="L633" href="#L633">633</a>             bytesFilled = skipBytesFromInput(bytesRequested);
+<a class="jxr_linenumber" name="L634" href="#L634">634</a>         } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="L635" href="#L635">635</a>             <strong class="jxr_keyword">if</strong> (additionalBytesNeeded &gt; MAXIMUM_VALUE_SIZE) {
+<a class="jxr_linenumber" name="L636" href="#L636">636</a>                 <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> <a name="IonException" href="../../../../com/amazon/ion/IonException.html#IonException">IonException</a>(<span class="jxr_string">"The size of the value exceeds the limits of the implementation."</span>);
+<a class="jxr_linenumber" name="L637" href="#L637">637</a>             }
+<a class="jxr_linenumber" name="L638" href="#L638">638</a>             bytesFilled = fillPage((<strong class="jxr_keyword">int</strong>) bytesRequested);
+<a class="jxr_linenumber" name="L639" href="#L639">639</a>         }
+<a class="jxr_linenumber" name="L640" href="#L640">640</a>         <strong class="jxr_keyword">if</strong> (bytesFilled &lt; 1) {
+<a class="jxr_linenumber" name="L641" href="#L641">641</a>             <strong class="jxr_keyword">return</strong> 0;
+<a class="jxr_linenumber" name="L642" href="#L642">642</a>         }
+<a class="jxr_linenumber" name="L643" href="#L643">643</a>         <strong class="jxr_keyword">if</strong> (isSkippingCurrentValue()) {
+<a class="jxr_linenumber" name="L644" href="#L644">644</a>             <em class="jxr_comment">// The user cannot be notified of a size violation until it has been determined whether</em>
+<a class="jxr_linenumber" name="L645" href="#L645">645</a>             <em class="jxr_comment">// the value is a symbol table or user value, which is only true in the SKIPPING_VALUE</em>
+<a class="jxr_linenumber" name="L646" href="#L646">646</a>             <em class="jxr_comment">// state.</em>
+<a class="jxr_linenumber" name="L647" href="#L647">647</a>             notifyHandlerOfOversizedValue();
+<a class="jxr_linenumber" name="L648" href="#L648">648</a>             <em class="jxr_comment">// Skip all of the bytes skipped from the InputStream as well as all bytes previously</em>
+<a class="jxr_linenumber" name="L649" href="#L649">649</a>             <em class="jxr_comment">// buffered.</em>
+<a class="jxr_linenumber" name="L650" href="#L650">650</a>             bytesFilled = bytesFilled + ((<strong class="jxr_keyword">int</strong>) additionalBytesNeeded - bytesRequested);
+<a class="jxr_linenumber" name="L651" href="#L651">651</a>         } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="L652" href="#L652">652</a>             bytesFilled = Math.min(additionalBytesNeeded, bytesFilled);
+<a class="jxr_linenumber" name="L653" href="#L653">653</a>             pipe.extendBoundary((<strong class="jxr_keyword">int</strong>) bytesFilled);
+<a class="jxr_linenumber" name="L654" href="#L654">654</a>             peekIndex += (<strong class="jxr_keyword">int</strong>) bytesFilled;
+<a class="jxr_linenumber" name="L655" href="#L655">655</a>         }
+<a class="jxr_linenumber" name="L656" href="#L656">656</a>         <strong class="jxr_keyword">return</strong> bytesFilled;
+<a class="jxr_linenumber" name="L657" href="#L657">657</a>     }
+<a class="jxr_linenumber" name="L658" href="#L658">658</a> 
+<a class="jxr_linenumber" name="L659" href="#L659">659</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L660" href="#L660">660</a> <em class="jxr_javadoccomment">     * Attempts to skip the requested number of bytes.</em>
+<a class="jxr_linenumber" name="L661" href="#L661">661</a> <em class="jxr_javadoccomment">     * @param numberOfBytesToSkip the number of bytes to attempt to skip.</em>
+<a class="jxr_linenumber" name="L662" href="#L662">662</a> <em class="jxr_javadoccomment">     * @return the number of bytes actually skipped.</em>
+<a class="jxr_linenumber" name="L663" href="#L663">663</a> <em class="jxr_javadoccomment">     * @throws Exception if thrown by the event handler.</em>
+<a class="jxr_linenumber" name="L664" href="#L664">664</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L665" href="#L665">665</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">long</strong> skip(<strong class="jxr_keyword">long</strong> numberOfBytesToSkip) <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="L666" href="#L666">666</a>         <strong class="jxr_keyword">long</strong> numberOfBytesSkipped;
+<a class="jxr_linenumber" name="L667" href="#L667">667</a>         <strong class="jxr_keyword">if</strong> (pipe.availableBeyondBoundary() &gt;= numberOfBytesToSkip) {
+<a class="jxr_linenumber" name="L668" href="#L668">668</a>             numberOfBytesSkipped = (<strong class="jxr_keyword">int</strong>) numberOfBytesToSkip;
+<a class="jxr_linenumber" name="L669" href="#L669">669</a>             pipe.extendBoundary((<strong class="jxr_keyword">int</strong>) numberOfBytesSkipped);
+<a class="jxr_linenumber" name="L670" href="#L670">670</a>             peekIndex += (<strong class="jxr_keyword">int</strong>) numberOfBytesSkipped;
+<a class="jxr_linenumber" name="L671" href="#L671">671</a>         } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="L672" href="#L672">672</a>             numberOfBytesSkipped = fillOrSkip();
+<a class="jxr_linenumber" name="L673" href="#L673">673</a>         }
+<a class="jxr_linenumber" name="L674" href="#L674">674</a>         <strong class="jxr_keyword">if</strong> (numberOfBytesSkipped &gt; 0) {
+<a class="jxr_linenumber" name="L675" href="#L675">675</a>             <strong class="jxr_keyword">long</strong> numberOfBytesToReport = numberOfBytesSkipped;
+<a class="jxr_linenumber" name="L676" href="#L676">676</a>             <strong class="jxr_keyword">while</strong> (numberOfBytesToReport &gt; 0) {
+<a class="jxr_linenumber" name="L677" href="#L677">677</a>                 <strong class="jxr_keyword">int</strong> numberOfBytesToReportThisIteration = (<strong class="jxr_keyword">int</strong>) Math.min(Integer.MAX_VALUE, numberOfBytesToReport);
+<a class="jxr_linenumber" name="L678" href="#L678">678</a>                 dataHandler.onData(numberOfBytesToReportThisIteration);
+<a class="jxr_linenumber" name="L679" href="#L679">679</a>                 numberOfBytesToReport -= numberOfBytesToReportThisIteration;
+<a class="jxr_linenumber" name="L680" href="#L680">680</a>             }
+<a class="jxr_linenumber" name="L681" href="#L681">681</a>         }
+<a class="jxr_linenumber" name="L682" href="#L682">682</a>         <strong class="jxr_keyword">return</strong> numberOfBytesSkipped;
+<a class="jxr_linenumber" name="L683" href="#L683">683</a>     }
+<a class="jxr_linenumber" name="L684" href="#L684">684</a> 
+<a class="jxr_linenumber" name="L685" href="#L685">685</a>     <em class="jxr_comment">/*</em>
+<a class="jxr_linenumber" name="L686" href="#L686">686</a> <em class="jxr_comment">     * The state transitions of the fillInput() method are summarized by the following diagram.</em>
+<a class="jxr_linenumber" name="L687" href="#L687">687</a> <em class="jxr_comment">     *</em>
+<a class="jxr_linenumber" name="L688" href="#L688">688</a> <em class="jxr_comment">     *                                 fillInput()</em>
+<a class="jxr_linenumber" name="L689" href="#L689">689</a> <em class="jxr_comment">     *                                       |</em>
+<a class="jxr_linenumber" name="L690" href="#L690">690</a> <em class="jxr_comment">     *                                       |   +----------------------------------------------------+</em>
+<a class="jxr_linenumber" name="L691" href="#L691">691</a> <em class="jxr_comment">     *                                       |   |                                                    |</em>
+<a class="jxr_linenumber" name="L692" href="#L692">692</a> <em class="jxr_comment">     *       Read first byte of IVM +--------v---v-+                                                  |</em>
+<a class="jxr_linenumber" name="L693" href="#L693">693</a> <em class="jxr_comment">     *   +--------------------------+BEFORE_TYPE_ID&lt;--+                                               |</em>
+<a class="jxr_linenumber" name="L694" href="#L694">694</a> <em class="jxr_comment">     *   |   Or length was inferred |              +--+1-byte value(null or bool) read                |</em>
+<a class="jxr_linenumber" name="L695" href="#L695">695</a> <em class="jxr_comment">     *   |    from the type ID    +&gt;+------+-------+                                                  |</em>
+<a class="jxr_linenumber" name="L696" href="#L696">696</a> <em class="jxr_comment">     *   |                        |        |                                                          |</em>
+<a class="jxr_linenumber" name="L697" href="#L697">697</a> <em class="jxr_comment">     *   |                        |        |No bytes available                                        |</em>
+<a class="jxr_linenumber" name="L698" href="#L698">698</a> <em class="jxr_comment">     *   |           1-byte value |        v                                                          |</em>
+<a class="jxr_linenumber" name="L699" href="#L699">699</a> <em class="jxr_comment">     *   |                        | +----------------+                                                |</em>
+<a class="jxr_linenumber" name="L700" href="#L700">700</a> <em class="jxr_comment">     *   |                        +-+READING_TYPE_ID &lt;-+                                              |</em>
+<a class="jxr_linenumber" name="L701" href="#L701">701</a> <em class="jxr_comment">     *   |                          |                +-+No bytes available                            |</em>
+<a class="jxr_linenumber" name="L702" href="#L702">702</a> <em class="jxr_comment">     *   |                          +------+---------+                                                |</em>
+<a class="jxr_linenumber" name="L703" href="#L703">703</a> <em class="jxr_comment">     *   |                                 |Read type-id of multi-byte value                          |</em>
+<a class="jxr_linenumber" name="L704" href="#L704">704</a> <em class="jxr_comment">     *   |                                 v                                                          |</em>
+<a class="jxr_linenumber" name="L705" href="#L705">705</a> <em class="jxr_comment">     *   |      Finished header     +----------------+                                                |</em>
+<a class="jxr_linenumber" name="L706" href="#L706">706</a> <em class="jxr_comment">     *   | +------------------------+READING_HEADER  &lt;--+                                             |</em>
+<a class="jxr_linenumber" name="L707" href="#L707">707</a> <em class="jxr_comment">     *   | |                        |                +--+Not enough bytes to complete header          |</em>
+<a class="jxr_linenumber" name="L708" href="#L708">708</a> <em class="jxr_comment">     *   | |                        +------+---------+                                                |</em>
+<a class="jxr_linenumber" name="L709" href="#L709">709</a> <em class="jxr_comment">     *   | |                               |Read annotation wrapper with symbol table annotation      |</em>
+<a class="jxr_linenumber" name="L710" href="#L710">710</a> <em class="jxr_comment">     *   | |                               v                                                          |</em>
+<a class="jxr_linenumber" name="L711" href="#L711">711</a> <em class="jxr_comment">     *   | |             +---------------------------------------------+                              |</em>
+<a class="jxr_linenumber" name="L712" href="#L712">712</a> <em class="jxr_comment">     *   | |             |READING_VALUE_WITH_SYMBOL_TABLE_ANNOTATION   &lt;--+                           |</em>
+<a class="jxr_linenumber" name="L713" href="#L713">713</a> <em class="jxr_comment">     *   | |             |                                             +--+No bytes available         |</em>
+<a class="jxr_linenumber" name="L714" href="#L714">714</a> <em class="jxr_comment">     *   | |             +--+--------------+---------------------------+                              |</em>
+<a class="jxr_linenumber" name="L715" href="#L715">715</a> <em class="jxr_comment">     *   | |                |              |The wrapped value is a struct                             |</em>
+<a class="jxr_linenumber" name="L716" href="#L716">716</a> <em class="jxr_comment">     *   | | The wrapped    |              v                                                          |</em>
+<a class="jxr_linenumber" name="L717" href="#L717">717</a> <em class="jxr_comment">     *   | |  value is not  |  +-----------------------------+                                        |</em>
+<a class="jxr_linenumber" name="L718" href="#L718">718</a> <em class="jxr_comment">     *   | |   a struct     |  | READING_SYMBOL_TABLE_LENGTH &lt;--+                                     |</em>
+<a class="jxr_linenumber" name="L719" href="#L719">719</a> <em class="jxr_comment">     *   | |                |  |                             +--+Not enough bytes to complete length  |</em>
+<a class="jxr_linenumber" name="L720" href="#L720">720</a> <em class="jxr_comment">     *   | |                |  +-----------+-----------------+                                        |</em>
+<a class="jxr_linenumber" name="L721" href="#L721">721</a> <em class="jxr_comment">     *   | |                |              |Read length                                               |</em>
+<a class="jxr_linenumber" name="L722" href="#L722">722</a> <em class="jxr_comment">     *   | |                |              v                                                          |</em>
+<a class="jxr_linenumber" name="L723" href="#L723">723</a> <em class="jxr_comment">     *   | |                |      +-----------------+                                                |</em>
+<a class="jxr_linenumber" name="L724" href="#L724">724</a> <em class="jxr_comment">     *   | +---------------&gt;+-----&gt;| SKIPPING_VALUE  &lt;--+                                             |</em>
+<a class="jxr_linenumber" name="L725" href="#L725">725</a> <em class="jxr_comment">     *   |                         |                 +--+More bytes needed to complete skip           |</em>
+<a class="jxr_linenumber" name="L726" href="#L726">726</a> <em class="jxr_comment">     *   +------------------------&gt;+-------+---------+                                                |</em>
+<a class="jxr_linenumber" name="L727" href="#L727">727</a> <em class="jxr_comment">     *                                     |                                                          |</em>
+<a class="jxr_linenumber" name="L728" href="#L728">728</a> <em class="jxr_comment">     *                                     |All bytes skipped                                         |</em>
+<a class="jxr_linenumber" name="L729" href="#L729">729</a> <em class="jxr_comment">     *                                     |                                                          |</em>
+<a class="jxr_linenumber" name="L730" href="#L730">730</a> <em class="jxr_comment">     *                                     +----------------------------------------------------------+</em>
+<a class="jxr_linenumber" name="L731" href="#L731">731</a> <em class="jxr_comment">     */</em>
+<a class="jxr_linenumber" name="L732" href="#L732">732</a>     @Override
+<a class="jxr_linenumber" name="L733" href="#L733">733</a>     <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">void</strong> fillInputHelper() <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="L734" href="#L734">734</a>         <strong class="jxr_keyword">while</strong> (<strong class="jxr_keyword">true</strong>) {
+<a class="jxr_linenumber" name="L735" href="#L735">735</a>             <strong class="jxr_keyword">if</strong> (state == State.BEFORE_TYPE_ID || state == State.READING_TYPE_ID) {
+<a class="jxr_linenumber" name="L736" href="#L736">736</a>                 reset();
+<a class="jxr_linenumber" name="L737" href="#L737">737</a>                 state = State.READING_TYPE_ID;
+<a class="jxr_linenumber" name="L738" href="#L738">738</a>                 <strong class="jxr_keyword">if</strong> (readTypeID(<strong class="jxr_keyword">true</strong>) != ReadTypeIdResult.NO_DATA) {
+<a class="jxr_linenumber" name="L739" href="#L739">739</a>                     <em class="jxr_comment">// The previous line transfers at most one byte, so the pre-header index is the write index minus</em>
+<a class="jxr_linenumber" name="L740" href="#L740">740</a>                     <em class="jxr_comment">// one.</em>
+<a class="jxr_linenumber" name="L741" href="#L741">741</a>                     valuePostHeaderIndex = peekIndex;
+<a class="jxr_linenumber" name="L742" href="#L742">742</a>                     valuePreHeaderIndex = valuePostHeaderIndex - 1;
+<a class="jxr_linenumber" name="L743" href="#L743">743</a>                     valueStartWriteIndex = valuePreHeaderIndex;
+<a class="jxr_linenumber" name="L744" href="#L744">744</a>                 }
+<a class="jxr_linenumber" name="L745" href="#L745">745</a>             }
+<a class="jxr_linenumber" name="L746" href="#L746">746</a>             <strong class="jxr_keyword">if</strong> (state == State.READING_HEADER) {
+<a class="jxr_linenumber" name="L747" href="#L747">747</a>                 readHeader();
+<a class="jxr_linenumber" name="L748" href="#L748">748</a>                 <strong class="jxr_keyword">if</strong> (!inProgressVarUInt.isComplete) {
+<a class="jxr_linenumber" name="L749" href="#L749">749</a>                     <strong class="jxr_keyword">return</strong>;
+<a class="jxr_linenumber" name="L750" href="#L750">750</a>                 }
+<a class="jxr_linenumber" name="L751" href="#L751">751</a>                 valuePostHeaderIndex = peekIndex;
+<a class="jxr_linenumber" name="L752" href="#L752">752</a>             }
+<a class="jxr_linenumber" name="L753" href="#L753">753</a>             <strong class="jxr_keyword">if</strong> (state == State.READING_VALUE_WITH_SYMBOL_TABLE_ANNOTATION) {
+<a class="jxr_linenumber" name="L754" href="#L754">754</a>                 <em class="jxr_comment">// Skip annotations until positioned on the value's type ID.</em>
+<a class="jxr_linenumber" name="L755" href="#L755">755</a>                 <strong class="jxr_keyword">while</strong> (numberOfAnnotationSidBytesRemaining &gt; 0) {
+<a class="jxr_linenumber" name="L756" href="#L756">756</a>                     <strong class="jxr_keyword">long</strong> numberOfBytesSkipped = skip(numberOfAnnotationSidBytesRemaining);
+<a class="jxr_linenumber" name="L757" href="#L757">757</a>                     <strong class="jxr_keyword">if</strong> (numberOfBytesSkipped &lt; 1) {
+<a class="jxr_linenumber" name="L758" href="#L758">758</a>                         <strong class="jxr_keyword">return</strong>;
+<a class="jxr_linenumber" name="L759" href="#L759">759</a>                     }
+<a class="jxr_linenumber" name="L760" href="#L760">760</a>                     numberOfAnnotationSidBytesRemaining -= numberOfBytesSkipped;
+<a class="jxr_linenumber" name="L761" href="#L761">761</a>                     additionalBytesNeeded -= numberOfBytesSkipped;
+<a class="jxr_linenumber" name="L762" href="#L762">762</a>                 }
+<a class="jxr_linenumber" name="L763" href="#L763">763</a>                 ReadTypeIdResult result = readTypeID(false);
+<a class="jxr_linenumber" name="L764" href="#L764">764</a>                 <strong class="jxr_keyword">if</strong> (result == ReadTypeIdResult.NO_DATA) {
+<a class="jxr_linenumber" name="L765" href="#L765">765</a>                     <strong class="jxr_keyword">return</strong>;
+<a class="jxr_linenumber" name="L766" href="#L766">766</a>                 }
+<a class="jxr_linenumber" name="L767" href="#L767">767</a>                 <em class="jxr_comment">// When successful, readTypeID reads exactly one byte.</em>
+<a class="jxr_linenumber" name="L768" href="#L768">768</a>                 additionalBytesNeeded--;
+<a class="jxr_linenumber" name="L769" href="#L769">769</a>                 <strong class="jxr_keyword">if</strong> (result == ReadTypeIdResult.STRUCT) {
+<a class="jxr_linenumber" name="L770" href="#L770">770</a>                     state = State.READING_SYMBOL_TABLE_LENGTH;
+<a class="jxr_linenumber" name="L771" href="#L771">771</a>                 } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="L772" href="#L772">772</a>                     state = State.SKIPPING_VALUE;
+<a class="jxr_linenumber" name="L773" href="#L773">773</a>                 }
+<a class="jxr_linenumber" name="L774" href="#L774">774</a>             }
+<a class="jxr_linenumber" name="L775" href="#L775">775</a>             <strong class="jxr_keyword">if</strong> (state == State.READING_SYMBOL_TABLE_LENGTH) {
+<a class="jxr_linenumber" name="L776" href="#L776">776</a>                 isSystemValue = <strong class="jxr_keyword">true</strong>;
+<a class="jxr_linenumber" name="L777" href="#L777">777</a>                 <strong class="jxr_keyword">if</strong> (inProgressVarUInt.location == VarUInt.Location.VALUE_LENGTH) {
+<a class="jxr_linenumber" name="L778" href="#L778">778</a>                     readVarUInt();
+<a class="jxr_linenumber" name="L779" href="#L779">779</a>                     <strong class="jxr_keyword">if</strong> (!inProgressVarUInt.isComplete) {
+<a class="jxr_linenumber" name="L780" href="#L780">780</a>                         <strong class="jxr_keyword">return</strong>;
+<a class="jxr_linenumber" name="L781" href="#L781">781</a>                     }
+<a class="jxr_linenumber" name="L782" href="#L782">782</a>                     additionalBytesNeeded = inProgressVarUInt.value;
+<a class="jxr_linenumber" name="L783" href="#L783">783</a>                 }
+<a class="jxr_linenumber" name="L784" href="#L784">784</a>                 symbolTableMarkers.add(<strong class="jxr_keyword">new</strong> Marker(peekIndex, (<strong class="jxr_keyword">int</strong>) additionalBytesNeeded));
+<a class="jxr_linenumber" name="L785" href="#L785">785</a>                 state = State.SKIPPING_VALUE;
+<a class="jxr_linenumber" name="L786" href="#L786">786</a>             }
+<a class="jxr_linenumber" name="L787" href="#L787">787</a>             <strong class="jxr_keyword">if</strong> (state == State.SKIPPING_VALUE) {
+<a class="jxr_linenumber" name="L788" href="#L788">788</a>                 <strong class="jxr_keyword">if</strong> (valueTid.isNopPad) {
+<a class="jxr_linenumber" name="L789" href="#L789">789</a>                     <strong class="jxr_keyword">if</strong> (pipe.availableBeyondBoundary() &lt;= additionalBytesNeeded) {
+<a class="jxr_linenumber" name="L790" href="#L790">790</a>                         <em class="jxr_comment">// There cannot be any meaningful data beyond the NOP pad, so the buffer can be truncated</em>
+<a class="jxr_linenumber" name="L791" href="#L791">791</a>                         <em class="jxr_comment">// immediately and the rest of the NOP pad skipped.</em>
+<a class="jxr_linenumber" name="L792" href="#L792">792</a>                         additionalBytesNeeded -= pipe.availableBeyondBoundary();
+<a class="jxr_linenumber" name="L793" href="#L793">793</a>                         startSkippingValue();
+<a class="jxr_linenumber" name="L794" href="#L794">794</a>                         <em class="jxr_comment">// NOP padding will not be buffered, so it is never considered oversized.</em>
+<a class="jxr_linenumber" name="L795" href="#L795">795</a>                         handlerNeedsToBeNotifiedOfOversizedValue = false;
+<a class="jxr_linenumber" name="L796" href="#L796">796</a>                     }
+<a class="jxr_linenumber" name="L797" href="#L797">797</a>                     <em class="jxr_comment">// Else, the rest of the NOP pad is already buffered, and there is a value at least partially</em>
+<a class="jxr_linenumber" name="L798" href="#L798">798</a>                     <em class="jxr_comment">// buffered beyond it. The NOP pad will only be deleted from the buffer if the next value is</em>
+<a class="jxr_linenumber" name="L799" href="#L799">799</a>                     <em class="jxr_comment">// large enough that it doesn't fit within the buffer's configured maximum size.</em>
+<a class="jxr_linenumber" name="L800" href="#L800">800</a>                 }
+<a class="jxr_linenumber" name="L801" href="#L801">801</a>                 <strong class="jxr_keyword">while</strong> (additionalBytesNeeded &gt; 0) {
+<a class="jxr_linenumber" name="L802" href="#L802">802</a>                     <strong class="jxr_keyword">long</strong> numberOfBytesSkipped = skip(additionalBytesNeeded);
+<a class="jxr_linenumber" name="L803" href="#L803">803</a>                     <strong class="jxr_keyword">if</strong> (numberOfBytesSkipped &lt; 1) {
+<a class="jxr_linenumber" name="L804" href="#L804">804</a>                         <strong class="jxr_keyword">return</strong>;
+<a class="jxr_linenumber" name="L805" href="#L805">805</a>                     }
+<a class="jxr_linenumber" name="L806" href="#L806">806</a>                     additionalBytesNeeded -= numberOfBytesSkipped;
+<a class="jxr_linenumber" name="L807" href="#L807">807</a>                 }
+<a class="jxr_linenumber" name="L808" href="#L808">808</a>                 state = State.BEFORE_TYPE_ID;
+<a class="jxr_linenumber" name="L809" href="#L809">809</a>             }
+<a class="jxr_linenumber" name="L810" href="#L810">810</a>             <strong class="jxr_keyword">if</strong> (state == State.BEFORE_TYPE_ID) {
+<a class="jxr_linenumber" name="L811" href="#L811">811</a>                 valueEndIndex = peekIndex;
+<a class="jxr_linenumber" name="L812" href="#L812">812</a>                 <strong class="jxr_keyword">if</strong> (isSystemValue || isSkippingCurrentValue() || valueTid.isNopPad) {
+<a class="jxr_linenumber" name="L813" href="#L813">813</a>                     <strong class="jxr_keyword">if</strong> (valueTid.isNopPad &amp;&amp; nopPadStartIndex &lt; 0) {
+<a class="jxr_linenumber" name="L814" href="#L814">814</a>                         <em class="jxr_comment">// This is the first NOP before the next value. Mark the start index in case the space needs to</em>
+<a class="jxr_linenumber" name="L815" href="#L815">815</a>                         <em class="jxr_comment">// be reclaimed later.</em>
+<a class="jxr_linenumber" name="L816" href="#L816">816</a>                         nopPadStartIndex = valuePreHeaderIndex;
+<a class="jxr_linenumber" name="L817" href="#L817">817</a>                     }
+<a class="jxr_linenumber" name="L818" href="#L818">818</a>                     <strong class="jxr_keyword">if</strong> (isSystemValue &amp;&amp; isSkippingCurrentValue()) {
+<a class="jxr_linenumber" name="L819" href="#L819">819</a>                         <em class="jxr_comment">// The symbol table(s) currently buffered exceed the maximum buffer size. This is not</em>
+<a class="jxr_linenumber" name="L820" href="#L820">820</a>                         <em class="jxr_comment">// recoverable; future invocations of fillInput() will do nothing.</em>
+<a class="jxr_linenumber" name="L821" href="#L821">821</a>                         reset();
+<a class="jxr_linenumber" name="L822" href="#L822">822</a>                         state = State.DONE;
+<a class="jxr_linenumber" name="L823" href="#L823">823</a>                     } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="L824" href="#L824">824</a>                         <strong class="jxr_keyword">if</strong> (isSystemValue &amp;&amp; nopPadStartIndex &gt; -1) {
+<a class="jxr_linenumber" name="L825" href="#L825">825</a>                             <em class="jxr_comment">// Reclaim any NOP pad space that precedes system values. This will usually not be strictly</em>
+<a class="jxr_linenumber" name="L826" href="#L826">826</a>                             <em class="jxr_comment">// necessary, but it simplifies the implementation and will be rare in practice. Without</em>
+<a class="jxr_linenumber" name="L827" href="#L827">827</a>                             <em class="jxr_comment">// this simplification, we would need to keep track of a list of NOP pad start/end indexes</em>
+<a class="jxr_linenumber" name="L828" href="#L828">828</a>                             <em class="jxr_comment">// as we do with the symbol table markers. This way, we know that there can only be one</em>
+<a class="jxr_linenumber" name="L829" href="#L829">829</a>                             <em class="jxr_comment">// uninterrupted run of NOP pad bytes immediately preceding any user value, making it easy</em>
+<a class="jxr_linenumber" name="L830" href="#L830">830</a>                             <em class="jxr_comment">// to reclaim this space if necessary.</em>
+<a class="jxr_linenumber" name="L831" href="#L831">831</a>                             reclaimNopPadding();
+<a class="jxr_linenumber" name="L832" href="#L832">832</a>                         }
+<a class="jxr_linenumber" name="L833" href="#L833">833</a>                         <em class="jxr_comment">// Just skipped over system value or an oversized value. Consume the next value too so that a</em>
+<a class="jxr_linenumber" name="L834" href="#L834">834</a>                         <em class="jxr_comment">// call to reader.next() won't return null.</em>
+<a class="jxr_linenumber" name="L835" href="#L835">835</a>                         <strong class="jxr_keyword">continue</strong>;
+<a class="jxr_linenumber" name="L836" href="#L836">836</a>                     }
+<a class="jxr_linenumber" name="L837" href="#L837">837</a>                 }
+<a class="jxr_linenumber" name="L838" href="#L838">838</a>             }
+<a class="jxr_linenumber" name="L839" href="#L839">839</a>             <strong class="jxr_keyword">break</strong>;
+<a class="jxr_linenumber" name="L840" href="#L840">840</a>         }
+<a class="jxr_linenumber" name="L841" href="#L841">841</a>     }
+<a class="jxr_linenumber" name="L842" href="#L842">842</a> 
+<a class="jxr_linenumber" name="L843" href="#L843">843</a>     @Override
+<a class="jxr_linenumber" name="L844" href="#L844">844</a>     <strong class="jxr_keyword">void</strong> truncateToEndOfPreviousValue() {
+<a class="jxr_linenumber" name="L845" href="#L845">845</a>         peekIndex = valueStartWriteIndex;
+<a class="jxr_linenumber" name="L846" href="#L846">846</a>         pipe.truncate(valueStartWriteIndex, valueStartAvailable);
+<a class="jxr_linenumber" name="L847" href="#L847">847</a>         handlerNeedsToBeNotifiedOfOversizedValue = <strong class="jxr_keyword">true</strong>;
+<a class="jxr_linenumber" name="L848" href="#L848">848</a>     }
+<a class="jxr_linenumber" name="L849" href="#L849">849</a> 
+<a class="jxr_linenumber" name="L850" href="#L850">850</a>     @Override
+<a class="jxr_linenumber" name="L851" href="#L851">851</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">boolean</strong> moreDataRequired() {
+<a class="jxr_linenumber" name="L852" href="#L852">852</a>         <strong class="jxr_keyword">return</strong> pipe.available() &lt;= 0 || state != State.BEFORE_TYPE_ID;
+<a class="jxr_linenumber" name="L853" href="#L853">853</a>     }
+<a class="jxr_linenumber" name="L854" href="#L854">854</a> 
+<a class="jxr_linenumber" name="L855" href="#L855">855</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L856" href="#L856">856</a> <em class="jxr_javadoccomment">     * Rewinds to the start of the value currently buffered. Does not include any system values that may precede</em>
+<a class="jxr_linenumber" name="L857" href="#L857">857</a> <em class="jxr_javadoccomment">     * the value. This method is not called in conjunction with {@link #mark()} / {@link #rewind()}, which may be</em>
+<a class="jxr_linenumber" name="L858" href="#L858">858</a> <em class="jxr_javadoccomment">     * used if the caller wants to rewind to the start of any system values that precede the current value. This</em>
+<a class="jxr_linenumber" name="L859" href="#L859">859</a> <em class="jxr_javadoccomment">     * method may be used to re-read the current value and may only be called after {@code IonReader.next()}</em>
+<a class="jxr_linenumber" name="L860" href="#L860">860</a> <em class="jxr_javadoccomment">     * has been called on the current value; otherwise, the data representing any system values that precede the</em>
+<a class="jxr_linenumber" name="L861" href="#L861">861</a> <em class="jxr_javadoccomment">     * current value would be lost.</em>
+<a class="jxr_linenumber" name="L862" href="#L862">862</a> <em class="jxr_javadoccomment">     *</em>
+<a class="jxr_linenumber" name="L863" href="#L863">863</a> <em class="jxr_javadoccomment">     * @throws IllegalStateException if there is no value currently buffered or if system value data would be lost</em>
+<a class="jxr_linenumber" name="L864" href="#L864">864</a> <em class="jxr_javadoccomment">     *   as a result of calling this method before {@code IonReader.next()} was called.</em>
+<a class="jxr_linenumber" name="L865" href="#L865">865</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L866" href="#L866">866</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> rewindToValueStart() {
+<a class="jxr_linenumber" name="L867" href="#L867">867</a>         <strong class="jxr_keyword">if</strong> (valuePreHeaderIndex &lt; 0) {
+<a class="jxr_linenumber" name="L868" href="#L868">868</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> IllegalStateException(<span class="jxr_string">"A value must be buffered before calling rewindToValueStart()."</span>);
+<a class="jxr_linenumber" name="L869" href="#L869">869</a>         }
+<a class="jxr_linenumber" name="L870" href="#L870">870</a>         <strong class="jxr_keyword">int</strong> availableAtValueStart = pipe.getBoundary() - valuePreHeaderIndex;
+<a class="jxr_linenumber" name="L871" href="#L871">871</a>         <em class="jxr_comment">// If rewinding would reduce the amount of data available, that indicates that system value data would be lost.</em>
+<a class="jxr_linenumber" name="L872" href="#L872">872</a>         <strong class="jxr_keyword">if</strong> (availableAtValueStart &lt; available()) {
+<a class="jxr_linenumber" name="L873" href="#L873">873</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> IllegalStateException(
+<a class="jxr_linenumber" name="L874" href="#L874">874</a>                 <span class="jxr_string">"IonReader.next() must be called on the current value before calling rewindToValueStart()."</span>
+<a class="jxr_linenumber" name="L875" href="#L875">875</a>             );
+<a class="jxr_linenumber" name="L876" href="#L876">876</a>         }
+<a class="jxr_linenumber" name="L877" href="#L877">877</a>         pipe.rewind(valuePreHeaderIndex, availableAtValueStart);
+<a class="jxr_linenumber" name="L878" href="#L878">878</a>         peekIndex = valuePreHeaderIndex;
+<a class="jxr_linenumber" name="L879" href="#L879">879</a>     }
+<a class="jxr_linenumber" name="L880" href="#L880">880</a> 
+<a class="jxr_linenumber" name="L881" href="#L881">881</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L882" href="#L882">882</a> <em class="jxr_javadoccomment">     * @return the index of the second byte of the IVM.</em>
+<a class="jxr_linenumber" name="L883" href="#L883">883</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L884" href="#L884">884</a>     <strong class="jxr_keyword">int</strong> getIvmIndex() {
+<a class="jxr_linenumber" name="L885" href="#L885">885</a>         <strong class="jxr_keyword">return</strong> ivmSecondByteIndex;
+<a class="jxr_linenumber" name="L886" href="#L886">886</a>     }
+<a class="jxr_linenumber" name="L887" href="#L887">887</a> 
+<a class="jxr_linenumber" name="L888" href="#L888">888</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L889" href="#L889">889</a> <em class="jxr_javadoccomment">     * Clears the IVM index. Should be called between user values.</em>
+<a class="jxr_linenumber" name="L890" href="#L890">890</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L891" href="#L891">891</a>     <strong class="jxr_keyword">void</strong> resetIvmIndex() {
+<a class="jxr_linenumber" name="L892" href="#L892">892</a>         ivmSecondByteIndex = -1;
+<a class="jxr_linenumber" name="L893" href="#L893">893</a>     }
+<a class="jxr_linenumber" name="L894" href="#L894">894</a> 
+<a class="jxr_linenumber" name="L895" href="#L895">895</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L896" href="#L896">896</a> <em class="jxr_javadoccomment">     * Clears the NOP pad index. Should be called between user values.</em>
+<a class="jxr_linenumber" name="L897" href="#L897">897</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L898" href="#L898">898</a>     <strong class="jxr_keyword">void</strong> resetNopPadIndex() {
+<a class="jxr_linenumber" name="L899" href="#L899">899</a>         nopPadStartIndex = -1;
+<a class="jxr_linenumber" name="L900" href="#L900">900</a>     }
+<a class="jxr_linenumber" name="L901" href="#L901">901</a> 
+<a class="jxr_linenumber" name="L902" href="#L902">902</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L903" href="#L903">903</a> <em class="jxr_javadoccomment">     * @return the index of the first byte of the value representation (past the type ID and the optional length field).</em>
+<a class="jxr_linenumber" name="L904" href="#L904">904</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L905" href="#L905">905</a>     <strong class="jxr_keyword">int</strong> getValueStart() {
+<a class="jxr_linenumber" name="L906" href="#L906">906</a>         <strong class="jxr_keyword">if</strong> (hasAnnotations()) {
+<a class="jxr_linenumber" name="L907" href="#L907">907</a>             <strong class="jxr_keyword">return</strong> annotationSidsMarker.endIndex;
+<a class="jxr_linenumber" name="L908" href="#L908">908</a>         }
+<a class="jxr_linenumber" name="L909" href="#L909">909</a>         <strong class="jxr_keyword">return</strong> valuePostHeaderIndex;
+<a class="jxr_linenumber" name="L910" href="#L910">910</a>     }
+<a class="jxr_linenumber" name="L911" href="#L911">911</a> 
+<a class="jxr_linenumber" name="L912" href="#L912">912</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L913" href="#L913">913</a> <em class="jxr_javadoccomment">     * @return the type ID of the current value.</em>
+<a class="jxr_linenumber" name="L914" href="#L914">914</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L915" href="#L915">915</a>     <a name="IonTypeID" href="../../../../com/amazon/ion/impl/IonTypeID.html#IonTypeID">IonTypeID</a> getValueTid() {
+<a class="jxr_linenumber" name="L916" href="#L916">916</a>         <strong class="jxr_keyword">return</strong> valueTid;
+<a class="jxr_linenumber" name="L917" href="#L917">917</a>     }
+<a class="jxr_linenumber" name="L918" href="#L918">918</a> 
+<a class="jxr_linenumber" name="L919" href="#L919">919</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L920" href="#L920">920</a> <em class="jxr_javadoccomment">     * @return the index of the first byte after the end of the current value.</em>
+<a class="jxr_linenumber" name="L921" href="#L921">921</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L922" href="#L922">922</a>     <strong class="jxr_keyword">int</strong> getValueEnd() {
+<a class="jxr_linenumber" name="L923" href="#L923">923</a>         <strong class="jxr_keyword">return</strong> valueEndIndex;
+<a class="jxr_linenumber" name="L924" href="#L924">924</a>     }
+<a class="jxr_linenumber" name="L925" href="#L925">925</a> 
+<a class="jxr_linenumber" name="L926" href="#L926">926</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L927" href="#L927">927</a> <em class="jxr_javadoccomment">     * Returns markers for any symbol tables that occurred in the stream between the last value and the current value.</em>
+<a class="jxr_linenumber" name="L928" href="#L928">928</a> <em class="jxr_javadoccomment">     * The startIndex of the returned markers is the index of the first byte of the symbol table struct's contents.</em>
+<a class="jxr_linenumber" name="L929" href="#L929">929</a> <em class="jxr_javadoccomment">     * The endIndex of the returned markers is the index of the first byte after the end of the symbol table.</em>
+<a class="jxr_linenumber" name="L930" href="#L930">930</a> <em class="jxr_javadoccomment">     * @return the markers.</em>
+<a class="jxr_linenumber" name="L931" href="#L931">931</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L932" href="#L932">932</a>     List&lt;Marker&gt; getSymbolTableMarkers() {
+<a class="jxr_linenumber" name="L933" href="#L933">933</a>         <strong class="jxr_keyword">return</strong> symbolTableMarkers;
+<a class="jxr_linenumber" name="L934" href="#L934">934</a>     }
+<a class="jxr_linenumber" name="L935" href="#L935">935</a> 
+<a class="jxr_linenumber" name="L936" href="#L936">936</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L937" href="#L937">937</a> <em class="jxr_javadoccomment">     * Clears the symbol table markers.</em>
+<a class="jxr_linenumber" name="L938" href="#L938">938</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L939" href="#L939">939</a>     <strong class="jxr_keyword">void</strong> resetSymbolTableMarkers() {
+<a class="jxr_linenumber" name="L940" href="#L940">940</a>         symbolTableMarkers.clear();
+<a class="jxr_linenumber" name="L941" href="#L941">941</a>     }
+<a class="jxr_linenumber" name="L942" href="#L942">942</a> 
+<a class="jxr_linenumber" name="L943" href="#L943">943</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L944" href="#L944">944</a> <em class="jxr_javadoccomment">     * @return true if the current value has annotations; otherwise, false.</em>
+<a class="jxr_linenumber" name="L945" href="#L945">945</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L946" href="#L946">946</a>     <strong class="jxr_keyword">boolean</strong> hasAnnotations() {
+<a class="jxr_linenumber" name="L947" href="#L947">947</a>         <strong class="jxr_keyword">return</strong> annotationSidsMarker.startIndex &gt;= 0;
+<a class="jxr_linenumber" name="L948" href="#L948">948</a>     }
+<a class="jxr_linenumber" name="L949" href="#L949">949</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L950" href="#L950">950</a> <em class="jxr_javadoccomment">     * Returns the marker for the sequence of annotation symbol IDs on the current value. The startIndex of the</em>
+<a class="jxr_linenumber" name="L951" href="#L951">951</a> <em class="jxr_javadoccomment">     * returned marker is the index of the first byte of the first annotation symbol ID in the sequence. The endIndex</em>
+<a class="jxr_linenumber" name="L952" href="#L952">952</a> <em class="jxr_javadoccomment">     * of the returned marker is the index of the type ID byte of the value to which the annotations are applied.</em>
+<a class="jxr_linenumber" name="L953" href="#L953">953</a> <em class="jxr_javadoccomment">     * @return  the marker.</em>
+<a class="jxr_linenumber" name="L954" href="#L954">954</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L955" href="#L955">955</a>     Marker getAnnotationSidsMarker() {
+<a class="jxr_linenumber" name="L956" href="#L956">956</a>         <strong class="jxr_keyword">return</strong> annotationSidsMarker;
+<a class="jxr_linenumber" name="L957" href="#L957">957</a>     }
+<a class="jxr_linenumber" name="L958" href="#L958">958</a> 
+<a class="jxr_linenumber" name="L959" href="#L959">959</a> }
 </pre>
 <hr/>
 <div id="footer">Copyright &#169; 2022. All rights reserved.</div>
