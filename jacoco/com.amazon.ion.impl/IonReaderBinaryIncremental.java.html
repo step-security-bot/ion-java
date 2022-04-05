@@ -949,7 +949,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
 <span class="fc" id="L949">                    resetSymbolTable();</span>
                 }
 <span class="fc" id="L951">                hasSeenImports = true;</span>
-<span class="pc bpc" id="L952" title="1 of 2 branches missed.">            } else if (fieldNameSid == SystemSymbolIDs.SYMBOLS_ID) {</span>
+<span class="fc bfc" id="L952" title="All 2 branches covered.">            } else if (fieldNameSid == SystemSymbolIDs.SYMBOLS_ID) {</span>
 <span class="fc bfc" id="L953" title="All 2 branches covered.">                if (hasSeenSymbols) {</span>
 <span class="fc" id="L954">                    throw new IonException(&quot;Symbol table contained multiple symbols fields.&quot;);</span>
                 }
@@ -962,119 +962,122 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
             }
 <span class="fc" id="L963">            peekIndex = currentValueEndPosition;</span>
 <span class="fc" id="L964">        }</span>
-<span class="fc bfc" id="L965" title="All 2 branches covered.">        if (!hasSeenImports) {</span>
-<span class="fc" id="L966">            resetSymbolTable();</span>
-<span class="fc" id="L967">            resetImports();</span>
+<span class="fc bfc" id="L965" title="All 2 branches covered.">        if (peekIndex &gt; marker.endIndex) {</span>
+<span class="fc" id="L966">            throw new IonException(&quot;Malformed symbol table. Child values exceeded the length declared in the header.&quot;);</span>
         }
-<span class="fc bfc" id="L969" title="All 2 branches covered.">        if (symbolsPosition &gt; -1) {</span>
-<span class="fc" id="L970">            peekIndex = symbolsPosition;</span>
-<span class="fc" id="L971">            valueType = IonType.LIST;</span>
-<span class="fc" id="L972">            valueEndPosition = symbolsEndPosition;</span>
-<span class="fc" id="L973">            stepIn();</span>
-<span class="fc bfc" id="L974" title="All 2 branches covered.">            while (next() != null) {</span>
-<span class="fc bfc" id="L975" title="All 2 branches covered.">                if (valueType != IonType.STRING) {</span>
-<span class="fc" id="L976">                    symbols.add(null);</span>
+<span class="fc bfc" id="L968" title="All 2 branches covered.">        if (!hasSeenImports) {</span>
+<span class="fc" id="L969">            resetSymbolTable();</span>
+<span class="fc" id="L970">            resetImports();</span>
+        }
+<span class="fc bfc" id="L972" title="All 2 branches covered.">        if (symbolsPosition &gt; -1) {</span>
+<span class="fc" id="L973">            peekIndex = symbolsPosition;</span>
+<span class="fc" id="L974">            valueType = IonType.LIST;</span>
+<span class="fc" id="L975">            valueEndPosition = symbolsEndPosition;</span>
+<span class="fc" id="L976">            stepIn();</span>
+<span class="fc bfc" id="L977" title="All 2 branches covered.">            while (next() != null) {</span>
+<span class="fc bfc" id="L978" title="All 2 branches covered.">                if (valueType != IonType.STRING) {</span>
+<span class="fc" id="L979">                    symbols.add(null);</span>
                 } else {
-<span class="fc" id="L978">                    symbols.add(stringValue());</span>
+<span class="fc" id="L981">                    symbols.add(stringValue());</span>
                 }
             }
-<span class="fc" id="L981">            stepOut();</span>
-<span class="fc" id="L982">            peekIndex = valueEndPosition;</span>
+<span class="fc" id="L984">            stepOut();</span>
+<span class="fc" id="L985">            peekIndex = valueEndPosition;</span>
         }
-<span class="fc" id="L984">    }</span>
+<span class="fc" id="L987">    }</span>
 
     /**
      * Advance the reader to the next top-level value. Buffers an entire top-level value, reads any IVMs and/or local
      * symbol tables that precede the value, and sets the byte positions of important components of the value.
      */
     private void nextAtTopLevel() {
-<span class="fc bfc" id="L991" title="All 2 branches covered.">        if (completeValueBuffered) {</span>
+<span class="fc bfc" id="L994" title="All 2 branches covered.">        if (completeValueBuffered) {</span>
             // There is already data buffered, but the user is choosing to skip it.
-<span class="fc" id="L993">            buffer.seekTo(valueEndPosition);</span>
-<span class="fc" id="L994">            completeValueBuffered = false;</span>
+<span class="fc" id="L996">            buffer.seekTo(valueEndPosition);</span>
+<span class="fc" id="L997">            completeValueBuffered = false;</span>
         }
         try {
-<span class="fc" id="L997">            lookahead.fillInput();</span>
-<span class="fc" id="L998">        } catch (Exception e) {</span>
-<span class="fc" id="L999">            throw new IonException(e);</span>
-<span class="fc" id="L1000">        }</span>
-<span class="fc bfc" id="L1001" title="All 2 branches covered.">        if (lookahead.moreDataRequired()) {</span>
-<span class="fc" id="L1002">            valueType = null;</span>
-<span class="fc" id="L1003">            valueTypeID = null;</span>
-<span class="fc" id="L1004">            return;</span>
+<span class="fc" id="L1000">            lookahead.fillInput();</span>
+<span class="fc" id="L1001">        } catch (Exception e) {</span>
+<span class="fc" id="L1002">            throw new IonException(e);</span>
+<span class="fc" id="L1003">        }</span>
+<span class="fc bfc" id="L1004" title="All 2 branches covered.">        if (lookahead.moreDataRequired()) {</span>
+<span class="fc" id="L1005">            valueType = null;</span>
+<span class="fc" id="L1006">            valueTypeID = null;</span>
+<span class="fc" id="L1007">            return;</span>
         }
-<span class="fc" id="L1006">        completeValueBuffered = true;</span>
-<span class="fc bfc" id="L1007" title="All 2 branches covered.">        if (lookahead.getIvmIndex() &gt; -1) {</span>
-<span class="fc" id="L1008">            peekIndex = lookahead.getIvmIndex();</span>
-<span class="fc" id="L1009">            majorVersion = buffer.peek(peekIndex++);</span>
-<span class="fc" id="L1010">            minorVersion = buffer.peek(peekIndex++);</span>
-<span class="fc bfc" id="L1011" title="All 2 branches covered.">            if (buffer.peek(peekIndex++) != IVM_FINAL_BYTE) {</span>
-<span class="fc" id="L1012">                throw new IonException(&quot;Invalid Ion version marker.&quot;);</span>
+<span class="fc" id="L1009">        completeValueBuffered = true;</span>
+<span class="fc bfc" id="L1010" title="All 2 branches covered.">        if (lookahead.getIvmIndex() &gt; -1) {</span>
+<span class="fc" id="L1011">            peekIndex = lookahead.getIvmIndex();</span>
+<span class="fc" id="L1012">            majorVersion = buffer.peek(peekIndex++);</span>
+<span class="fc" id="L1013">            minorVersion = buffer.peek(peekIndex++);</span>
+<span class="fc bfc" id="L1014" title="All 2 branches covered.">            if (buffer.peek(peekIndex++) != IVM_FINAL_BYTE) {</span>
+<span class="fc" id="L1015">                throw new IonException(&quot;Invalid Ion version marker.&quot;);</span>
             }
-<span class="fc" id="L1014">            requireSupportedIonVersion();</span>
-<span class="fc" id="L1015">            resetSymbolTable();</span>
-<span class="fc" id="L1016">            resetImports();</span>
-<span class="fc" id="L1017">            lookahead.resetIvmIndex();</span>
-<span class="fc bfc" id="L1018" title="All 2 branches covered.">        } else if (peekIndex &lt; 0) {</span>
+<span class="fc" id="L1017">            requireSupportedIonVersion();</span>
+<span class="fc" id="L1018">            resetSymbolTable();</span>
+<span class="fc" id="L1019">            resetImports();</span>
+<span class="fc" id="L1020">            lookahead.resetIvmIndex();</span>
+<span class="fc bfc" id="L1021" title="All 2 branches covered.">        } else if (peekIndex &lt; 0) {</span>
             // peekIndex is initialized to -1 and only increases. This branch is reached if the IVM does not occur
             // first in the stream. This is necessary because currently a binary incremental reader will be created if
             // an empty stream is provided to the IonReaderBuilder. If, once bytes appear in the stream, those bytes do
             // not represent valid binary Ion, a quick failure is necessary.
-<span class="fc" id="L1023">            throw new IonException(&quot;Binary Ion must start with an Ion version marker.&quot;);</span>
+<span class="fc" id="L1026">            throw new IonException(&quot;Binary Ion must start with an Ion version marker.&quot;);</span>
         }
-<span class="fc" id="L1025">        List&lt;IonReaderLookaheadBuffer.Marker&gt; symbolTableMarkers = lookahead.getSymbolTableMarkers();</span>
-<span class="fc bfc" id="L1026" title="All 2 branches covered.">        if (!symbolTableMarkers.isEmpty()) {</span>
+<span class="fc" id="L1028">        List&lt;IonReaderLookaheadBuffer.Marker&gt; symbolTableMarkers = lookahead.getSymbolTableMarkers();</span>
+<span class="fc bfc" id="L1029" title="All 2 branches covered.">        if (!symbolTableMarkers.isEmpty()) {</span>
             // The cached SymbolTable (if any) is a snapshot in time, so it must be cleared whenever a new symbol
             // table is read regardless of whether the new LST is an append or a reset.
-<span class="fc" id="L1029">            cachedReadOnlySymbolTable = null;</span>
-<span class="fc bfc" id="L1030" title="All 2 branches covered.">            for (IonReaderLookaheadBuffer.Marker symbolTableMarker : symbolTableMarkers) {</span>
-<span class="fc" id="L1031">                readSymbolTable(symbolTableMarker);</span>
-<span class="fc" id="L1032">            }</span>
-<span class="fc" id="L1033">            lookahead.resetSymbolTableMarkers();</span>
+<span class="fc" id="L1032">            cachedReadOnlySymbolTable = null;</span>
+<span class="fc bfc" id="L1033" title="All 2 branches covered.">            for (IonReaderLookaheadBuffer.Marker symbolTableMarker : symbolTableMarkers) {</span>
+<span class="fc" id="L1034">                readSymbolTable(symbolTableMarker);</span>
+<span class="fc" id="L1035">            }</span>
+<span class="fc" id="L1036">            lookahead.resetSymbolTableMarkers();</span>
         }
-<span class="fc" id="L1035">        peekIndex = lookahead.getValueStart();</span>
-<span class="fc" id="L1036">        hasAnnotations = lookahead.hasAnnotations();</span>
-<span class="fc bfc" id="L1037" title="All 2 branches covered.">        if (hasAnnotations) {</span>
-<span class="fc bfc" id="L1038" title="All 2 branches covered.">            if (peekIndex &gt;= lookahead.getValueEnd()) {</span>
-<span class="fc" id="L1039">                throw new IonException(&quot;Annotation wrappers without values are invalid.&quot;);</span>
+<span class="fc" id="L1038">        peekIndex = lookahead.getValueStart();</span>
+<span class="fc" id="L1039">        hasAnnotations = lookahead.hasAnnotations();</span>
+<span class="fc bfc" id="L1040" title="All 2 branches covered.">        if (hasAnnotations) {</span>
+<span class="fc bfc" id="L1041" title="All 2 branches covered.">            if (peekIndex &gt;= lookahead.getValueEnd()) {</span>
+<span class="fc" id="L1042">                throw new IonException(&quot;Annotation wrappers without values are invalid.&quot;);</span>
             }
-<span class="fc" id="L1041">            annotationSids.clear();</span>
-<span class="fc" id="L1042">            IonReaderLookaheadBuffer.Marker annotationSidsMarker = lookahead.getAnnotationSidsMarker();</span>
-<span class="fc" id="L1043">            annotationStartPosition = annotationSidsMarker.startIndex;</span>
-<span class="fc" id="L1044">            annotationEndPosition = annotationSidsMarker.endIndex;</span>
-<span class="fc" id="L1045">            peekIndex = annotationEndPosition;</span>
-<span class="fc" id="L1046">            valueTypeID = IonTypeID.TYPE_IDS[buffer.peek(peekIndex++)];</span>
-<span class="fc" id="L1047">            int wrappedValueLength = valueTypeID.length;</span>
-<span class="fc bfc" id="L1048" title="All 2 branches covered.">            if (valueTypeID.variableLength) {</span>
-<span class="fc" id="L1049">                wrappedValueLength = readVarUInt();</span>
+<span class="fc" id="L1044">            annotationSids.clear();</span>
+<span class="fc" id="L1045">            IonReaderLookaheadBuffer.Marker annotationSidsMarker = lookahead.getAnnotationSidsMarker();</span>
+<span class="fc" id="L1046">            annotationStartPosition = annotationSidsMarker.startIndex;</span>
+<span class="fc" id="L1047">            annotationEndPosition = annotationSidsMarker.endIndex;</span>
+<span class="fc" id="L1048">            peekIndex = annotationEndPosition;</span>
+<span class="fc" id="L1049">            valueTypeID = IonTypeID.TYPE_IDS[buffer.peek(peekIndex++)];</span>
+<span class="fc" id="L1050">            int wrappedValueLength = valueTypeID.length;</span>
+<span class="fc bfc" id="L1051" title="All 2 branches covered.">            if (valueTypeID.variableLength) {</span>
+<span class="fc" id="L1052">                wrappedValueLength = readVarUInt();</span>
             }
-<span class="fc" id="L1051">            valueType = valueTypeID.type;</span>
-<span class="fc bfc" id="L1052" title="All 2 branches covered.">            if (valueType == IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {</span>
-<span class="fc" id="L1053">                throw new IonException(&quot;Nested annotations are invalid.&quot;);</span>
+<span class="fc" id="L1054">            valueType = valueTypeID.type;</span>
+<span class="fc bfc" id="L1055" title="All 2 branches covered.">            if (valueType == IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {</span>
+<span class="fc" id="L1056">                throw new IonException(&quot;Nested annotations are invalid.&quot;);</span>
             }
-<span class="fc bfc" id="L1055" title="All 2 branches covered.">            if (peekIndex + wrappedValueLength != lookahead.getValueEnd()) {</span>
-<span class="fc" id="L1056">                throw new IonException(&quot;Mismatched annotation wrapper length.&quot;);</span>
+<span class="fc bfc" id="L1058" title="All 2 branches covered.">            if (peekIndex + wrappedValueLength != lookahead.getValueEnd()) {</span>
+<span class="fc" id="L1059">                throw new IonException(&quot;Mismatched annotation wrapper length.&quot;);</span>
             }
-<span class="fc" id="L1058">        } else {</span>
-<span class="fc" id="L1059">            valueTypeID = lookahead.getValueTid();</span>
-<span class="fc" id="L1060">            valueType = valueTypeID.type;</span>
+<span class="fc" id="L1061">        } else {</span>
+<span class="fc" id="L1062">            valueTypeID = lookahead.getValueTid();</span>
+<span class="fc" id="L1063">            valueType = valueTypeID.type;</span>
         }
-<span class="fc" id="L1062">        valueStartPosition = peekIndex;</span>
-<span class="fc" id="L1063">        valueEndPosition = lookahead.getValueEnd();</span>
-<span class="fc" id="L1064">        lookahead.resetNopPadIndex();</span>
-<span class="fc" id="L1065">    }</span>
+<span class="fc" id="L1065">        valueStartPosition = peekIndex;</span>
+<span class="fc" id="L1066">        valueEndPosition = lookahead.getValueEnd();</span>
+<span class="fc" id="L1067">        lookahead.resetNopPadIndex();</span>
+<span class="fc" id="L1068">    }</span>
 
     /**
      * Reads the type ID byte.
      * @return the TypeAndLength descriptor for the type ID byte.
      */
     private IonTypeID readTypeId() {
-<span class="fc" id="L1072">        valueTypeID = IonTypeID.TYPE_IDS[buffer.peek(peekIndex++)];</span>
-<span class="fc bfc" id="L1073" title="All 2 branches covered.">        if (!valueTypeID.isValid) {</span>
-<span class="fc" id="L1074">            throw new IonException(&quot;Invalid type ID.&quot;);</span>
+<span class="fc" id="L1075">        valueTypeID = IonTypeID.TYPE_IDS[buffer.peek(peekIndex++)];</span>
+<span class="fc bfc" id="L1076" title="All 2 branches covered.">        if (!valueTypeID.isValid) {</span>
+<span class="fc" id="L1077">            throw new IonException(&quot;Invalid type ID.&quot;);</span>
         }
-<span class="fc" id="L1076">        valueType = valueTypeID.type;</span>
-<span class="fc" id="L1077">        return valueTypeID;</span>
+<span class="fc" id="L1079">        valueType = valueTypeID.type;</span>
+<span class="fc" id="L1080">        return valueTypeID;</span>
     }
 
     /**
@@ -1082,220 +1085,220 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
      * @param typeID the type ID descriptor.
      */
     private void calculateEndPosition(IonTypeID typeID) {
-<span class="fc bfc" id="L1085" title="All 2 branches covered.">        if (typeID.variableLength) {</span>
-<span class="fc" id="L1086">            valueEndPosition = readVarUInt() + peekIndex;</span>
+<span class="fc bfc" id="L1088" title="All 2 branches covered.">        if (typeID.variableLength) {</span>
+<span class="fc" id="L1089">            valueEndPosition = readVarUInt() + peekIndex;</span>
         } else {
-<span class="fc" id="L1088">            valueEndPosition = typeID.length + peekIndex;</span>
+<span class="fc" id="L1091">            valueEndPosition = typeID.length + peekIndex;</span>
         }
-<span class="fc" id="L1090">    }</span>
+<span class="fc" id="L1093">    }</span>
 
     @Override
     public boolean hasNext() {
-<span class="nc" id="L1094">        throw new UnsupportedOperationException(&quot;Not implemented&quot;);</span>
+<span class="nc" id="L1097">        throw new UnsupportedOperationException(&quot;Not implemented&quot;);</span>
     }
 
     /**
      * Marks the end of the current container by indicating that the reader is no longer positioned on a value.
      */
     private void endContainer() {
-<span class="fc" id="L1101">        valueType = null;</span>
-<span class="fc" id="L1102">        valueTypeID = null;</span>
-<span class="fc" id="L1103">        annotationStartPosition = -1;</span>
-<span class="fc" id="L1104">        annotationEndPosition = -1;</span>
-<span class="fc" id="L1105">        hasAnnotations = false;</span>
-<span class="fc" id="L1106">    }</span>
+<span class="fc" id="L1104">        valueType = null;</span>
+<span class="fc" id="L1105">        valueTypeID = null;</span>
+<span class="fc" id="L1106">        annotationStartPosition = -1;</span>
+<span class="fc" id="L1107">        annotationEndPosition = -1;</span>
+<span class="fc" id="L1108">        hasAnnotations = false;</span>
+<span class="fc" id="L1109">    }</span>
 
     /**
      * Advance the reader to the next value within a container, which must already be buffered.
      */
     private void nextBelowTopLevel() {
         // Seek past the previous value.
-<span class="fc bfc" id="L1113" title="All 2 branches covered.">        if (peekIndex &lt; valueEndPosition) {</span>
-<span class="fc" id="L1114">            peekIndex = valueEndPosition;</span>
+<span class="fc bfc" id="L1116" title="All 2 branches covered.">        if (peekIndex &lt; valueEndPosition) {</span>
+<span class="fc" id="L1117">            peekIndex = valueEndPosition;</span>
         }
-<span class="fc bfc" id="L1116" title="All 2 branches covered.">        if (peekIndex &gt;= containerStack.peek().endPosition) {</span>
-<span class="fc" id="L1117">            endContainer();</span>
+<span class="fc bfc" id="L1119" title="All 2 branches covered.">        if (peekIndex &gt;= containerStack.peek().endPosition) {</span>
+<span class="fc" id="L1120">            endContainer();</span>
         } else {
-<span class="fc bfc" id="L1119" title="All 2 branches covered.">            if (containerStack.peek().type == IonType.STRUCT) {</span>
-<span class="fc" id="L1120">                fieldNameSid = readVarUInt();</span>
+<span class="fc bfc" id="L1122" title="All 2 branches covered.">            if (containerStack.peek().type == IonType.STRUCT) {</span>
+<span class="fc" id="L1123">                fieldNameSid = readVarUInt();</span>
             }
-<span class="fc" id="L1122">            IonTypeID typeID = readTypeId();</span>
-<span class="fc bfc" id="L1123" title="All 2 branches covered.">            while (typeID.isNopPad) {</span>
-<span class="fc" id="L1124">                calculateEndPosition(typeID);</span>
-<span class="fc" id="L1125">                peekIndex = valueEndPosition;</span>
-<span class="fc bfc" id="L1126" title="All 2 branches covered.">                if (peekIndex &gt;= containerStack.peek().endPosition) {</span>
-<span class="fc" id="L1127">                    endContainer();</span>
-<span class="fc" id="L1128">                    return;</span>
+<span class="fc" id="L1125">            IonTypeID typeID = readTypeId();</span>
+<span class="fc bfc" id="L1126" title="All 2 branches covered.">            while (typeID.isNopPad) {</span>
+<span class="fc" id="L1127">                calculateEndPosition(typeID);</span>
+<span class="fc" id="L1128">                peekIndex = valueEndPosition;</span>
+<span class="fc bfc" id="L1129" title="All 2 branches covered.">                if (peekIndex &gt;= containerStack.peek().endPosition) {</span>
+<span class="fc" id="L1130">                    endContainer();</span>
+<span class="fc" id="L1131">                    return;</span>
                 }
-<span class="pc bpc" id="L1130" title="1 of 2 branches missed.">                if (containerStack.peek().type == IonType.STRUCT) {</span>
-<span class="fc" id="L1131">                    fieldNameSid = readVarUInt();</span>
+<span class="pc bpc" id="L1133" title="1 of 2 branches missed.">                if (containerStack.peek().type == IonType.STRUCT) {</span>
+<span class="fc" id="L1134">                    fieldNameSid = readVarUInt();</span>
                 }
-<span class="fc" id="L1133">                typeID = readTypeId();</span>
+<span class="fc" id="L1136">                typeID = readTypeId();</span>
             }
-<span class="fc" id="L1135">            calculateEndPosition(typeID);</span>
-<span class="fc bfc" id="L1136" title="All 2 branches covered.">            if (valueType == IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {</span>
-<span class="fc" id="L1137">                hasAnnotations = true;</span>
-<span class="fc" id="L1138">                annotationSids.clear();</span>
-<span class="fc" id="L1139">                int annotationsLength = readVarUInt();</span>
-<span class="fc" id="L1140">                annotationStartPosition = peekIndex;</span>
-<span class="fc" id="L1141">                annotationEndPosition = annotationStartPosition + annotationsLength;</span>
-<span class="fc" id="L1142">                peekIndex = annotationEndPosition;</span>
-<span class="fc" id="L1143">                typeID = readTypeId();</span>
-<span class="fc bfc" id="L1144" title="All 2 branches covered.">                if (typeID.isNopPad) {</span>
-<span class="fc" id="L1145">                    throw new IonException(</span>
+<span class="fc" id="L1138">            calculateEndPosition(typeID);</span>
+<span class="fc bfc" id="L1139" title="All 2 branches covered.">            if (valueType == IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {</span>
+<span class="fc" id="L1140">                hasAnnotations = true;</span>
+<span class="fc" id="L1141">                annotationSids.clear();</span>
+<span class="fc" id="L1142">                int annotationsLength = readVarUInt();</span>
+<span class="fc" id="L1143">                annotationStartPosition = peekIndex;</span>
+<span class="fc" id="L1144">                annotationEndPosition = annotationStartPosition + annotationsLength;</span>
+<span class="fc" id="L1145">                peekIndex = annotationEndPosition;</span>
+<span class="fc" id="L1146">                typeID = readTypeId();</span>
+<span class="fc bfc" id="L1147" title="All 2 branches covered.">                if (typeID.isNopPad) {</span>
+<span class="fc" id="L1148">                    throw new IonException(</span>
                         &quot;Invalid annotation wrapper: NOP pad may not occur inside an annotation wrapper.&quot;
                     );
                 }
-<span class="fc bfc" id="L1149" title="All 2 branches covered.">                if (valueType == IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {</span>
-<span class="fc" id="L1150">                    throw new IonException(&quot;Nested annotations are invalid.&quot;);</span>
+<span class="fc bfc" id="L1152" title="All 2 branches covered.">                if (valueType == IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {</span>
+<span class="fc" id="L1153">                    throw new IonException(&quot;Nested annotations are invalid.&quot;);</span>
                 }
-<span class="fc" id="L1152">                long annotationWrapperEndPosition = valueEndPosition;</span>
-<span class="fc" id="L1153">                calculateEndPosition(typeID);</span>
-<span class="fc bfc" id="L1154" title="All 2 branches covered.">                if (annotationWrapperEndPosition != valueEndPosition) {</span>
-<span class="fc" id="L1155">                    throw new IonException(</span>
+<span class="fc" id="L1155">                long annotationWrapperEndPosition = valueEndPosition;</span>
+<span class="fc" id="L1156">                calculateEndPosition(typeID);</span>
+<span class="fc bfc" id="L1157" title="All 2 branches covered.">                if (annotationWrapperEndPosition != valueEndPosition) {</span>
+<span class="fc" id="L1158">                    throw new IonException(</span>
                         &quot;Invalid annotation wrapper: end of the wrapper did not match end of the value.&quot;
                     );
                 }
-<span class="fc" id="L1159">            } else {</span>
-<span class="fc" id="L1160">                annotationStartPosition = -1;</span>
-<span class="fc" id="L1161">                annotationEndPosition = -1;</span>
-<span class="fc" id="L1162">                hasAnnotations = false;</span>
-<span class="fc bfc" id="L1163" title="All 2 branches covered.">                if (valueEndPosition &gt; containerStack.peek().endPosition) {</span>
-<span class="fc" id="L1164">                    throw new IonException(&quot;Value overflowed its container.&quot;);</span>
+<span class="fc" id="L1162">            } else {</span>
+<span class="fc" id="L1163">                annotationStartPosition = -1;</span>
+<span class="fc" id="L1164">                annotationEndPosition = -1;</span>
+<span class="fc" id="L1165">                hasAnnotations = false;</span>
+<span class="fc bfc" id="L1166" title="All 2 branches covered.">                if (valueEndPosition &gt; containerStack.peek().endPosition) {</span>
+<span class="fc" id="L1167">                    throw new IonException(&quot;Value overflowed its container.&quot;);</span>
                 }
             }
-<span class="pc bpc" id="L1167" title="1 of 2 branches missed.">            if (!valueTypeID.isValid) {</span>
-<span class="nc" id="L1168">                throw new IonException(&quot;Invalid type ID.&quot;);</span>
+<span class="pc bpc" id="L1170" title="1 of 2 branches missed.">            if (!valueTypeID.isValid) {</span>
+<span class="nc" id="L1171">                throw new IonException(&quot;Invalid type ID.&quot;);</span>
             }
-<span class="fc" id="L1170">            valueStartPosition = peekIndex;</span>
+<span class="fc" id="L1173">            valueStartPosition = peekIndex;</span>
         }
-<span class="fc" id="L1172">    }</span>
+<span class="fc" id="L1175">    }</span>
 
     @Override
     public IonType next() {
-<span class="fc" id="L1176">        fieldNameSid = -1;</span>
-<span class="fc" id="L1177">        lobBytesRead = 0;</span>
-<span class="fc" id="L1178">        valueStartPosition = -1;</span>
-<span class="fc" id="L1179">        resetAnnotations();</span>
-<span class="fc bfc" id="L1180" title="All 2 branches covered.">        if (containerStack.isEmpty()) {</span>
-<span class="fc" id="L1181">            nextAtTopLevel();</span>
+<span class="fc" id="L1179">        fieldNameSid = -1;</span>
+<span class="fc" id="L1180">        lobBytesRead = 0;</span>
+<span class="fc" id="L1181">        valueStartPosition = -1;</span>
+<span class="fc" id="L1182">        resetAnnotations();</span>
+<span class="fc bfc" id="L1183" title="All 2 branches covered.">        if (containerStack.isEmpty()) {</span>
+<span class="fc" id="L1184">            nextAtTopLevel();</span>
         } else {
-<span class="fc" id="L1183">            nextBelowTopLevel();</span>
+<span class="fc" id="L1186">            nextBelowTopLevel();</span>
         }
         // Note: the following check is necessary to catch empty ordered structs, which are prohibited by the spec.
         // Unfortunately, this requires a check on every value for a condition that will probably never happen.
-<span class="fc bfc" id="L1187" title="All 6 branches covered.">        if (</span>
+<span class="fc bfc" id="L1190" title="All 6 branches covered.">        if (</span>
             valueType == IonType.STRUCT &amp;&amp;
             valueTypeID.lowerNibble == IonTypeID.ORDERED_STRUCT_NIBBLE &amp;&amp;
             valueStartPosition == valueEndPosition
         ) {
-<span class="fc" id="L1192">            throw new IonException(&quot;Ordered struct must not be empty.&quot;);</span>
+<span class="fc" id="L1195">            throw new IonException(&quot;Ordered struct must not be empty.&quot;);</span>
         }
-<span class="fc" id="L1194">        return valueType;</span>
+<span class="fc" id="L1197">        return valueType;</span>
     }
 
     @Override
     public void stepIn() {
-<span class="fc bfc" id="L1199" title="All 2 branches covered.">        if (!IonType.isContainer(valueType)) {</span>
-<span class="fc" id="L1200">            throw new IonException(&quot;Must be positioned on a container to step in.&quot;);</span>
+<span class="fc bfc" id="L1202" title="All 2 branches covered.">        if (!IonType.isContainer(valueType)) {</span>
+<span class="fc" id="L1203">            throw new IonException(&quot;Must be positioned on a container to step in.&quot;);</span>
         }
         // Note: the IonReader interface dictates that stepping into a null container has the same behavior as
         // an empty container.
-<span class="fc" id="L1204">        ContainerInfo containerInfo = containerStack.push();</span>
-<span class="fc" id="L1205">        containerInfo.type = valueType;</span>
-<span class="fc" id="L1206">        containerInfo.endPosition = valueEndPosition;</span>
-<span class="fc" id="L1207">        valueType = null;</span>
-<span class="fc" id="L1208">        valueTypeID = null;</span>
-<span class="fc" id="L1209">        valueEndPosition = -1;</span>
-<span class="fc" id="L1210">        fieldNameSid = -1;</span>
-<span class="fc" id="L1211">        valueStartPosition = -1;</span>
-<span class="fc" id="L1212">    }</span>
+<span class="fc" id="L1207">        ContainerInfo containerInfo = containerStack.push();</span>
+<span class="fc" id="L1208">        containerInfo.type = valueType;</span>
+<span class="fc" id="L1209">        containerInfo.endPosition = valueEndPosition;</span>
+<span class="fc" id="L1210">        valueType = null;</span>
+<span class="fc" id="L1211">        valueTypeID = null;</span>
+<span class="fc" id="L1212">        valueEndPosition = -1;</span>
+<span class="fc" id="L1213">        fieldNameSid = -1;</span>
+<span class="fc" id="L1214">        valueStartPosition = -1;</span>
+<span class="fc" id="L1215">    }</span>
 
     @Override
     public void stepOut() {
-<span class="fc bfc" id="L1216" title="All 2 branches covered.">        if (containerStack.isEmpty()) {</span>
+<span class="fc bfc" id="L1219" title="All 2 branches covered.">        if (containerStack.isEmpty()) {</span>
             // Note: this is IllegalStateException for consistency with the other binary IonReader implementation.
-<span class="fc" id="L1218">            throw new IllegalStateException(&quot;Cannot step out at top level.&quot;);</span>
+<span class="fc" id="L1221">            throw new IllegalStateException(&quot;Cannot step out at top level.&quot;);</span>
         }
-<span class="fc" id="L1220">        ContainerInfo containerInfo = containerStack.pop();</span>
-<span class="fc" id="L1221">        valueEndPosition = containerInfo.endPosition;</span>
-<span class="fc" id="L1222">        valueType = null;</span>
-<span class="fc" id="L1223">        valueTypeID = null;</span>
-<span class="fc" id="L1224">        fieldNameSid = -1;</span>
-<span class="fc" id="L1225">        valueStartPosition = -1;</span>
-<span class="fc" id="L1226">    }</span>
+<span class="fc" id="L1223">        ContainerInfo containerInfo = containerStack.pop();</span>
+<span class="fc" id="L1224">        valueEndPosition = containerInfo.endPosition;</span>
+<span class="fc" id="L1225">        valueType = null;</span>
+<span class="fc" id="L1226">        valueTypeID = null;</span>
+<span class="fc" id="L1227">        fieldNameSid = -1;</span>
+<span class="fc" id="L1228">        valueStartPosition = -1;</span>
+<span class="fc" id="L1229">    }</span>
 
     @Override
     public int getDepth() {
-<span class="fc" id="L1230">        return containerStack.size();</span>
+<span class="fc" id="L1233">        return containerStack.size();</span>
     }
 
     @Override
     public SymbolTable getSymbolTable() {
-<span class="fc bfc" id="L1235" title="All 2 branches covered.">        if (cachedReadOnlySymbolTable == null) {</span>
-<span class="fc bfc" id="L1236" title="All 4 branches covered.">            if (symbols.size() == 0 &amp;&amp; imports == ION_1_0_IMPORTS) {</span>
-<span class="fc" id="L1237">                cachedReadOnlySymbolTable = imports.getSystemSymbolTable();</span>
+<span class="fc bfc" id="L1238" title="All 2 branches covered.">        if (cachedReadOnlySymbolTable == null) {</span>
+<span class="fc bfc" id="L1239" title="All 4 branches covered.">            if (symbols.size() == 0 &amp;&amp; imports == ION_1_0_IMPORTS) {</span>
+<span class="fc" id="L1240">                cachedReadOnlySymbolTable = imports.getSystemSymbolTable();</span>
             } else {
-<span class="fc" id="L1239">                cachedReadOnlySymbolTable = new LocalSymbolTableSnapshot();</span>
+<span class="fc" id="L1242">                cachedReadOnlySymbolTable = new LocalSymbolTableSnapshot();</span>
             }
         }
-<span class="fc" id="L1242">        return cachedReadOnlySymbolTable;</span>
+<span class="fc" id="L1245">        return cachedReadOnlySymbolTable;</span>
     }
 
     @Override
     public SymbolTable pop_passed_symbol_table() {
-<span class="fc" id="L1247">        SymbolTable currentSymbolTable = getSymbolTable();</span>
-<span class="fc bfc" id="L1248" title="All 2 branches covered.">        if (currentSymbolTable == symbolTableLastTransferred) {</span>
+<span class="fc" id="L1250">        SymbolTable currentSymbolTable = getSymbolTable();</span>
+<span class="fc bfc" id="L1251" title="All 2 branches covered.">        if (currentSymbolTable == symbolTableLastTransferred) {</span>
             // This symbol table has already been returned. Since the contract is that it is a &quot;pop&quot;, it should not
             // be returned twice.
-<span class="fc" id="L1251">            return null;</span>
+<span class="fc" id="L1254">            return null;</span>
         }
-<span class="fc" id="L1253">        symbolTableLastTransferred = currentSymbolTable;</span>
-<span class="fc" id="L1254">        return symbolTableLastTransferred;</span>
+<span class="fc" id="L1256">        symbolTableLastTransferred = currentSymbolTable;</span>
+<span class="fc" id="L1257">        return symbolTableLastTransferred;</span>
     }
 
     @Override
     public IonType getType() {
-<span class="fc" id="L1259">        return valueType;</span>
+<span class="fc" id="L1262">        return valueType;</span>
     }
 
     @Override
     public IntegerSize getIntegerSize() {
-<span class="fc bfc" id="L1264" title="All 4 branches covered.">        if (valueType != IonType.INT || isNullValue()) {</span>
-<span class="fc" id="L1265">            return null;</span>
+<span class="fc bfc" id="L1267" title="All 4 branches covered.">        if (valueType != IonType.INT || isNullValue()) {</span>
+<span class="fc" id="L1268">            return null;</span>
         }
-<span class="fc bfc" id="L1267" title="All 2 branches covered.">        if (valueTypeID.length &lt; INT_SIZE_IN_BYTES) {</span>
+<span class="fc bfc" id="L1270" title="All 2 branches covered.">        if (valueTypeID.length &lt; INT_SIZE_IN_BYTES) {</span>
             // Note: this is conservative. Most integers of size 4 also fit in an int, but since exactly the
             // same parsing code is used for ints and longs, there is no point wasting the time to determine the
             // smallest possible type.
-<span class="fc" id="L1271">            return IntegerSize.INT;</span>
-<span class="fc bfc" id="L1272" title="All 2 branches covered.">        } else if (valueTypeID.length &lt; LONG_SIZE_IN_BYTES) {</span>
-<span class="fc" id="L1273">            return IntegerSize.LONG;</span>
-<span class="fc bfc" id="L1274" title="All 2 branches covered.">        } else if (valueTypeID.length == LONG_SIZE_IN_BYTES) {</span>
+<span class="fc" id="L1274">            return IntegerSize.INT;</span>
+<span class="fc bfc" id="L1275" title="All 2 branches covered.">        } else if (valueTypeID.length &lt; LONG_SIZE_IN_BYTES) {</span>
+<span class="fc" id="L1276">            return IntegerSize.LONG;</span>
+<span class="fc bfc" id="L1277" title="All 2 branches covered.">        } else if (valueTypeID.length == LONG_SIZE_IN_BYTES) {</span>
             // Because creating BigIntegers is so expensive, it is worth it to look ahead and determine exactly
             // which 8-byte integers can fit in a long.
-<span class="fc bfc" id="L1277" title="All 2 branches covered.">            if (valueTypeID.isNegativeInt) {</span>
+<span class="fc bfc" id="L1280" title="All 2 branches covered.">            if (valueTypeID.isNegativeInt) {</span>
                 // The smallest negative 8-byte integer that can fit in a long is -0x80_00_00_00_00_00_00_00.
-<span class="fc" id="L1279">                int firstByte = buffer.peek(valueStartPosition);</span>
-<span class="fc bfc" id="L1280" title="All 2 branches covered.">                if (firstByte &lt; MOST_SIGNIFICANT_BYTE_OF_MIN_LONG) {</span>
-<span class="fc" id="L1281">                    return IntegerSize.LONG;</span>
-<span class="fc bfc" id="L1282" title="All 2 branches covered.">                } else if (firstByte &gt; MOST_SIGNIFICANT_BYTE_OF_MIN_LONG) {</span>
-<span class="fc" id="L1283">                    return IntegerSize.BIG_INTEGER;</span>
+<span class="fc" id="L1282">                int firstByte = buffer.peek(valueStartPosition);</span>
+<span class="fc bfc" id="L1283" title="All 2 branches covered.">                if (firstByte &lt; MOST_SIGNIFICANT_BYTE_OF_MIN_LONG) {</span>
+<span class="fc" id="L1284">                    return IntegerSize.LONG;</span>
+<span class="fc bfc" id="L1285" title="All 2 branches covered.">                } else if (firstByte &gt; MOST_SIGNIFICANT_BYTE_OF_MIN_LONG) {</span>
+<span class="fc" id="L1286">                    return IntegerSize.BIG_INTEGER;</span>
                 }
-<span class="fc bfc" id="L1285" title="All 2 branches covered.">                for (int i = valueStartPosition + 1; i &lt; valueEndPosition; i++) {</span>
-<span class="fc bfc" id="L1286" title="All 2 branches covered.">                    if (0x00 != buffer.peek(i)) {</span>
-<span class="fc" id="L1287">                        return IntegerSize.BIG_INTEGER;</span>
+<span class="fc bfc" id="L1288" title="All 2 branches covered.">                for (int i = valueStartPosition + 1; i &lt; valueEndPosition; i++) {</span>
+<span class="fc bfc" id="L1289" title="All 2 branches covered.">                    if (0x00 != buffer.peek(i)) {</span>
+<span class="fc" id="L1290">                        return IntegerSize.BIG_INTEGER;</span>
                     }
                 }
-<span class="fc" id="L1290">            } else {</span>
+<span class="fc" id="L1293">            } else {</span>
                 // The largest positive 8-byte integer that can fit in a long is 0x7F_FF_FF_FF_FF_FF_FF_FF.
-<span class="fc bfc" id="L1292" title="All 2 branches covered.">                if (buffer.peek(valueStartPosition) &gt; MOST_SIGNIFICANT_BYTE_OF_MAX_LONG) {</span>
-<span class="fc" id="L1293">                    return IntegerSize.BIG_INTEGER;</span>
+<span class="fc bfc" id="L1295" title="All 2 branches covered.">                if (buffer.peek(valueStartPosition) &gt; MOST_SIGNIFICANT_BYTE_OF_MAX_LONG) {</span>
+<span class="fc" id="L1296">                    return IntegerSize.BIG_INTEGER;</span>
                 }
             }
-<span class="fc" id="L1296">            return IntegerSize.LONG;</span>
+<span class="fc" id="L1299">            return IntegerSize.LONG;</span>
         }
-<span class="fc" id="L1298">        return IntegerSize.BIG_INTEGER;</span>
+<span class="fc" id="L1301">        return IntegerSize.BIG_INTEGER;</span>
     }
 
     /**
@@ -1303,26 +1306,26 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
      * @param required the required type of current value.
      */
     private void requireType(IonType required) {
-<span class="fc bfc" id="L1306" title="All 2 branches covered.">        if (required != valueType) {</span>
+<span class="fc bfc" id="L1309" title="All 2 branches covered.">        if (required != valueType) {</span>
             // Note: this is IllegalStateException to match the behavior of the other binary IonReader implementation.
-<span class="fc" id="L1308">            throw new IllegalStateException(</span>
-<span class="fc" id="L1309">                String.format(&quot;Invalid type. Required %s but found %s.&quot;, required, valueType)</span>
+<span class="fc" id="L1311">            throw new IllegalStateException(</span>
+<span class="fc" id="L1312">                String.format(&quot;Invalid type. Required %s but found %s.&quot;, required, valueType)</span>
             );
         }
-<span class="fc" id="L1312">    }</span>
+<span class="fc" id="L1315">    }</span>
 
     /**
      * Reads a VarUInt.
      * @return the value.
      */
     private int readVarUInt() {
-<span class="fc" id="L1319">        int currentByte = 0;</span>
-<span class="fc" id="L1320">        int result = 0;</span>
-<span class="fc bfc" id="L1321" title="All 2 branches covered.">        while ((currentByte &amp; HIGHEST_BIT_BITMASK) == 0) {</span>
-<span class="fc" id="L1322">            currentByte = buffer.peek(peekIndex++);</span>
-<span class="fc" id="L1323">            result = (result &lt;&lt; VALUE_BITS_PER_VARUINT_BYTE) | (currentByte &amp; LOWER_SEVEN_BITS_BITMASK);</span>
+<span class="fc" id="L1322">        int currentByte = 0;</span>
+<span class="fc" id="L1323">        int result = 0;</span>
+<span class="fc bfc" id="L1324" title="All 2 branches covered.">        while ((currentByte &amp; HIGHEST_BIT_BITMASK) == 0) {</span>
+<span class="fc" id="L1325">            currentByte = buffer.peek(peekIndex++);</span>
+<span class="fc" id="L1326">            result = (result &lt;&lt; VALUE_BITS_PER_VARUINT_BYTE) | (currentByte &amp; LOWER_SEVEN_BITS_BITMASK);</span>
         }
-<span class="fc" id="L1325">        return result;</span>
+<span class="fc" id="L1328">        return result;</span>
     }
 
     /**
@@ -1331,11 +1334,11 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
      * @return the value.
      */
     private long readUInt(int startIndex, int limit) {
-<span class="fc" id="L1334">        long result = 0;</span>
-<span class="fc bfc" id="L1335" title="All 2 branches covered.">        for (int i = startIndex; i &lt; limit; i++) {</span>
-<span class="fc" id="L1336">            result = (result &lt;&lt; VALUE_BITS_PER_UINT_BYTE) | buffer.peek(i);</span>
+<span class="fc" id="L1337">        long result = 0;</span>
+<span class="fc bfc" id="L1338" title="All 2 branches covered.">        for (int i = startIndex; i &lt; limit; i++) {</span>
+<span class="fc" id="L1339">            result = (result &lt;&lt; VALUE_BITS_PER_UINT_BYTE) | buffer.peek(i);</span>
         }
-<span class="fc" id="L1338">        return result;</span>
+<span class="fc" id="L1341">        return result;</span>
     }
 
     /**
@@ -1343,7 +1346,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
      * @return the value.
      */
     private long readUInt() {
-<span class="fc" id="L1346">        return readUInt(valueStartPosition, valueEndPosition);</span>
+<span class="fc" id="L1349">        return readUInt(valueStartPosition, valueEndPosition);</span>
     }
 
     /**
@@ -1352,14 +1355,14 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
      * @return the value.
      */
     private int readVarInt(int firstByte) {
-<span class="fc" id="L1355">        int currentByte = firstByte;</span>
-<span class="fc bfc" id="L1356" title="All 2 branches covered.">        int sign = (currentByte &amp; VAR_INT_SIGN_BITMASK) == 0 ? 1 : -1;</span>
-<span class="fc" id="L1357">        int result = currentByte &amp; LOWER_SIX_BITS_BITMASK;</span>
-<span class="fc bfc" id="L1358" title="All 2 branches covered.">        while ((currentByte &amp; HIGHEST_BIT_BITMASK) == 0) {</span>
-<span class="fc" id="L1359">            currentByte = buffer.peek(peekIndex++);</span>
-<span class="fc" id="L1360">            result = (result &lt;&lt; VALUE_BITS_PER_VARUINT_BYTE) | (currentByte &amp; LOWER_SEVEN_BITS_BITMASK);</span>
+<span class="fc" id="L1358">        int currentByte = firstByte;</span>
+<span class="fc bfc" id="L1359" title="All 2 branches covered.">        int sign = (currentByte &amp; VAR_INT_SIGN_BITMASK) == 0 ? 1 : -1;</span>
+<span class="fc" id="L1360">        int result = currentByte &amp; LOWER_SIX_BITS_BITMASK;</span>
+<span class="fc bfc" id="L1361" title="All 2 branches covered.">        while ((currentByte &amp; HIGHEST_BIT_BITMASK) == 0) {</span>
+<span class="fc" id="L1362">            currentByte = buffer.peek(peekIndex++);</span>
+<span class="fc" id="L1363">            result = (result &lt;&lt; VALUE_BITS_PER_VARUINT_BYTE) | (currentByte &amp; LOWER_SEVEN_BITS_BITMASK);</span>
         }
-<span class="fc" id="L1362">        return result * sign;</span>
+<span class="fc" id="L1365">        return result * sign;</span>
     }
 
     /**
@@ -1367,11 +1370,11 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
      * @return the value.
      */
     private int readVarInt() {
-<span class="fc" id="L1370">        return readVarInt(buffer.peek(peekIndex++));</span>
+<span class="fc" id="L1373">        return readVarInt(buffer.peek(peekIndex++));</span>
     }
 
     // Scratch space for various byte sizes. Only for use while computing a single value.
-<span class="fc" id="L1374">    private static final byte[][] SCRATCH_FOR_SIZE = new byte[][] {</span>
+<span class="fc" id="L1377">    private static final byte[][] SCRATCH_FOR_SIZE = new byte[][] {</span>
         new byte[0],
         new byte[1],
         new byte[2],
@@ -1396,17 +1399,17 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
     private byte[] copyBytesToScratch(int startIndex, int length) {
         // Note: using reusable scratch buffers makes reading ints and decimals 1-5% faster and causes much less
         // GC churn.
-<span class="fc" id="L1399">        byte[] bytes = null;</span>
-<span class="fc bfc" id="L1400" title="All 2 branches covered.">        if (length &lt; SCRATCH_FOR_SIZE.length) {</span>
-<span class="fc" id="L1401">            bytes = SCRATCH_FOR_SIZE[length];</span>
+<span class="fc" id="L1402">        byte[] bytes = null;</span>
+<span class="fc bfc" id="L1403" title="All 2 branches covered.">        if (length &lt; SCRATCH_FOR_SIZE.length) {</span>
+<span class="fc" id="L1404">            bytes = SCRATCH_FOR_SIZE[length];</span>
         }
-<span class="fc bfc" id="L1403" title="All 2 branches covered.">        if (bytes == null) {</span>
-<span class="fc" id="L1404">            bytes = new byte[length];</span>
+<span class="fc bfc" id="L1406" title="All 2 branches covered.">        if (bytes == null) {</span>
+<span class="fc" id="L1407">            bytes = new byte[length];</span>
         }
         // The correct number of bytes will be requested from the buffer, so the limit is set at the capacity to
         // avoid having to calculate a limit.
-<span class="fc" id="L1408">        buffer.copyBytes(startIndex, bytes, 0, bytes.length);</span>
-<span class="fc" id="L1409">        return bytes;</span>
+<span class="fc" id="L1411">        buffer.copyBytes(startIndex, bytes, 0, bytes.length);</span>
+<span class="fc" id="L1412">        return bytes;</span>
     }
 
     /**
@@ -1415,13 +1418,13 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
      * @return the value.
      */
     private BigInteger readUIntAsBigInteger(boolean isNegative) {
-<span class="fc" id="L1418">        int length = valueEndPosition - valueStartPosition;</span>
+<span class="fc" id="L1421">        int length = valueEndPosition - valueStartPosition;</span>
         // NOTE: unfortunately, there is no BigInteger(int signum, byte[] bits, int offset, int length) constructor
         // until JDK 9, so copying to scratch space is always required. Migrating to the new constructor will
         // lead to a significant performance improvement.
-<span class="fc" id="L1422">        byte[] magnitude = copyBytesToScratch(valueStartPosition, length);</span>
-<span class="fc bfc" id="L1423" title="All 2 branches covered.">        int signum = isNegative ? -1 : 1;</span>
-<span class="fc" id="L1424">        return new BigInteger(signum, magnitude);</span>
+<span class="fc" id="L1425">        byte[] magnitude = copyBytesToScratch(valueStartPosition, length);</span>
+<span class="fc bfc" id="L1426" title="All 2 branches covered.">        int signum = isNegative ? -1 : 1;</span>
+<span class="fc" id="L1427">        return new BigInteger(signum, magnitude);</span>
     }
 
     /**
@@ -1430,12 +1433,12 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
      * @return -1 if the most significant bit was set; otherwise, 1.
      */
     private int getAndClearSignBit(byte[] intBytes) {
-<span class="fc bfc" id="L1433" title="All 2 branches covered.">        boolean isNegative = (intBytes[0] &amp; HIGHEST_BIT_BITMASK) != 0;</span>
-<span class="fc bfc" id="L1434" title="All 2 branches covered.">        int signum = isNegative ? -1 : 1;</span>
-<span class="fc bfc" id="L1435" title="All 2 branches covered.">        if (isNegative) {</span>
-<span class="fc" id="L1436">            intBytes[0] &amp;= LOWER_SEVEN_BITS_BITMASK;</span>
+<span class="fc bfc" id="L1436" title="All 2 branches covered.">        boolean isNegative = (intBytes[0] &amp; HIGHEST_BIT_BITMASK) != 0;</span>
+<span class="fc bfc" id="L1437" title="All 2 branches covered.">        int signum = isNegative ? -1 : 1;</span>
+<span class="fc bfc" id="L1438" title="All 2 branches covered.">        if (isNegative) {</span>
+<span class="fc" id="L1439">            intBytes[0] &amp;= LOWER_SEVEN_BITS_BITMASK;</span>
         }
-<span class="fc" id="L1438">        return signum;</span>
+<span class="fc" id="L1441">        return signum;</span>
     }
 
     /**
@@ -1445,133 +1448,133 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
      */
     private BigInteger readIntAsBigInteger(int limit) {
         BigInteger value;
-<span class="fc" id="L1448">        int length = limit - peekIndex;</span>
-<span class="fc bfc" id="L1449" title="All 2 branches covered.">        if (length &gt; 0) {</span>
+<span class="fc" id="L1451">        int length = limit - peekIndex;</span>
+<span class="fc bfc" id="L1452" title="All 2 branches covered.">        if (length &gt; 0) {</span>
             // NOTE: unfortunately, there is no BigInteger(int signum, byte[] bits, int offset, int length) constructor
             // until JDK 9, so copying to scratch space is always required. Migrating to the new constructor will
             // lead to a significant performance improvement.
-<span class="fc" id="L1453">            byte[] bytes = copyBytesToScratch(peekIndex, length);</span>
-<span class="fc" id="L1454">            value = new BigInteger(getAndClearSignBit(bytes), bytes);</span>
-<span class="fc" id="L1455">        }</span>
+<span class="fc" id="L1456">            byte[] bytes = copyBytesToScratch(peekIndex, length);</span>
+<span class="fc" id="L1457">            value = new BigInteger(getAndClearSignBit(bytes), bytes);</span>
+<span class="fc" id="L1458">        }</span>
         else {
-<span class="fc" id="L1457">            value = BigInteger.ZERO;</span>
+<span class="fc" id="L1460">            value = BigInteger.ZERO;</span>
         }
-<span class="fc" id="L1459">        return value;</span>
+<span class="fc" id="L1462">        return value;</span>
     }
 
     @Override
     public long longValue() {
         long value;
-<span class="fc bfc" id="L1465" title="All 2 branches covered.">        if (valueType == IonType.INT) {</span>
-<span class="fc bfc" id="L1466" title="All 2 branches covered.">            if (valueTypeID.length == 0) {</span>
-<span class="fc" id="L1467">                return 0;</span>
+<span class="fc bfc" id="L1468" title="All 2 branches covered.">        if (valueType == IonType.INT) {</span>
+<span class="fc bfc" id="L1469" title="All 2 branches covered.">            if (valueTypeID.length == 0) {</span>
+<span class="fc" id="L1470">                return 0;</span>
             }
-<span class="fc" id="L1469">            value = readUInt();</span>
-<span class="fc bfc" id="L1470" title="All 2 branches covered.">            if (valueTypeID.isNegativeInt) {</span>
-<span class="fc bfc" id="L1471" title="All 2 branches covered.">                if (value == 0) {</span>
-<span class="fc" id="L1472">                    throw new IonException(&quot;Int zero may not be negative.&quot;);</span>
+<span class="fc" id="L1472">            value = readUInt();</span>
+<span class="fc bfc" id="L1473" title="All 2 branches covered.">            if (valueTypeID.isNegativeInt) {</span>
+<span class="fc bfc" id="L1474" title="All 2 branches covered.">                if (value == 0) {</span>
+<span class="fc" id="L1475">                    throw new IonException(&quot;Int zero may not be negative.&quot;);</span>
                 }
-<span class="fc" id="L1474">                value *= -1;</span>
+<span class="fc" id="L1477">                value *= -1;</span>
             }
-<span class="fc bfc" id="L1476" title="All 2 branches covered.">        } else if (valueType == IonType.FLOAT) {</span>
-<span class="fc" id="L1477">            scalarConverter.addValue(doubleValue());</span>
-<span class="fc" id="L1478">            scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.double_value);</span>
-<span class="fc" id="L1479">            scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.long_value));</span>
-<span class="fc" id="L1480">            value = scalarConverter.getLong();</span>
-<span class="fc" id="L1481">            scalarConverter.clear();</span>
-<span class="fc bfc" id="L1482" title="All 2 branches covered.">        } else if (valueType == IonType.DECIMAL) {</span>
-<span class="fc" id="L1483">            scalarConverter.addValue(decimalValue());</span>
-<span class="fc" id="L1484">            scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.decimal_value);</span>
-<span class="fc" id="L1485">            scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.long_value));</span>
-<span class="fc" id="L1486">            value = scalarConverter.getLong();</span>
-<span class="fc" id="L1487">            scalarConverter.clear();</span>
+<span class="fc bfc" id="L1479" title="All 2 branches covered.">        } else if (valueType == IonType.FLOAT) {</span>
+<span class="fc" id="L1480">            scalarConverter.addValue(doubleValue());</span>
+<span class="fc" id="L1481">            scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.double_value);</span>
+<span class="fc" id="L1482">            scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.long_value));</span>
+<span class="fc" id="L1483">            value = scalarConverter.getLong();</span>
+<span class="fc" id="L1484">            scalarConverter.clear();</span>
+<span class="fc bfc" id="L1485" title="All 2 branches covered.">        } else if (valueType == IonType.DECIMAL) {</span>
+<span class="fc" id="L1486">            scalarConverter.addValue(decimalValue());</span>
+<span class="fc" id="L1487">            scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.decimal_value);</span>
+<span class="fc" id="L1488">            scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.long_value));</span>
+<span class="fc" id="L1489">            value = scalarConverter.getLong();</span>
+<span class="fc" id="L1490">            scalarConverter.clear();</span>
         } else {
-<span class="fc" id="L1489">            throw new IllegalStateException(&quot;longValue() may only be called on values of type int, float, or decimal.&quot;);</span>
+<span class="fc" id="L1492">            throw new IllegalStateException(&quot;longValue() may only be called on values of type int, float, or decimal.&quot;);</span>
         }
-<span class="fc" id="L1491">        return value;</span>
+<span class="fc" id="L1494">        return value;</span>
     }
 
     @Override
     public BigInteger bigIntegerValue() {
         BigInteger value;
-<span class="fc bfc" id="L1497" title="All 2 branches covered.">        if (valueType == IonType.INT) {</span>
-<span class="fc bfc" id="L1498" title="All 2 branches covered.">            if (isNullValue()) {</span>
+<span class="fc bfc" id="L1500" title="All 2 branches covered.">        if (valueType == IonType.INT) {</span>
+<span class="fc bfc" id="L1501" title="All 2 branches covered.">            if (isNullValue()) {</span>
                 // NOTE: this mimics existing behavior, but should probably be undefined (as, e.g., longValue() is in this
                 //  case).
-<span class="fc" id="L1501">                return null;</span>
+<span class="fc" id="L1504">                return null;</span>
             }
-<span class="fc bfc" id="L1503" title="All 2 branches covered.">            if (valueTypeID.length == 0) {</span>
-<span class="fc" id="L1504">                return BigInteger.ZERO;</span>
+<span class="fc bfc" id="L1506" title="All 2 branches covered.">            if (valueTypeID.length == 0) {</span>
+<span class="fc" id="L1507">                return BigInteger.ZERO;</span>
             }
-<span class="fc" id="L1506">            value = readUIntAsBigInteger(valueTypeID.isNegativeInt);</span>
-<span class="fc bfc" id="L1507" title="All 4 branches covered.">            if (valueTypeID.isNegativeInt &amp;&amp; value.signum() == 0) {</span>
-<span class="fc" id="L1508">                throw new IonException(&quot;Int zero may not be negative.&quot;);</span>
+<span class="fc" id="L1509">            value = readUIntAsBigInteger(valueTypeID.isNegativeInt);</span>
+<span class="fc bfc" id="L1510" title="All 4 branches covered.">            if (valueTypeID.isNegativeInt &amp;&amp; value.signum() == 0) {</span>
+<span class="fc" id="L1511">                throw new IonException(&quot;Int zero may not be negative.&quot;);</span>
             }
-<span class="fc bfc" id="L1510" title="All 2 branches covered.">        } else if (valueType == IonType.FLOAT) {</span>
-<span class="fc bfc" id="L1511" title="All 2 branches covered.">            if (isNullValue()) {</span>
-<span class="fc" id="L1512">                value = null;</span>
+<span class="fc bfc" id="L1513" title="All 2 branches covered.">        } else if (valueType == IonType.FLOAT) {</span>
+<span class="fc bfc" id="L1514" title="All 2 branches covered.">            if (isNullValue()) {</span>
+<span class="fc" id="L1515">                value = null;</span>
             } else {
-<span class="fc" id="L1514">                scalarConverter.addValue(doubleValue());</span>
-<span class="fc" id="L1515">                scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.double_value);</span>
-<span class="fc" id="L1516">                scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.bigInteger_value));</span>
-<span class="fc" id="L1517">                value = scalarConverter.getBigInteger();</span>
-<span class="fc" id="L1518">                scalarConverter.clear();</span>
+<span class="fc" id="L1517">                scalarConverter.addValue(doubleValue());</span>
+<span class="fc" id="L1518">                scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.double_value);</span>
+<span class="fc" id="L1519">                scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.bigInteger_value));</span>
+<span class="fc" id="L1520">                value = scalarConverter.getBigInteger();</span>
+<span class="fc" id="L1521">                scalarConverter.clear();</span>
             }
-<span class="fc bfc" id="L1520" title="All 2 branches covered.">        } else if (valueType == IonType.DECIMAL) {</span>
-<span class="fc bfc" id="L1521" title="All 2 branches covered.">            if (isNullValue()) {</span>
-<span class="fc" id="L1522">                value = null;</span>
+<span class="fc bfc" id="L1523" title="All 2 branches covered.">        } else if (valueType == IonType.DECIMAL) {</span>
+<span class="fc bfc" id="L1524" title="All 2 branches covered.">            if (isNullValue()) {</span>
+<span class="fc" id="L1525">                value = null;</span>
             } else {
-<span class="fc" id="L1524">                scalarConverter.addValue(decimalValue());</span>
-<span class="fc" id="L1525">                scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.decimal_value);</span>
-<span class="fc" id="L1526">                scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.bigInteger_value));</span>
-<span class="fc" id="L1527">                value = scalarConverter.getBigInteger();</span>
-<span class="fc" id="L1528">                scalarConverter.clear();</span>
+<span class="fc" id="L1527">                scalarConverter.addValue(decimalValue());</span>
+<span class="fc" id="L1528">                scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.decimal_value);</span>
+<span class="fc" id="L1529">                scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.bigInteger_value));</span>
+<span class="fc" id="L1530">                value = scalarConverter.getBigInteger();</span>
+<span class="fc" id="L1531">                scalarConverter.clear();</span>
             }
         } else {
-<span class="fc" id="L1531">            throw new IllegalStateException(&quot;longValue() may only be called on values of type int, float, or decimal.&quot;);</span>
+<span class="fc" id="L1534">            throw new IllegalStateException(&quot;longValue() may only be called on values of type int, float, or decimal.&quot;);</span>
         }
-<span class="fc" id="L1533">        return value;</span>
+<span class="fc" id="L1536">        return value;</span>
     }
 
     @Override
     public Date dateValue() {
-<span class="fc" id="L1538">        Timestamp timestamp = timestampValue();</span>
-<span class="fc bfc" id="L1539" title="All 2 branches covered.">        if (timestamp == null) {</span>
-<span class="fc" id="L1540">            return null;</span>
+<span class="fc" id="L1541">        Timestamp timestamp = timestampValue();</span>
+<span class="fc bfc" id="L1542" title="All 2 branches covered.">        if (timestamp == null) {</span>
+<span class="fc" id="L1543">            return null;</span>
         }
-<span class="fc" id="L1542">        return timestamp.dateValue();</span>
+<span class="fc" id="L1545">        return timestamp.dateValue();</span>
     }
 
     @Override
     public int intValue() {
-<span class="fc" id="L1547">        return (int) longValue();</span>
+<span class="fc" id="L1550">        return (int) longValue();</span>
     }
 
     @Override
     public double doubleValue() {
         double value;
-<span class="fc bfc" id="L1553" title="All 2 branches covered.">        if (valueType == IonType.FLOAT) {</span>
-<span class="fc" id="L1554">            int length = valueEndPosition - valueStartPosition;</span>
-<span class="fc bfc" id="L1555" title="All 2 branches covered.">            if (length == 0) {</span>
-<span class="fc" id="L1556">                return 0.0d;</span>
+<span class="fc bfc" id="L1556" title="All 2 branches covered.">        if (valueType == IonType.FLOAT) {</span>
+<span class="fc" id="L1557">            int length = valueEndPosition - valueStartPosition;</span>
+<span class="fc bfc" id="L1558" title="All 2 branches covered.">            if (length == 0) {</span>
+<span class="fc" id="L1559">                return 0.0d;</span>
             }
-<span class="fc" id="L1558">            ByteBuffer bytes = buffer.getByteBuffer(valueStartPosition, valueEndPosition);</span>
-<span class="fc bfc" id="L1559" title="All 2 branches covered.">            if (length == FLOAT_32_BYTE_LENGTH) {</span>
-<span class="fc" id="L1560">                value = bytes.getFloat();</span>
+<span class="fc" id="L1561">            ByteBuffer bytes = buffer.getByteBuffer(valueStartPosition, valueEndPosition);</span>
+<span class="fc bfc" id="L1562" title="All 2 branches covered.">            if (length == FLOAT_32_BYTE_LENGTH) {</span>
+<span class="fc" id="L1563">                value = bytes.getFloat();</span>
             } else {
                 // Note: there is no need to check for other lengths here; the type ID byte is validated during next().
-<span class="fc" id="L1563">                value = bytes.getDouble();</span>
+<span class="fc" id="L1566">                value = bytes.getDouble();</span>
             }
-<span class="fc bfc" id="L1565" title="All 2 branches covered.">        }  else if (valueType == IonType.DECIMAL) {</span>
-<span class="fc" id="L1566">            scalarConverter.addValue(decimalValue());</span>
-<span class="fc" id="L1567">            scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.decimal_value);</span>
-<span class="fc" id="L1568">            scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.double_value));</span>
-<span class="fc" id="L1569">            value = scalarConverter.getDouble();</span>
-<span class="fc" id="L1570">            scalarConverter.clear();</span>
+<span class="fc bfc" id="L1568" title="All 2 branches covered.">        }  else if (valueType == IonType.DECIMAL) {</span>
+<span class="fc" id="L1569">            scalarConverter.addValue(decimalValue());</span>
+<span class="fc" id="L1570">            scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.decimal_value);</span>
+<span class="fc" id="L1571">            scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.double_value));</span>
+<span class="fc" id="L1572">            value = scalarConverter.getDouble();</span>
+<span class="fc" id="L1573">            scalarConverter.clear();</span>
         } else {
-<span class="fc" id="L1572">            throw new IllegalStateException(&quot;doubleValue() may only be called on values of type float or decimal.&quot;);</span>
+<span class="fc" id="L1575">            throw new IllegalStateException(&quot;doubleValue() may only be called on values of type float or decimal.&quot;);</span>
         }
-<span class="fc" id="L1574">        return value;</span>
+<span class="fc" id="L1577">        return value;</span>
     }
 
     /**
@@ -1581,69 +1584,69 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
      * @return the value.
      */
     private String readString(int valueStart, int valueEnd) {
-<span class="fc" id="L1584">        ByteBuffer utf8InputBuffer = buffer.getByteBuffer(valueStart, valueEnd);</span>
-<span class="fc" id="L1585">        int numberOfBytes = valueEnd - valueStart;</span>
-<span class="fc" id="L1586">        return utf8Decoder.decode(utf8InputBuffer, numberOfBytes);</span>
+<span class="fc" id="L1587">        ByteBuffer utf8InputBuffer = buffer.getByteBuffer(valueStart, valueEnd);</span>
+<span class="fc" id="L1588">        int numberOfBytes = valueEnd - valueStart;</span>
+<span class="fc" id="L1589">        return utf8Decoder.decode(utf8InputBuffer, numberOfBytes);</span>
     }
 
     @Override
     public String stringValue() {
         String value;
-<span class="fc bfc" id="L1592" title="All 2 branches covered.">        if (valueType == IonType.STRING) {</span>
-<span class="fc bfc" id="L1593" title="All 2 branches covered.">            if (isNullValue()) {</span>
-<span class="fc" id="L1594">                return null;</span>
+<span class="fc bfc" id="L1595" title="All 2 branches covered.">        if (valueType == IonType.STRING) {</span>
+<span class="fc bfc" id="L1596" title="All 2 branches covered.">            if (isNullValue()) {</span>
+<span class="fc" id="L1597">                return null;</span>
             }
-<span class="fc" id="L1596">            value = readString(valueStartPosition, valueEndPosition);</span>
-<span class="fc bfc" id="L1597" title="All 2 branches covered.">        } else if (valueType == IonType.SYMBOL) {</span>
-<span class="fc bfc" id="L1598" title="All 2 branches covered.">            if (isNullValue()) {</span>
-<span class="fc" id="L1599">                return null;</span>
+<span class="fc" id="L1599">            value = readString(valueStartPosition, valueEndPosition);</span>
+<span class="fc bfc" id="L1600" title="All 2 branches covered.">        } else if (valueType == IonType.SYMBOL) {</span>
+<span class="fc bfc" id="L1601" title="All 2 branches covered.">            if (isNullValue()) {</span>
+<span class="fc" id="L1602">                return null;</span>
             }
-<span class="fc" id="L1601">            int sid = (int) readUInt();</span>
-<span class="fc" id="L1602">            value = getSymbol(sid);</span>
-<span class="fc bfc" id="L1603" title="All 2 branches covered.">            if (value == null) {</span>
-<span class="fc" id="L1604">                throw new UnknownSymbolException(sid);</span>
+<span class="fc" id="L1604">            int sid = (int) readUInt();</span>
+<span class="fc" id="L1605">            value = getSymbol(sid);</span>
+<span class="fc bfc" id="L1606" title="All 2 branches covered.">            if (value == null) {</span>
+<span class="fc" id="L1607">                throw new UnknownSymbolException(sid);</span>
             }
-<span class="fc" id="L1606">        } else {</span>
-<span class="fc" id="L1607">            throw new IllegalStateException(&quot;Invalid type requested.&quot;);</span>
+<span class="fc" id="L1609">        } else {</span>
+<span class="fc" id="L1610">            throw new IllegalStateException(&quot;Invalid type requested.&quot;);</span>
         }
-<span class="fc" id="L1609">        return value;</span>
+<span class="fc" id="L1612">        return value;</span>
     }
 
     @Override
     public SymbolToken symbolValue() {
-<span class="fc" id="L1614">        requireType(IonType.SYMBOL);</span>
-<span class="fc bfc" id="L1615" title="All 2 branches covered.">        if (isNullValue()) {</span>
-<span class="fc" id="L1616">            return null;</span>
+<span class="fc" id="L1617">        requireType(IonType.SYMBOL);</span>
+<span class="fc bfc" id="L1618" title="All 2 branches covered.">        if (isNullValue()) {</span>
+<span class="fc" id="L1619">            return null;</span>
         }
-<span class="fc" id="L1618">        int sid = (int) readUInt();</span>
-<span class="fc" id="L1619">        return getSymbolToken(sid);</span>
+<span class="fc" id="L1621">        int sid = (int) readUInt();</span>
+<span class="fc" id="L1622">        return getSymbolToken(sid);</span>
     }
 
     @Override
     public int byteSize() {
-<span class="pc bpc" id="L1624" title="1 of 4 branches missed.">        if (!IonType.isLob(valueType) &amp;&amp; !isNullValue()) {</span>
-<span class="fc" id="L1625">            throw new IonException(&quot;Reader must be positioned on a blob or clob.&quot;);</span>
+<span class="pc bpc" id="L1627" title="1 of 4 branches missed.">        if (!IonType.isLob(valueType) &amp;&amp; !isNullValue()) {</span>
+<span class="fc" id="L1628">            throw new IonException(&quot;Reader must be positioned on a blob or clob.&quot;);</span>
         }
-<span class="fc" id="L1627">        return valueEndPosition - valueStartPosition;</span>
+<span class="fc" id="L1630">        return valueEndPosition - valueStartPosition;</span>
     }
 
     @Override
     public byte[] newBytes() {
-<span class="fc" id="L1632">        byte[] bytes = new byte[byteSize()];</span>
+<span class="fc" id="L1635">        byte[] bytes = new byte[byteSize()];</span>
         // The correct number of bytes will be requested from the buffer, so the limit is set at the capacity to
         // avoid having to calculate a limit.
-<span class="fc" id="L1635">        buffer.copyBytes(valueStartPosition, bytes, 0, bytes.length);</span>
-<span class="fc" id="L1636">        return bytes;</span>
+<span class="fc" id="L1638">        buffer.copyBytes(valueStartPosition, bytes, 0, bytes.length);</span>
+<span class="fc" id="L1639">        return bytes;</span>
     }
 
     @Override
     public int getBytes(byte[] bytes, int offset, int len) {
-<span class="fc" id="L1641">        int length = Math.min(len, byteSize() - lobBytesRead);</span>
+<span class="fc" id="L1644">        int length = Math.min(len, byteSize() - lobBytesRead);</span>
         // The correct number of bytes will be requested from the buffer, so the limit is set at the capacity to
         // avoid having to calculate a limit.
-<span class="fc" id="L1644">        buffer.copyBytes(valueStartPosition + lobBytesRead, bytes, offset, length);</span>
-<span class="fc" id="L1645">        lobBytesRead += length;</span>
-<span class="fc" id="L1646">        return length;</span>
+<span class="fc" id="L1647">        buffer.copyBytes(valueStartPosition + lobBytesRead, bytes, offset, length);</span>
+<span class="fc" id="L1648">        lobBytesRead += length;</span>
+<span class="fc" id="L1649">        return length;</span>
     }
 
     /**
@@ -1651,30 +1654,30 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
      * @return the value.
      */
     private BigDecimal readBigDecimal() {
-<span class="fc" id="L1654">        int length = valueEndPosition - peekIndex;</span>
-<span class="fc bfc" id="L1655" title="All 2 branches covered.">        if (length == 0) {</span>
-<span class="fc" id="L1656">            return BigDecimal.ZERO;</span>
+<span class="fc" id="L1657">        int length = valueEndPosition - peekIndex;</span>
+<span class="fc bfc" id="L1658" title="All 2 branches covered.">        if (length == 0) {</span>
+<span class="fc" id="L1659">            return BigDecimal.ZERO;</span>
         }
-<span class="fc" id="L1658">        int scale = -readVarInt();</span>
+<span class="fc" id="L1661">        int scale = -readVarInt();</span>
         BigDecimal value;
-<span class="fc bfc" id="L1660" title="All 2 branches covered.">        if (length &lt; LONG_SIZE_IN_BYTES) {</span>
+<span class="fc bfc" id="L1663" title="All 2 branches covered.">        if (length &lt; LONG_SIZE_IN_BYTES) {</span>
             // No need to allocate a BigInteger to hold the coefficient.
-<span class="fc" id="L1662">            long coefficient = 0;</span>
-<span class="fc" id="L1663">            int sign = 1;</span>
-<span class="fc bfc" id="L1664" title="All 2 branches covered.">            if (peekIndex &lt; valueEndPosition) {</span>
-<span class="fc" id="L1665">                int firstByte = buffer.peek(peekIndex++);</span>
-<span class="fc bfc" id="L1666" title="All 2 branches covered.">                sign = (firstByte &amp; HIGHEST_BIT_BITMASK) == 0 ? 1 : -1;</span>
-<span class="fc" id="L1667">                coefficient = firstByte &amp; LOWER_SEVEN_BITS_BITMASK;</span>
+<span class="fc" id="L1665">            long coefficient = 0;</span>
+<span class="fc" id="L1666">            int sign = 1;</span>
+<span class="fc bfc" id="L1667" title="All 2 branches covered.">            if (peekIndex &lt; valueEndPosition) {</span>
+<span class="fc" id="L1668">                int firstByte = buffer.peek(peekIndex++);</span>
+<span class="fc bfc" id="L1669" title="All 2 branches covered.">                sign = (firstByte &amp; HIGHEST_BIT_BITMASK) == 0 ? 1 : -1;</span>
+<span class="fc" id="L1670">                coefficient = firstByte &amp; LOWER_SEVEN_BITS_BITMASK;</span>
             }
-<span class="fc bfc" id="L1669" title="All 2 branches covered.">            while (peekIndex &lt; valueEndPosition) {</span>
-<span class="fc" id="L1670">                coefficient = (coefficient &lt;&lt; VALUE_BITS_PER_UINT_BYTE) | buffer.peek(peekIndex++);</span>
+<span class="fc bfc" id="L1672" title="All 2 branches covered.">            while (peekIndex &lt; valueEndPosition) {</span>
+<span class="fc" id="L1673">                coefficient = (coefficient &lt;&lt; VALUE_BITS_PER_UINT_BYTE) | buffer.peek(peekIndex++);</span>
             }
-<span class="fc" id="L1672">            value = BigDecimal.valueOf(coefficient * sign, scale);</span>
-<span class="fc" id="L1673">        } else {</span>
+<span class="fc" id="L1675">            value = BigDecimal.valueOf(coefficient * sign, scale);</span>
+<span class="fc" id="L1676">        } else {</span>
             // The coefficient may overflow a long, so a BigInteger is required.
-<span class="fc" id="L1675">            value = new BigDecimal(readIntAsBigInteger(valueEndPosition), scale);</span>
+<span class="fc" id="L1678">            value = new BigDecimal(readIntAsBigInteger(valueEndPosition), scale);</span>
         }
-<span class="fc" id="L1677">        return value;</span>
+<span class="fc" id="L1680">        return value;</span>
     }
 
     /**
@@ -1682,94 +1685,94 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
      * @return the value.
      */
     private Decimal readDecimal() {
-<span class="fc" id="L1685">        int length = valueEndPosition - peekIndex;</span>
-<span class="fc bfc" id="L1686" title="All 2 branches covered.">        if (length == 0) {</span>
-<span class="fc" id="L1687">            return Decimal.ZERO;</span>
+<span class="fc" id="L1688">        int length = valueEndPosition - peekIndex;</span>
+<span class="fc bfc" id="L1689" title="All 2 branches covered.">        if (length == 0) {</span>
+<span class="fc" id="L1690">            return Decimal.ZERO;</span>
         }
-<span class="fc" id="L1689">        int scale = -readVarInt();</span>
+<span class="fc" id="L1692">        int scale = -readVarInt();</span>
         BigInteger coefficient;
-<span class="fc" id="L1691">        length = valueEndPosition - peekIndex;</span>
-<span class="fc bfc" id="L1692" title="All 2 branches covered.">        if (length &gt; 0) {</span>
+<span class="fc" id="L1694">        length = valueEndPosition - peekIndex;</span>
+<span class="fc bfc" id="L1695" title="All 2 branches covered.">        if (length &gt; 0) {</span>
             // NOTE: unfortunately, there is no BigInteger(int signum, byte[] bits, int offset, int length) constructor,
             // so copying to scratch space is always required.
-<span class="fc" id="L1695">            byte[] bits = copyBytesToScratch(peekIndex, length);</span>
-<span class="fc" id="L1696">            int signum = getAndClearSignBit(bits);</span>
+<span class="fc" id="L1698">            byte[] bits = copyBytesToScratch(peekIndex, length);</span>
+<span class="fc" id="L1699">            int signum = getAndClearSignBit(bits);</span>
             // NOTE: there is a BigInteger.valueOf(long unscaledValue, int scale) factory method that avoids allocating
             // a BigInteger for coefficients that fit in a long. See its use in readBigDecimal() above. Unfortunately,
             // it is not possible to use this for Decimal because the necessary BigDecimal constructor is
             // package-private. If a compatible BigDecimal constructor is added in a future JDK revision, a
             // corresponding factory method should be added to Decimal to enable this optimization.
-<span class="fc" id="L1702">            coefficient = new BigInteger(signum, bits);</span>
-<span class="pc bpc" id="L1703" title="1 of 4 branches missed.">            if (coefficient.signum() == 0 &amp;&amp; signum &lt; 0) {</span>
-<span class="fc" id="L1704">                return Decimal.negativeZero(scale);</span>
+<span class="fc" id="L1705">            coefficient = new BigInteger(signum, bits);</span>
+<span class="pc bpc" id="L1706" title="1 of 4 branches missed.">            if (coefficient.signum() == 0 &amp;&amp; signum &lt; 0) {</span>
+<span class="fc" id="L1707">                return Decimal.negativeZero(scale);</span>
             }
-<span class="fc" id="L1706">        }</span>
+<span class="fc" id="L1709">        }</span>
         else {
-<span class="fc" id="L1708">            coefficient = BigInteger.ZERO;</span>
+<span class="fc" id="L1711">            coefficient = BigInteger.ZERO;</span>
         }
-<span class="fc" id="L1710">        return Decimal.valueOf(coefficient, scale);</span>
+<span class="fc" id="L1713">        return Decimal.valueOf(coefficient, scale);</span>
     }
 
     @Override
     public BigDecimal bigDecimalValue() {
-<span class="fc" id="L1715">        requireType(IonType.DECIMAL);</span>
-<span class="fc bfc" id="L1716" title="All 2 branches covered.">        if (isNullValue()) {</span>
-<span class="fc" id="L1717">            return null;</span>
+<span class="fc" id="L1718">        requireType(IonType.DECIMAL);</span>
+<span class="fc bfc" id="L1719" title="All 2 branches covered.">        if (isNullValue()) {</span>
+<span class="fc" id="L1720">            return null;</span>
         }
-<span class="fc" id="L1719">        peekIndex = valueStartPosition;</span>
-<span class="fc" id="L1720">        return readBigDecimal();</span>
+<span class="fc" id="L1722">        peekIndex = valueStartPosition;</span>
+<span class="fc" id="L1723">        return readBigDecimal();</span>
     }
 
     @Override
     public Decimal decimalValue() {
-<span class="fc" id="L1725">        requireType(IonType.DECIMAL);</span>
-<span class="fc bfc" id="L1726" title="All 2 branches covered.">        if (isNullValue()) {</span>
-<span class="fc" id="L1727">            return null;</span>
+<span class="fc" id="L1728">        requireType(IonType.DECIMAL);</span>
+<span class="fc bfc" id="L1729" title="All 2 branches covered.">        if (isNullValue()) {</span>
+<span class="fc" id="L1730">            return null;</span>
         }
-<span class="fc" id="L1729">        peekIndex = valueStartPosition;</span>
-<span class="fc" id="L1730">        return readDecimal();</span>
+<span class="fc" id="L1732">        peekIndex = valueStartPosition;</span>
+<span class="fc" id="L1733">        return readDecimal();</span>
     }
 
     @Override
     public Timestamp timestampValue() {
-<span class="fc" id="L1735">        requireType(IonType.TIMESTAMP);</span>
-<span class="fc bfc" id="L1736" title="All 2 branches covered.">        if (isNullValue()) {</span>
-<span class="fc" id="L1737">            return null;</span>
+<span class="fc" id="L1738">        requireType(IonType.TIMESTAMP);</span>
+<span class="fc bfc" id="L1739" title="All 2 branches covered.">        if (isNullValue()) {</span>
+<span class="fc" id="L1740">            return null;</span>
         }
-<span class="fc" id="L1739">        peekIndex = valueStartPosition;</span>
-<span class="fc" id="L1740">        int firstByte = buffer.peek(peekIndex++);</span>
-<span class="fc" id="L1741">        Integer offset = null;</span>
-<span class="fc bfc" id="L1742" title="All 2 branches covered.">        if (firstByte != VAR_INT_NEGATIVE_ZERO) {</span>
-<span class="fc" id="L1743">            offset = readVarInt(firstByte);</span>
+<span class="fc" id="L1742">        peekIndex = valueStartPosition;</span>
+<span class="fc" id="L1743">        int firstByte = buffer.peek(peekIndex++);</span>
+<span class="fc" id="L1744">        Integer offset = null;</span>
+<span class="fc bfc" id="L1745" title="All 2 branches covered.">        if (firstByte != VAR_INT_NEGATIVE_ZERO) {</span>
+<span class="fc" id="L1746">            offset = readVarInt(firstByte);</span>
         }
-<span class="fc" id="L1745">        int year = readVarUInt();</span>
-<span class="fc" id="L1746">        int month = 0;</span>
-<span class="fc" id="L1747">        int day = 0;</span>
-<span class="fc" id="L1748">        int hour = 0;</span>
-<span class="fc" id="L1749">        int minute = 0;</span>
-<span class="fc" id="L1750">        int second = 0;</span>
-<span class="fc" id="L1751">        BigDecimal fractionalSecond = null;</span>
-<span class="fc" id="L1752">        Timestamp.Precision precision = Timestamp.Precision.YEAR;</span>
-<span class="fc bfc" id="L1753" title="All 2 branches covered.">        if (peekIndex &lt; valueEndPosition) {</span>
-<span class="fc" id="L1754">            month = readVarUInt();</span>
-<span class="fc" id="L1755">            precision = Timestamp.Precision.MONTH;</span>
-<span class="fc bfc" id="L1756" title="All 2 branches covered.">            if (peekIndex &lt; valueEndPosition) {</span>
-<span class="fc" id="L1757">                day = readVarUInt();</span>
-<span class="fc" id="L1758">                precision = Timestamp.Precision.DAY;</span>
-<span class="fc bfc" id="L1759" title="All 2 branches covered.">                if (peekIndex &lt; valueEndPosition) {</span>
-<span class="fc" id="L1760">                    hour = readVarUInt();</span>
-<span class="fc bfc" id="L1761" title="All 2 branches covered.">                    if (peekIndex &gt;= valueEndPosition) {</span>
-<span class="fc" id="L1762">                        throw new IonException(&quot;Timestamps may not specify hour without specifying minute.&quot;);</span>
+<span class="fc" id="L1748">        int year = readVarUInt();</span>
+<span class="fc" id="L1749">        int month = 0;</span>
+<span class="fc" id="L1750">        int day = 0;</span>
+<span class="fc" id="L1751">        int hour = 0;</span>
+<span class="fc" id="L1752">        int minute = 0;</span>
+<span class="fc" id="L1753">        int second = 0;</span>
+<span class="fc" id="L1754">        BigDecimal fractionalSecond = null;</span>
+<span class="fc" id="L1755">        Timestamp.Precision precision = Timestamp.Precision.YEAR;</span>
+<span class="fc bfc" id="L1756" title="All 2 branches covered.">        if (peekIndex &lt; valueEndPosition) {</span>
+<span class="fc" id="L1757">            month = readVarUInt();</span>
+<span class="fc" id="L1758">            precision = Timestamp.Precision.MONTH;</span>
+<span class="fc bfc" id="L1759" title="All 2 branches covered.">            if (peekIndex &lt; valueEndPosition) {</span>
+<span class="fc" id="L1760">                day = readVarUInt();</span>
+<span class="fc" id="L1761">                precision = Timestamp.Precision.DAY;</span>
+<span class="fc bfc" id="L1762" title="All 2 branches covered.">                if (peekIndex &lt; valueEndPosition) {</span>
+<span class="fc" id="L1763">                    hour = readVarUInt();</span>
+<span class="fc bfc" id="L1764" title="All 2 branches covered.">                    if (peekIndex &gt;= valueEndPosition) {</span>
+<span class="fc" id="L1765">                        throw new IonException(&quot;Timestamps may not specify hour without specifying minute.&quot;);</span>
                     }
-<span class="fc" id="L1764">                    minute = readVarUInt();</span>
-<span class="fc" id="L1765">                    precision = Timestamp.Precision.MINUTE;</span>
-<span class="fc bfc" id="L1766" title="All 2 branches covered.">                    if (peekIndex &lt; valueEndPosition) {</span>
-<span class="fc" id="L1767">                        second = readVarUInt();</span>
-<span class="fc" id="L1768">                        precision = Timestamp.Precision.SECOND;</span>
-<span class="fc bfc" id="L1769" title="All 2 branches covered.">                        if (peekIndex &lt; valueEndPosition) {</span>
-<span class="fc" id="L1770">                            fractionalSecond = readBigDecimal();</span>
-<span class="fc bfc" id="L1771" title="All 4 branches covered.">                            if (fractionalSecond.signum() &lt; 0 || fractionalSecond.compareTo(BigDecimal.ONE) &gt;= 0) {</span>
-<span class="fc" id="L1772">                                throw new IonException(&quot;The fractional seconds value in a timestamp must be greater&quot; +</span>
+<span class="fc" id="L1767">                    minute = readVarUInt();</span>
+<span class="fc" id="L1768">                    precision = Timestamp.Precision.MINUTE;</span>
+<span class="fc bfc" id="L1769" title="All 2 branches covered.">                    if (peekIndex &lt; valueEndPosition) {</span>
+<span class="fc" id="L1770">                        second = readVarUInt();</span>
+<span class="fc" id="L1771">                        precision = Timestamp.Precision.SECOND;</span>
+<span class="fc bfc" id="L1772" title="All 2 branches covered.">                        if (peekIndex &lt; valueEndPosition) {</span>
+<span class="fc" id="L1773">                            fractionalSecond = readBigDecimal();</span>
+<span class="fc bfc" id="L1774" title="All 4 branches covered.">                            if (fractionalSecond.signum() &lt; 0 || fractionalSecond.compareTo(BigDecimal.ONE) &gt;= 0) {</span>
+<span class="fc" id="L1775">                                throw new IonException(&quot;The fractional seconds value in a timestamp must be greater&quot; +</span>
                                         &quot;than or equal to zero and less than one.&quot;);
                             }
                         }
@@ -1778,7 +1781,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
             }
         }
         try {
-<span class="fc" id="L1781">            return Timestamp.createFromUtcFields(</span>
+<span class="fc" id="L1784">            return Timestamp.createFromUtcFields(</span>
                     precision,
                     year,
                     month,
@@ -1789,8 +1792,8 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
                     fractionalSecond,
                     offset
             );
-<span class="fc" id="L1792">        } catch (IllegalArgumentException e) {</span>
-<span class="fc" id="L1793">            throw new IonException(&quot;Illegal timestamp encoding. &quot;, e);</span>
+<span class="fc" id="L1795">        } catch (IllegalArgumentException e) {</span>
+<span class="fc" id="L1796">            throw new IonException(&quot;Illegal timestamp encoding. &quot;, e);</span>
         }
     }
 
@@ -1799,122 +1802,122 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
      * @return the annotation symbol IDs, or an empty list if the current value is not annotated.
      */
     private IntList getAnnotationSids() {
-<span class="fc bfc" id="L1802" title="All 2 branches covered.">        if (annotationSids.isEmpty()) {</span>
-<span class="fc" id="L1803">            int savedPeekIndex = peekIndex;</span>
-<span class="fc" id="L1804">            peekIndex = annotationStartPosition;</span>
-<span class="fc bfc" id="L1805" title="All 2 branches covered.">            while (peekIndex &lt; annotationEndPosition) {</span>
-<span class="fc" id="L1806">                annotationSids.add(readVarUInt());</span>
+<span class="fc bfc" id="L1805" title="All 2 branches covered.">        if (annotationSids.isEmpty()) {</span>
+<span class="fc" id="L1806">            int savedPeekIndex = peekIndex;</span>
+<span class="fc" id="L1807">            peekIndex = annotationStartPosition;</span>
+<span class="fc bfc" id="L1808" title="All 2 branches covered.">            while (peekIndex &lt; annotationEndPosition) {</span>
+<span class="fc" id="L1809">                annotationSids.add(readVarUInt());</span>
             }
-<span class="fc" id="L1808">            peekIndex = savedPeekIndex;</span>
+<span class="fc" id="L1811">            peekIndex = savedPeekIndex;</span>
         }
-<span class="fc" id="L1810">        return annotationSids;</span>
+<span class="fc" id="L1813">        return annotationSids;</span>
     }
 
     @Override
     public String[] getTypeAnnotations() {
-<span class="fc bfc" id="L1815" title="All 2 branches covered.">        if (hasAnnotations) {</span>
-<span class="fc" id="L1816">            IntList annotationSids = getAnnotationSids();</span>
-<span class="fc" id="L1817">            String[] annotationArray = new String[annotationSids.size()];</span>
-<span class="fc bfc" id="L1818" title="All 2 branches covered.">            for (int i = 0; i &lt; annotationArray.length; i++) {</span>
-<span class="fc" id="L1819">                String symbol = getSymbol(annotationSids.get(i));</span>
-<span class="fc bfc" id="L1820" title="All 2 branches covered.">                if (symbol == null) {</span>
-<span class="fc" id="L1821">                    throw new UnknownSymbolException(annotationSids.get(i));</span>
+<span class="fc bfc" id="L1818" title="All 2 branches covered.">        if (hasAnnotations) {</span>
+<span class="fc" id="L1819">            IntList annotationSids = getAnnotationSids();</span>
+<span class="fc" id="L1820">            String[] annotationArray = new String[annotationSids.size()];</span>
+<span class="fc bfc" id="L1821" title="All 2 branches covered.">            for (int i = 0; i &lt; annotationArray.length; i++) {</span>
+<span class="fc" id="L1822">                String symbol = getSymbol(annotationSids.get(i));</span>
+<span class="fc bfc" id="L1823" title="All 2 branches covered.">                if (symbol == null) {</span>
+<span class="fc" id="L1824">                    throw new UnknownSymbolException(annotationSids.get(i));</span>
                 }
-<span class="fc" id="L1823">                annotationArray[i] = symbol;</span>
+<span class="fc" id="L1826">                annotationArray[i] = symbol;</span>
             }
-<span class="fc" id="L1825">            return annotationArray;</span>
+<span class="fc" id="L1828">            return annotationArray;</span>
         }
-<span class="fc" id="L1827">        return _Private_Utils.EMPTY_STRING_ARRAY;</span>
+<span class="fc" id="L1830">        return _Private_Utils.EMPTY_STRING_ARRAY;</span>
     }
 
     @Override
     public SymbolToken[] getTypeAnnotationSymbols() {
-<span class="fc bfc" id="L1832" title="All 2 branches covered.">        if (hasAnnotations) {</span>
-<span class="fc" id="L1833">            IntList annotationSids = getAnnotationSids();</span>
-<span class="fc" id="L1834">            SymbolToken[] annotationArray = new SymbolToken[annotationSids.size()];</span>
-<span class="fc bfc" id="L1835" title="All 2 branches covered.">            for (int i = 0; i &lt; annotationArray.length; i++) {</span>
-<span class="fc" id="L1836">                annotationArray[i] = getSymbolToken(annotationSids.get(i));</span>
+<span class="fc bfc" id="L1835" title="All 2 branches covered.">        if (hasAnnotations) {</span>
+<span class="fc" id="L1836">            IntList annotationSids = getAnnotationSids();</span>
+<span class="fc" id="L1837">            SymbolToken[] annotationArray = new SymbolToken[annotationSids.size()];</span>
+<span class="fc bfc" id="L1838" title="All 2 branches covered.">            for (int i = 0; i &lt; annotationArray.length; i++) {</span>
+<span class="fc" id="L1839">                annotationArray[i] = getSymbolToken(annotationSids.get(i));</span>
             }
-<span class="fc" id="L1838">            return annotationArray;</span>
+<span class="fc" id="L1841">            return annotationArray;</span>
         }
-<span class="fc" id="L1840">        return SymbolToken.EMPTY_ARRAY;</span>
+<span class="fc" id="L1843">        return SymbolToken.EMPTY_ARRAY;</span>
     }
 
-<span class="fc" id="L1843">    private static final Iterator&lt;String&gt; EMPTY_ITERATOR = new Iterator&lt;String&gt;() {</span>
+<span class="fc" id="L1846">    private static final Iterator&lt;String&gt; EMPTY_ITERATOR = new Iterator&lt;String&gt;() {</span>
 
         @Override
         public boolean hasNext() {
-<span class="fc" id="L1847">            return false;</span>
+<span class="fc" id="L1850">            return false;</span>
         }
 
         @Override
         public String next() {
-<span class="nc" id="L1852">            return null;</span>
+<span class="nc" id="L1855">            return null;</span>
         }
 
         @Override
         public void remove() {
-<span class="nc" id="L1857">            throw new UnsupportedOperationException(&quot;Cannot remove from an empty iterator.&quot;);</span>
+<span class="nc" id="L1860">            throw new UnsupportedOperationException(&quot;Cannot remove from an empty iterator.&quot;);</span>
         }
     };
 
     @Override
     public Iterator&lt;String&gt; iterateTypeAnnotations() {
-<span class="fc bfc" id="L1863" title="All 2 branches covered.">        if (hasAnnotations) {</span>
-<span class="fc bfc" id="L1864" title="All 2 branches covered.">            if (isAnnotationIteratorReuseEnabled) {</span>
-<span class="fc" id="L1865">                annotationIterator.ready();</span>
-<span class="fc" id="L1866">                return annotationIterator;</span>
+<span class="fc bfc" id="L1866" title="All 2 branches covered.">        if (hasAnnotations) {</span>
+<span class="fc bfc" id="L1867" title="All 2 branches covered.">            if (isAnnotationIteratorReuseEnabled) {</span>
+<span class="fc" id="L1868">                annotationIterator.ready();</span>
+<span class="fc" id="L1869">                return annotationIterator;</span>
             } else {
-<span class="fc" id="L1868">                return new SingleUseAnnotationIterator();</span>
+<span class="fc" id="L1871">                return new SingleUseAnnotationIterator();</span>
             }
         }
-<span class="fc" id="L1871">        return EMPTY_ITERATOR;</span>
+<span class="fc" id="L1874">        return EMPTY_ITERATOR;</span>
     }
 
     @Override
     public int getFieldId() {
-<span class="fc" id="L1876">        return fieldNameSid;</span>
+<span class="fc" id="L1879">        return fieldNameSid;</span>
     }
 
     @Override
     public String getFieldName() {
-<span class="fc bfc" id="L1881" title="All 2 branches covered.">        if (fieldNameSid &lt; 0) {</span>
-<span class="fc" id="L1882">            return null;</span>
+<span class="fc bfc" id="L1884" title="All 2 branches covered.">        if (fieldNameSid &lt; 0) {</span>
+<span class="fc" id="L1885">            return null;</span>
         }
-<span class="fc" id="L1884">        String fieldName = getSymbol(fieldNameSid);</span>
-<span class="fc bfc" id="L1885" title="All 2 branches covered.">        if (fieldName == null) {</span>
-<span class="fc" id="L1886">            throw new UnknownSymbolException(fieldNameSid);</span>
+<span class="fc" id="L1887">        String fieldName = getSymbol(fieldNameSid);</span>
+<span class="fc bfc" id="L1888" title="All 2 branches covered.">        if (fieldName == null) {</span>
+<span class="fc" id="L1889">            throw new UnknownSymbolException(fieldNameSid);</span>
         }
-<span class="fc" id="L1888">        return fieldName;</span>
+<span class="fc" id="L1891">        return fieldName;</span>
     }
 
     @Override
     public SymbolToken getFieldNameSymbol() {
-<span class="fc bfc" id="L1893" title="All 2 branches covered.">        if (fieldNameSid &lt; 0) {</span>
-<span class="fc" id="L1894">            return null;</span>
+<span class="fc bfc" id="L1896" title="All 2 branches covered.">        if (fieldNameSid &lt; 0) {</span>
+<span class="fc" id="L1897">            return null;</span>
         }
-<span class="fc" id="L1896">        return getSymbolToken(fieldNameSid);</span>
+<span class="fc" id="L1899">        return getSymbolToken(fieldNameSid);</span>
     }
 
     @Override
     public boolean isNullValue() {
-<span class="fc bfc" id="L1901" title="All 4 branches covered.">        return valueTypeID != null &amp;&amp; valueTypeID.isNull;</span>
+<span class="fc bfc" id="L1904" title="All 4 branches covered.">        return valueTypeID != null &amp;&amp; valueTypeID.isNull;</span>
     }
 
     @Override
     public boolean isInStruct() {
-<span class="fc bfc" id="L1906" title="All 4 branches covered.">        return !containerStack.isEmpty() &amp;&amp; containerStack.peek().type == IonType.STRUCT;</span>
+<span class="fc bfc" id="L1909" title="All 4 branches covered.">        return !containerStack.isEmpty() &amp;&amp; containerStack.peek().type == IonType.STRUCT;</span>
     }
 
     @Override
     public boolean booleanValue() {
-<span class="fc" id="L1911">        requireType(IonType.BOOL);</span>
-<span class="fc bfc" id="L1912" title="All 2 branches covered.">        return valueTypeID.lowerNibble == 1;</span>
+<span class="fc" id="L1914">        requireType(IonType.BOOL);</span>
+<span class="fc bfc" id="L1915" title="All 2 branches covered.">        return valueTypeID.lowerNibble == 1;</span>
     }
 
     @Override
     public &lt;T&gt; T asFacet(Class&lt;T&gt; facetType) {
-<span class="fc" id="L1917">        return null;</span>
+<span class="fc" id="L1920">        return null;</span>
     }
 
     @Override
@@ -1923,23 +1926,23 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
         // validation could be performed in next() if incremental mode is not enabled. That would allow this
         // implementation to behave in the same way as the other implementation when an incomplete value is
         // encountered.
-<span class="fc bfc" id="L1926" title="All 2 branches covered.">        if (lookahead.isSkippingCurrentValue()) {</span>
-<span class="fc" id="L1927">            throw new IonException(&quot;Unexpected EOF.&quot;);</span>
+<span class="fc bfc" id="L1929" title="All 2 branches covered.">        if (lookahead.isSkippingCurrentValue()) {</span>
+<span class="fc" id="L1930">            throw new IonException(&quot;Unexpected EOF.&quot;);</span>
         }
-<span class="fc bfc" id="L1929" title="All 4 branches covered.">        if (lookahead.available() &gt; 0 &amp;&amp; lookahead.moreDataRequired()) {</span>
-<span class="fc bfc" id="L1930" title="All 2 branches covered.">            if (lookahead.getIvmIndex() &lt; 0</span>
-<span class="fc bfc" id="L1931" title="All 2 branches covered.">                || lookahead.available() != _Private_IonConstants.BINARY_VERSION_MARKER_SIZE) {</span>
-<span class="fc" id="L1932">                throw new IonException(&quot;Unexpected EOF.&quot;);</span>
+<span class="fc bfc" id="L1932" title="All 4 branches covered.">        if (lookahead.available() &gt; 0 &amp;&amp; lookahead.moreDataRequired()) {</span>
+<span class="fc bfc" id="L1933" title="All 2 branches covered.">            if (lookahead.getIvmIndex() &lt; 0</span>
+<span class="fc bfc" id="L1934" title="All 2 branches covered.">                || lookahead.available() != _Private_IonConstants.BINARY_VERSION_MARKER_SIZE) {</span>
+<span class="fc" id="L1935">                throw new IonException(&quot;Unexpected EOF.&quot;);</span>
             }
         }
-<span class="fc" id="L1935">    }</span>
+<span class="fc" id="L1938">    }</span>
 
     @Override
     public void close() throws IOException {
-<span class="fc" id="L1939">        requireCompleteValue();</span>
-<span class="fc" id="L1940">        inputStream.close();</span>
-<span class="fc" id="L1941">        utf8Decoder.close();</span>
-<span class="fc" id="L1942">    }</span>
+<span class="fc" id="L1942">        requireCompleteValue();</span>
+<span class="fc" id="L1943">        inputStream.close();</span>
+<span class="fc" id="L1944">        utf8Decoder.close();</span>
+<span class="fc" id="L1945">    }</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

@@ -12,7 +12,7 @@ com.amazon.ion:ion-java,com.amazon.ion.impl,IonTokenReader.LocalReader,72,0,6,0,
 com.amazon.ion:ion-java,com.amazon.ion.impl,SimpleByteBuffer.SimpleByteReader,1255,0,214,0,258,0,134,0,23,0
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderLookaheadBuffer,4,1117,3,155,3,269,3,105,0,29
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderBinaryUserX.IonReaderBinarySpan,0,15,0,0,0,6,0,4,0,4
-com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderBinaryIncremental,17,2695,14,340,4,640,15,229,1,66
+com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderBinaryIncremental,17,2705,13,343,4,642,14,231,1,66
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderBinaryUserX.ByteTransferReaderFacet,4,30,1,1,1,6,1,2,0,2
 com.amazon.ion:ion-java,com.amazon.ion.impl,UnifiedInputBufferX,227,252,44,25,42,65,31,25,2,19
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonWriterSystem,124,625,36,100,24,172,37,68,5,31
@@ -61,7 +61,7 @@ com.amazon.ion:ion-java,com.amazon.ion.impl,IonTypeID,0,273,0,62,0,38,0,34,0,3
 com.amazon.ion:ion-java,com.amazon.ion.impl,SimpleByteBuffer.UserByteWriter,238,0,8,0,63,0,25,0,21,0
 com.amazon.ion:ion-java,com.amazon.ion.impl,SubstituteSymbolTable,24,161,6,26,6,49,10,28,4,18
 com.amazon.ion:ion-java,com.amazon.ion.impl,UnifiedDataPageX.Bytes,48,25,4,0,10,8,6,2,4,2
-com.amazon.ion:ion-java,com.amazon.ion.impl,BlockedBuffer,752,1644,157,233,104,342,150,80,7,28
+com.amazon.ion:ion-java,com.amazon.ion.impl,BlockedBuffer,753,1643,159,231,104,342,151,79,7,28
 com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_SymtabExtendsCache,7,58,5,11,0,12,5,6,0,3
 com.amazon.ion:ion-java,com.amazon.ion.impl,LocalSymbolTable.Factory,0,36,0,2,0,8,0,3,0,2
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderLookaheadBuffer.VarUInt.Location,0,44,0,0,0,5,0,1,0,1

@@ -3396,7 +3396,25 @@
 <a class="jxr_linenumber" name="L3388" href="#L3388">3388</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> annotationIteratorReuseDisabled() <strong class="jxr_keyword">throws</strong> Exception {
 <a class="jxr_linenumber" name="L3389" href="#L3389">3389</a>         annotationIteratorReuse(false);
 <a class="jxr_linenumber" name="L3390" href="#L3390">3390</a>     }
-<a class="jxr_linenumber" name="L3391" href="#L3391">3391</a> }
+<a class="jxr_linenumber" name="L3391" href="#L3391">3391</a> 
+<a class="jxr_linenumber" name="L3392" href="#L3392">3392</a>     @Test
+<a class="jxr_linenumber" name="L3393" href="#L3393">3393</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> failsOnMalformedSymbolTable() {
+<a class="jxr_linenumber" name="L3394" href="#L3394">3394</a>         byte[] data = bytes(
+<a class="jxr_linenumber" name="L3395" href="#L3395">3395</a>             0xE0, 0x01, 0x00, 0xEA, <em class="jxr_comment">// Binary IVM</em>
+<a class="jxr_linenumber" name="L3396" href="#L3396">3396</a>             0xE6, <em class="jxr_comment">// 6-byte annotation wrapper</em>
+<a class="jxr_linenumber" name="L3397" href="#L3397">3397</a>             0x81, <em class="jxr_comment">// 1 byte of annotation SIDs</em>
+<a class="jxr_linenumber" name="L3398" href="#L3398">3398</a>             0x83, <em class="jxr_comment">// SID 3 ($ion_symbol_table)</em>
+<a class="jxr_linenumber" name="L3399" href="#L3399">3399</a>             0xD3, <em class="jxr_comment">// 3-byte struct</em>
+<a class="jxr_linenumber" name="L3400" href="#L3400">3400</a>             0x84, <em class="jxr_comment">// Field name SID 4 (name)</em>
+<a class="jxr_linenumber" name="L3401" href="#L3401">3401</a>             0xE7, <em class="jxr_comment">// 7-byte annotation wrapper (error: there should only be two bytes remaining).</em>
+<a class="jxr_linenumber" name="L3402" href="#L3402">3402</a>             0x81, <em class="jxr_comment">// Junk byte to fill the 6 bytes of the annotation wrapper and 3 bytes of the struct.</em>
+<a class="jxr_linenumber" name="L3403" href="#L3403">3403</a>             0x20  <em class="jxr_comment">// Next top-level value (int 0).</em>
+<a class="jxr_linenumber" name="L3404" href="#L3404">3404</a>         );
+<a class="jxr_linenumber" name="L3405" href="#L3405">3405</a>         IonReader reader = newBoundedIncrementalReader(data, 1024);
+<a class="jxr_linenumber" name="L3406" href="#L3406">3406</a>         thrown.expect(IonException.<strong class="jxr_keyword">class</strong>);
+<a class="jxr_linenumber" name="L3407" href="#L3407">3407</a>         reader.next();
+<a class="jxr_linenumber" name="L3408" href="#L3408">3408</a>     }
+<a class="jxr_linenumber" name="L3409" href="#L3409">3409</a> }
 </pre>
 <hr/>
 <div id="footer">Copyright &#169; 2022. All rights reserved.</div>
