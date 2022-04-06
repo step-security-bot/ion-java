@@ -730,7 +730,7 @@ static final boolean test_with_no_version_checking = false;
     bbBlock remove(Object caller, int version, bbBlock curr, int pos, int len)
     {
 <span class="pc bpc" id="L732" title="2 of 4 branches missed.">        assert mutation_in_progress(caller, version);</span>
-<span class="pc bpc" id="L733" title="1 of 2 branches missed.">        if (len == 0) return curr;</span>
+<span class="fc bfc" id="L733" title="All 2 branches covered.">        if (len == 0) return curr;</span>
 <span class="pc bpc" id="L734" title="2 of 4 branches missed.">        if (len &lt; 0 || (pos + len) &gt; this._buf_limit) {</span>
 <span class="nc" id="L735">            throw new IllegalArgumentException();</span>
         }
@@ -752,9 +752,9 @@ static final boolean test_with_no_version_checking = false;
 <span class="fc" id="L752">        int currBlockPosition = currBlock.blockOffsetFromAbsolute(pos);</span>
 <span class="fc" id="L753">        int removedFromThisBlock = currBlock._limit - currBlockPosition;</span>
 <span class="fc bfc" id="L754" title="All 2 branches covered.">        if (removedFromThisBlock &gt; amountToRemove) removedFromThisBlock = amountToRemove;</span>
-<span class="pc bpc" id="L755" title="1 of 2 branches missed.">        if (removedFromThisBlock == currBlock._limit) {</span>
+<span class="fc bfc" id="L755" title="All 2 branches covered.">        if (removedFromThisBlock == currBlock._limit) {</span>
             // we'll be removing the whole block in the whole block loop below
-<span class="nc" id="L757">            startingIdx--;  // so we have to back up on to fix the next block that will</span>
+<span class="fc" id="L757">            startingIdx--;  // so we have to back up on to fix the next block that will</span>
                             // &quot;fall&quot; down into the soon to be emptied slot here
         }
         else {
@@ -783,12 +783,12 @@ static final boolean test_with_no_version_checking = false;
 <span class="fc" id="L783">            temp.clearBlock();</span>
 <span class="fc" id="L784">            this._blocks.add(temp); // dump it at the end (marked as not in use)</span>
             // and we don't move currIdx because we bumped it out of the whole array
-<span class="fc bfc" id="L786" title="All 2 branches covered.">            if (currIdx &lt; this._next_block_position - removedBlocks) {</span>
+<span class="pc bpc" id="L786" title="1 of 2 branches missed.">            if (currIdx &lt; this._next_block_position - removedBlocks) {</span>
 <span class="fc" id="L787">                currBlock = this._blocks.get(currIdx);</span>
             }
-<span class="pc bpc" id="L789" title="1 of 2 branches missed.">            else if (currIdx &gt; 0) {</span>
-<span class="fc" id="L790">                currIdx--;</span>
-<span class="fc" id="L791">                currBlock = this._blocks.get(currIdx);</span>
+<span class="nc bnc" id="L789" title="All 2 branches missed.">            else if (currIdx &gt; 0) {</span>
+<span class="nc" id="L790">                currIdx--;</span>
+<span class="nc" id="L791">                currBlock = this._blocks.get(currIdx);</span>
             }
             else {
 <span class="nc" id="L794">                throw new BlockedBufferException(&quot;fatal - no current block!&quot;);</span>
