@@ -16,10 +16,12 @@
 package com.amazon.ion.util;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Properties;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 import com.amazon.ion.IonException;
@@ -31,11 +33,6 @@ import com.amazon.ion.Timestamp;
  */
 public final class JarInfo
 {
-
-    private static final String MANIFEST_FILE = &quot;META-INF/MANIFEST.MF&quot;;
-    private static final String BUILD_TIME_ATTRIBUTE = &quot;Ion-Java-Build-Time&quot;;
-    private static final String PROJECT_VERSION_ATTRIBUTE = &quot;Ion-Java-Project-Version&quot;;
-
     private String ourProjectVersion;
 
     private Timestamp ourBuildTime;
@@ -48,35 +45,10 @@ public final class JarInfo
      *         if there's a problem loading the build info.
      */
     public JarInfo() throws IonException
-<span class="nc" id="L51">    {</span>
-        Enumeration&lt;URL&gt; manifestUrls;
-        try
-        {
-<span class="nc" id="L55">            manifestUrls = getClass().getClassLoader().getResources(MANIFEST_FILE);</span>
-        }
-<span class="nc" id="L57">        catch (IOException e)</span>
-        {
-<span class="nc" id="L59">            throw new IonException(&quot;Unable to load manifests.&quot;, e);</span>
-<span class="nc" id="L60">        }</span>
-<span class="nc" id="L61">        List&lt;Manifest&gt; manifests = new ArrayList&lt;Manifest&gt;();</span>
-<span class="nc bnc" id="L62" title="All 2 branches missed.">        while (manifestUrls.hasMoreElements())</span>
-        {
-            try
-            {
-<span class="nc" id="L66">                manifests.add(new Manifest(manifestUrls.nextElement().openStream()));</span>
-            }
-<span class="nc" id="L68">            catch (IOException e)</span>
-            {
-<span class="nc" id="L70">                continue; // try the next manifest</span>
-<span class="nc" id="L71">            }</span>
-        }
-<span class="nc" id="L73">        loadBuildProperties(manifests);</span>
-<span class="nc" id="L74">    }</span>
+<span class="fc" id="L48">    {</span>
+<span class="fc" id="L49">        loadBuildProperties();</span>
+<span class="fc" id="L50">    }</span>
 
-    JarInfo(List&lt;Manifest&gt; manifests)
-<span class="fc" id="L77">    {</span>
-<span class="fc" id="L78">        loadBuildProperties(manifests);</span>
-<span class="fc" id="L79">    }</span>
 
     /**
      * Gets the ion-java project version of this build.
@@ -85,7 +57,7 @@ public final class JarInfo
      */
     public String getProjectVersion()
     {
-<span class="fc" id="L88">        return ourProjectVersion;</span>
+<span class="fc" id="L60">        return ourProjectVersion;</span>
     }
 
     /**
@@ -95,57 +67,61 @@ public final class JarInfo
      */
     public Timestamp getBuildTime()
     {
-<span class="fc" id="L98">        return ourBuildTime;</span>
+<span class="fc" id="L70">        return ourBuildTime;</span>
     }
 
     // TODO writeTo(IonWriter)
 
     // ========================================================================
-
-    private void loadBuildProperties(List&lt;Manifest&gt; manifests) throws IonException
-    {
-<span class="fc" id="L107">        boolean propertiesLoaded = false;</span>
-<span class="fc bfc" id="L108" title="All 2 branches covered.">        for(Manifest manifest : manifests)</span>
-        {
-<span class="fc" id="L110">            boolean success = tryLoadBuildProperties(manifest);</span>
-<span class="fc bfc" id="L111" title="All 4 branches covered.">            if(success &amp;&amp; propertiesLoaded)</span>
-            {
-                // In the event of conflicting manifests, fail instead of risking returning incorrect version info.
-<span class="fc" id="L114">                throw new IonException(&quot;Found multiple manifests with ion-java version info on the classpath.&quot;);</span>
-            }
-<span class="fc" id="L116">            propertiesLoaded |= success;</span>
-<span class="fc" id="L117">        }</span>
-<span class="fc bfc" id="L118" title="All 2 branches covered.">        if (!propertiesLoaded)</span>
-        {
-<span class="fc" id="L120">            throw new IonException(&quot;Unable to locate manifest with ion-java version info on the classpath.&quot;);</span>
-        }
-<span class="fc" id="L122">    }</span>
-
-    /*
-     * Returns true if the properties were loaded, otherwise false.
+    /**
+     * @return null but not empty string
      */
-    private boolean tryLoadBuildProperties(Manifest manifest)
+    private static String nonEmptyProperty(Properties props, String name)
     {
-<span class="fc" id="L129">        Attributes mainAttributes = manifest.getMainAttributes();</span>
-<span class="fc" id="L130">        String projectVersion = mainAttributes.getValue(PROJECT_VERSION_ATTRIBUTE);</span>
-<span class="fc" id="L131">        String time = mainAttributes.getValue(BUILD_TIME_ATTRIBUTE);</span>
+<span class="fc" id="L81">        String value = props.getProperty(name, &quot;&quot;);</span>
+<span class="pc bpc" id="L82" title="1 of 2 branches missed.">        if (value.length() == 0) value = null;</span>
+<span class="fc" id="L83">        return value;</span>
+    }
 
-<span class="pc bpc" id="L133" title="1 of 4 branches missed.">        if (projectVersion == null || time == null)</span>
-        {
-<span class="fc" id="L135">            return false;</span>
-        }
-
-<span class="fc" id="L138">        ourProjectVersion = projectVersion;</span>
-
+    private void loadBuildProperties()
+            throws IonException
+    {
+<span class="fc" id="L89">        String file = &quot;/build.properties&quot;;</span>
         try
         {
-<span class="fc" id="L142">            ourBuildTime = Timestamp.valueOf(time);</span>
+<span class="fc" id="L92">            Properties props = new Properties();</span>
+
+<span class="fc" id="L94">            InputStream in = getClass().getResourceAsStream(file);</span>
+<span class="pc bpc" id="L95" title="1 of 2 branches missed.">            if (in != null)</span>
+            {
+                try
+                {
+<span class="fc" id="L99">                    props.load(in);</span>
+                }
+                finally
+                {
+<span class="fc" id="L103">                    in.close();</span>
+                }
+            }
+
+<span class="fc" id="L107">            ourProjectVersion = nonEmptyProperty(props, &quot;build.version&quot;);</span>
+
+<span class="fc" id="L109">            String time = nonEmptyProperty(props, &quot;build.time&quot;);</span>
+<span class="pc bpc" id="L110" title="1 of 2 branches missed.">            if (time != null)</span>
+            {
+                try {
+<span class="fc" id="L113">                    ourBuildTime = Timestamp.valueOf(time);</span>
+                }
+<span class="nc" id="L115">                catch (IllegalArgumentException e)</span>
+                {
+                    // Badly formatted timestamp. Ignore it.
+<span class="fc" id="L118">                }</span>
+            }
         }
-<span class="nc" id="L144">        catch (IllegalArgumentException e)</span>
+<span class="nc" id="L121">        catch (IOException e)</span>
         {
-            // Badly formatted timestamp. Ignore it.
-<span class="fc" id="L147">        }</span>
-<span class="fc" id="L148">        return true;</span>
-    }
+<span class="nc" id="L123">            throw new IonException(&quot;Unable to load &quot; + file, e);</span>
+<span class="fc" id="L124">        }</span>
+<span class="fc" id="L125">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
