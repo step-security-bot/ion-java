@@ -2,71 +2,130 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonReaderIncremental;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 
 import static com.amazon.ion.BitUtils.bytes;
+import static com.amazon.ion.IonReaderIncremental.Event.END_CONTAINER;
+import static com.amazon.ion.IonReaderIncremental.Event.NEEDS_DATA;
+import static com.amazon.ion.IonReaderIncremental.Event.NEEDS_INSTRUCTION;
+import static com.amazon.ion.IonReaderIncremental.Event.SCALAR_READY;
+import static com.amazon.ion.IonReaderIncremental.Event.START_CONTAINER;
+import static com.amazon.ion.IonReaderIncremental.Event.START_SCALAR;
+import static com.amazon.ion.IonReaderIncremental.Instruction.LOAD_SCALAR;
+import static com.amazon.ion.IonReaderIncremental.Instruction.NEXT_VALUE;
+import static com.amazon.ion.IonReaderIncremental.Instruction.STEP_IN;
+import static com.amazon.ion.IonReaderIncremental.Instruction.STEP_OUT;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 public class IonReaderLookaheadBufferArbitraryDepthTest {
 
+    private static IonBufferConfiguration STANDARD_BUFFER_CONFIGURATION = IonBufferConfiguration.Builder.standard().build();
+
+    private static IonReaderLookaheadBufferArbitraryDepth.Marker loadScalar(IonReaderLookaheadBufferArbitraryDepth buffer) {
+        IonReaderIncremental.Event event = buffer.next(LOAD_SCALAR);
+        assertEquals(SCALAR_READY, event);
+        IonReaderLookaheadBufferArbitraryDepth.Marker marker = buffer.getScalarMarker();
+        assertNotNull(marker);
+        return marker;
+    }
+
+    IonReaderLookaheadBufferArbitraryDepth buffer = null;
+    int numberOfIvmsEncountered = 0;
+
+    private IonReaderLookaheadBufferArbitraryDepth.IvmNotificationConsumer countingIvmConsumer =
+        new IonReaderLookaheadBufferArbitraryDepth.IvmNotificationConsumer() {
+
+        @Override
+        public void ivmEncountered(int majorVersion, int minorVersion) {
+            numberOfIvmsEncountered++;
+        }
+    };
+
+    @Before
+    public void setup() {
+        buffer = null;
+        numberOfIvmsEncountered = 0;
+    }
+
+    private void initializeBuffer(byte[] bytes) {
+        buffer = new IonReaderLookaheadBufferArbitraryDepth(
+            STANDARD_BUFFER_CONFIGURATION,
+            countingIvmConsumer,
+            new ByteArrayInputStream(bytes)
+        );
+    }
+
     @Test
     public void basic() throws Exception {
-        ByteArrayInputStream in = new ByteArrayInputStream(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD3, 0x84, 0x21, 0x01));
-        IonReaderLookaheadBufferArbitraryDepth buffer = new IonReaderLookaheadBufferArbitraryDepth(IonBufferConfiguration.Builder.standard().build(), in);
-        assertEquals(IonReaderIncremental.Event.START_CONTAINER, buffer.next(IonReaderIncremental.Instruction.NEXT_VALUE));
-        assertEquals(IonReaderIncremental.Event.NEEDS_INSTRUCTION, buffer.next(IonReaderIncremental.Instruction.STEP_IN));
-        assertEquals(IonReaderIncremental.Event.START_SCALAR, buffer.next(IonReaderIncremental.Instruction.NEXT_VALUE));
-        buffer.fillScalar();
-        assertEquals(IonReaderIncremental.Event.END_CONTAINER, buffer.next(IonReaderIncremental.Instruction.NEXT_VALUE));
-        assertEquals(IonReaderIncremental.Event.NEEDS_INSTRUCTION, buffer.next(IonReaderIncremental.Instruction.STEP_OUT));
-        assertEquals(IonReaderIncremental.Event.NEEDS_DATA, buffer.next(IonReaderIncremental.Instruction.NEXT_VALUE));
+        initializeBuffer(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD3, 0x84, 0x21, 0x01));
+        assertEquals(START_CONTAINER, buffer.next(NEXT_VALUE));
+        assertEquals(NEEDS_INSTRUCTION, buffer.next(STEP_IN));
+        assertEquals(START_SCALAR, buffer.next(NEXT_VALUE));
+        IonReaderLookaheadBufferArbitraryDepth.Marker marker = loadScalar(buffer);
+        assertEquals(7, marker.startIndex);
+        assertEquals(8, marker.endIndex);
+        assertEquals(END_CONTAINER, buffer.next(NEXT_VALUE));
+        assertEquals(NEEDS_INSTRUCTION, buffer.next(STEP_OUT));
+        assertEquals(NEEDS_DATA, buffer.next(NEXT_VALUE));
     }
 
     @Test
     public void basicNoFill() throws Exception {
-        ByteArrayInputStream in = new ByteArrayInputStream(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD3, 0x84, 0x21, 0x01));
-        IonReaderLookaheadBufferArbitraryDepth buffer = new IonReaderLookaheadBufferArbitraryDepth(IonBufferConfiguration.Builder.standard().build(), in);
-        assertEquals(IonReaderIncremental.Event.START_CONTAINER, buffer.next(IonReaderIncremental.Instruction.NEXT_VALUE));
-        assertEquals(IonReaderIncremental.Event.NEEDS_INSTRUCTION, buffer.next(IonReaderIncremental.Instruction.STEP_IN));
-        assertEquals(IonReaderIncremental.Event.START_SCALAR, buffer.next(IonReaderIncremental.Instruction.NEXT_VALUE));
-        assertEquals(IonReaderIncremental.Event.END_CONTAINER, buffer.next(IonReaderIncremental.Instruction.NEXT_VALUE));
-        assertEquals(IonReaderIncremental.Event.NEEDS_INSTRUCTION, buffer.next(IonReaderIncremental.Instruction.STEP_OUT));
-        assertEquals(IonReaderIncremental.Event.NEEDS_DATA, buffer.next(IonReaderIncremental.Instruction.NEXT_VALUE));
+        initializeBuffer(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD3, 0x84, 0x21, 0x01));
+        assertEquals(START_CONTAINER, buffer.next(NEXT_VALUE));
+        assertEquals(NEEDS_INSTRUCTION, buffer.next(STEP_IN));
+        assertEquals(START_SCALAR, buffer.next(NEXT_VALUE));
+        assertEquals(END_CONTAINER, buffer.next(NEXT_VALUE));
+        assertEquals(NEEDS_INSTRUCTION, buffer.next(STEP_OUT));
+        assertEquals(NEEDS_DATA, buffer.next(NEXT_VALUE));
     }
 
     @Test
     public void basicStepOutEarly() throws Exception {
-        ByteArrayInputStream in = new ByteArrayInputStream(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD3, 0x84, 0x21, 0x01));
-        IonReaderLookaheadBufferArbitraryDepth buffer = new IonReaderLookaheadBufferArbitraryDepth(IonBufferConfiguration.Builder.standard().build(), in);
-        assertEquals(IonReaderIncremental.Event.START_CONTAINER, buffer.next(IonReaderIncremental.Instruction.NEXT_VALUE));
-        assertEquals(IonReaderIncremental.Event.NEEDS_INSTRUCTION, buffer.next(IonReaderIncremental.Instruction.STEP_IN));
-        assertEquals(IonReaderIncremental.Event.START_SCALAR, buffer.next(IonReaderIncremental.Instruction.NEXT_VALUE));
-        assertEquals(IonReaderIncremental.Event.NEEDS_INSTRUCTION, buffer.next(IonReaderIncremental.Instruction.STEP_OUT));
-        assertEquals(IonReaderIncremental.Event.NEEDS_DATA, buffer.next(IonReaderIncremental.Instruction.NEXT_VALUE));
+        initializeBuffer(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD3, 0x84, 0x21, 0x01));
+        assertEquals(START_CONTAINER, buffer.next(NEXT_VALUE));
+        assertEquals(NEEDS_INSTRUCTION, buffer.next(STEP_IN));
+        assertEquals(START_SCALAR, buffer.next(NEXT_VALUE));
+        assertEquals(NEEDS_INSTRUCTION, buffer.next(STEP_OUT));
+        assertEquals(NEEDS_DATA, buffer.next(NEXT_VALUE));
     }
 
     @Test
     public void basicTopLevelSkip() throws Exception {
-        ByteArrayInputStream in = new ByteArrayInputStream(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD3, 0x84, 0x21, 0x01));
-        IonReaderLookaheadBufferArbitraryDepth buffer = new IonReaderLookaheadBufferArbitraryDepth(IonBufferConfiguration.Builder.standard().build(), in);
-        assertEquals(IonReaderIncremental.Event.START_CONTAINER, buffer.next(IonReaderIncremental.Instruction.NEXT_VALUE));
-        assertEquals(IonReaderIncremental.Event.NEEDS_DATA, buffer.next(IonReaderIncremental.Instruction.NEXT_VALUE));
+        initializeBuffer(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD3, 0x84, 0x21, 0x01));
+        assertEquals(START_CONTAINER, buffer.next(NEXT_VALUE));
+        assertEquals(NEEDS_DATA, buffer.next(NEXT_VALUE));
     }
 
     @Test
     public void basicTopLevelSkipThenConsume() throws Exception {
-        ByteArrayInputStream in = new ByteArrayInputStream(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD3, 0x84, 0x21, 0x01, 0x21, 0x03));
-        IonReaderLookaheadBufferArbitraryDepth buffer = new IonReaderLookaheadBufferArbitraryDepth(IonBufferConfiguration.Builder.standard().build(), in);
-        assertEquals(IonReaderIncremental.Event.START_CONTAINER, buffer.next(IonReaderIncremental.Instruction.NEXT_VALUE));
-        assertEquals(IonReaderIncremental.Event.START_SCALAR, buffer.next(IonReaderIncremental.Instruction.NEXT_VALUE));
-        buffer.fillScalar();
-        assertEquals(IonReaderIncremental.Event.NEEDS_DATA, buffer.next(IonReaderIncremental.Instruction.NEXT_VALUE));
+        initializeBuffer(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD3, 0x84, 0x21, 0x01, 0x21, 0x03));
+        assertEquals(START_CONTAINER, buffer.next(NEXT_VALUE));
+        assertEquals(START_SCALAR, buffer.next(NEXT_VALUE));
+        IonReaderLookaheadBufferArbitraryDepth.Marker marker = loadScalar(buffer);
+        assertEquals(9, marker.startIndex);
+        assertEquals(10, marker.endIndex);
+        assertEquals(NEEDS_DATA, buffer.next(NEXT_VALUE));
     }
 
     @Test
     public void nestedContainers() throws Exception {
-
+        initializeBuffer(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD6, 0x83, 0xB1, 0x40, 0x84, 0x21, 0x01));
+        assertEquals(START_CONTAINER, buffer.next(NEXT_VALUE));
+        assertEquals(NEEDS_INSTRUCTION, buffer.next(STEP_IN));
+        assertEquals(START_CONTAINER, buffer.next(NEXT_VALUE));
+        assertEquals(NEEDS_INSTRUCTION, buffer.next(STEP_IN));
+        assertEquals(START_SCALAR, buffer.next(NEXT_VALUE));
+        assertEquals(NEEDS_INSTRUCTION, buffer.next(STEP_OUT));
+        assertEquals(START_SCALAR, buffer.next(NEXT_VALUE));
+        IonReaderLookaheadBufferArbitraryDepth.Marker marker = loadScalar(buffer);
+        assertEquals(10, marker.startIndex);
+        assertEquals(11, marker.endIndex);
+        assertEquals(NEEDS_INSTRUCTION, buffer.next(STEP_OUT));
+        assertEquals(NEEDS_DATA, buffer.next(NEXT_VALUE));
     }
 }

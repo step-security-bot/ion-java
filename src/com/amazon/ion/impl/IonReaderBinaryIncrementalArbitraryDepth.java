@@ -1,7 +1,5 @@
 package com.amazon.ion.impl;
 
-import com.amazon.ion.Decimal;
-import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
@@ -13,23 +11,16 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
-import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.impl.bin.IntList;
-import com.amazon.ion.impl.bin.utf8.Utf8StringDecoder;
-import com.amazon.ion.impl.bin.utf8.Utf8StringDecoderPool;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.SimpleCatalog;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -64,7 +55,7 @@ import java.util.Map;
  * </p>
  */
 class IonReaderBinaryIncrementalArbitraryDepth implements
-    IonReader, IonReaderIncremental, _Private_ReaderWriter, _Private_IncrementalReader {
+    IonReaderIncremental, _Private_ReaderWriter, _Private_IncrementalReader {
 
     /*
      * Potential future enhancements:
@@ -89,36 +80,11 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
      */
 
     /**
-     * Holds the information that the binary reader must keep track of for containers at any depth.
-     */
-    private static class ContainerInfo {
-
-        /**
-         * The container's type.
-         */
-        private IonType type;
-
-        /**
-         * The byte position of the end of the container.
-         */
-        private int endPosition;
-    }
-
-    /**
      * The standard {@link IonBufferConfiguration}. This will be used unless the user chooses custom settings.
      */
     private static final IonBufferConfiguration STANDARD_BUFFER_CONFIGURATION =
         IonBufferConfiguration.Builder.standard().build();
 
-    // Constructs ContainerInfo instances.
-    private static final _Private_RecyclingStack.ElementFactory<ContainerInfo> CONTAINER_INFO_FACTORY =
-        new _Private_RecyclingStack.ElementFactory<ContainerInfo>() {
-
-        @Override
-        public ContainerInfo newElement() {
-            return new ContainerInfo();
-        }
-    };
 
     // Symbol IDs for symbols contained in the system symbol table.
     private static class SystemSymbolIDs {
@@ -172,58 +138,11 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         }
     }
 
-    // The final byte of the binary IVM.
-    private static final int IVM_FINAL_BYTE = 0xEA;
-
-    // Isolates the highest bit in a byte.
-    private static final int HIGHEST_BIT_BITMASK = 0x80;
-
-    // Isolates the lowest seven bits in a byte.
-    private static final int LOWER_SEVEN_BITS_BITMASK = 0x7F;
-
-    // Isolates the lowest six bits in a byte.
-    private static final int LOWER_SIX_BITS_BITMASK = 0x3F;
-
-    // The number of significant bits in each UInt byte.
-    private static final int VALUE_BITS_PER_UINT_BYTE = 8;
-
-    // The number of significant bits in each VarUInt byte.
-    private static final int VALUE_BITS_PER_VARUINT_BYTE = 7;
-
     // An IonCatalog containing zero shared symbol tables.
     private static final IonCatalog EMPTY_CATALOG = new SimpleCatalog();
 
-    // Initial capacity of the stack used to hold ContainerInfo. Each additional level of nesting in the data requires
-    // a new ContainerInfo. Depths greater than 8 will be rare.
-    private static final int CONTAINER_STACK_INITIAL_CAPACITY = 8;
-
-    // Initial capacity of the ArrayList used to hold the symbol IDs of the annotations on the current value.
-    private static final int ANNOTATIONS_LIST_INITIAL_CAPACITY = 8;
-
     // Initial capacity of the ArrayList used to hold the text in the current symbol table.
     private static final int SYMBOLS_LIST_INITIAL_CAPACITY = 128;
-
-    // Single byte negative zero, represented as a VarInt. Often used in timestamp encodings to indicate unknown local
-    // offset.
-    private static final int VAR_INT_NEGATIVE_ZERO = 0xC0;
-
-    // The number of bytes occupied by a Java int.
-    private static final int INT_SIZE_IN_BYTES = 4;
-
-    // The number of bytes occupied by a Java long.
-    private static final int LONG_SIZE_IN_BYTES = 8;
-
-    // The smallest negative 8-byte integer that can fit in a long is -0x80_00_00_00_00_00_00_00.
-    private static final int MOST_SIGNIFICANT_BYTE_OF_MIN_LONG = 0x80;
-
-    // The largest positive 8-byte integer that can fit in a long is 0x7F_FF_FF_FF_FF_FF_FF_FF.
-    private static final int MOST_SIGNIFICANT_BYTE_OF_MAX_LONG = 0x7F;
-
-    // The second-most significant bit in the most significant byte of a VarInt is the sign.
-    private static final int VAR_INT_SIGN_BITMASK = 0x40;
-
-    // 32-bit floats must declare length 4.
-    private static final int FLOAT_32_BYTE_LENGTH = 4;
 
     // The imports for Ion 1.0 data with no shared user imports.
     private static final LocalSymbolTableImports ION_1_0_IMPORTS
@@ -232,23 +151,8 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
     // The InputStream that provides the binary Ion data.
     private final InputStream inputStream;
 
-    // Wrapper for the InputStream that ensures an entire top-level value is available.
-    private final IonReaderLookaheadBufferArbitraryDepth lookahead;
-
-    // Buffer that stores top-level values.
-    private final ResizingPipedInputStream buffer;
-
-    // Converter between scalar types, allowing, for example, for a value encoded as an Ion float to be returned as a
-    // Java `long` via `IonReader.longValue()`.
-    private final _Private_ScalarConversions.ValueVariant scalarConverter;
-
-    // Stack to hold container info. Stepping into a container results in a push; stepping out results in a pop.
-    private final _Private_RecyclingStack<ContainerInfo> containerStack;
-
-    private final Utf8StringDecoder utf8Decoder = Utf8StringDecoderPool.getInstance().getOrCreate();
-
-    // The symbol IDs for the annotations on the current value.
-    private final IntList annotationSids;
+    // The raw reader responsible for parsing Ion structure and values.
+    private final IonReaderBinaryIncrementalArbitraryDepthRaw raw;
 
     // True if the annotation iterator will be reused across values; otherwise, false.
     private final boolean isAnnotationIteratorReuseEnabled;
@@ -263,6 +167,8 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
     // The catalog used by the reader to resolve shared symbol table imports.
     private final IonCatalog catalog;
 
+    private final SymbolTableReader symbolTableReader;
+
     // The shared symbol tables imported by the local symbol table that is currently in scope.
     private LocalSymbolTableImports imports = ION_1_0_IMPORTS;
 
@@ -276,52 +182,6 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
 
     // The SymbolTable that was transferred via the last call to pop_passed_symbol_table.
     private SymbolTable symbolTableLastTransferred = null;
-
-    // The symbol ID of the current value's field name, or -1 if the current value is not in a struct.
-    private int fieldNameSid = -1;
-
-    // The major version of the Ion encoding currently being read.
-    private int majorVersion = 1;
-
-    // The minor version of the Ion encoding currently being read.
-    private int minorVersion = 0;
-
-    // The number of bytes of a lob value that the user has consumed, allowing for piecewise reads.
-    private int lobBytesRead = 0;
-
-    // The type of value at which the reader is currently positioned.
-    private IonType valueType = null;
-
-    // Information about the type ID byte for the value at which the reader is currently positioned.
-    private IonTypeID valueTypeID = null;
-
-    // Indicates whether there are annotations on the current value.
-    private boolean hasAnnotations = false;
-
-    // Indicates whether a complete top-level value is currenty buffered.
-    private boolean completeValueBuffered = false;
-
-    // --- Byte position markers ---
-    // Note: absolute positions/indexes can be used because the bytes that represent a single top-level value are
-    // always handled in two sequential phases: first, the bytes are buffered, and then they are read. These operations
-    // will never be interleaved during the processing of a single value. As a result, the underlying buffer
-    // will always hold all of the bytes for a single top-level value in a contiguous sequence, even if the buffer
-    // has to grow to hold all of the value's bytes.
-
-    // The buffer position of the first byte of the value representation (after the type ID and optional length field).
-    private int valueStartPosition = -1;
-
-    // The buffer position of the byte after the last byte in the value representation.
-    private int valueEndPosition = -1;
-
-    // The buffer position of the first byte of the annotation wrapper for the current value.
-    private int annotationStartPosition = -1;
-
-    // The buffer position of the byte after the last byte in the annotation wrapper for the current value.
-    private int annotationEndPosition = -1;
-
-    // The index of the next byte to peek from the underlying buffer.
-    private int peekIndex = -1;
 
     // ------
 
@@ -360,15 +220,21 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                 }
             }
         }
-        lookahead = new IonReaderLookaheadBufferArbitraryDepth(configuration, inputStream);
-        buffer = (ResizingPipedInputStream) lookahead.getPipe();
-        containerStack = new _Private_RecyclingStack<ContainerInfo>(
-            CONTAINER_STACK_INITIAL_CAPACITY,
-            CONTAINER_INFO_FACTORY
+        raw = new IonReaderBinaryIncrementalArbitraryDepthRaw(
+            configuration,
+            new IonReaderLookaheadBufferArbitraryDepth.IvmNotificationConsumer() {
+                @Override
+                public void ivmEncountered(int majorVersion, int minorVersion) {
+                    // TODO use the versions to set the proper system symbol table and local symbol table processing
+                    //  logic.
+                    resetSymbolTable();
+                    resetImports();
+                }
+            },
+            inputStream
         );
-        annotationSids = new IntList(ANNOTATIONS_LIST_INITIAL_CAPACITY);
         symbols = new ArrayList<String>(SYMBOLS_LIST_INITIAL_CAPACITY);
-        scalarConverter = new _Private_ScalarConversions.ValueVariant();
+        symbolTableReader = new SymbolTableReader();
         resetImports();
     }
 
@@ -377,21 +243,16 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
      */
     private class AnnotationIterator implements Iterator<String> {
 
-        // The byte position of the annotation to return from the next call to next().
-        private int nextAnnotationPeekIndex;
+        private IonReaderBinaryIncrementalArbitraryDepthRaw.AnnotationIterator sidIterator;
 
         @Override
         public boolean hasNext() {
-            return nextAnnotationPeekIndex < annotationEndPosition;
+            return sidIterator.hasNext();
         }
 
         @Override
         public String next() {
-            int savedPeekIndex = peekIndex;
-            peekIndex = nextAnnotationPeekIndex;
-            int sid = readVarUInt();
-            nextAnnotationPeekIndex = peekIndex;
-            peekIndex = savedPeekIndex;
+            int sid = sidIterator.next();
             String annotation = getSymbol(sid);
             if (annotation == null) {
                 throw new UnknownSymbolException(sid);
@@ -408,7 +269,8 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
          * Prepare the iterator to iterate over the annotations on the current value.
          */
         void ready() {
-            nextAnnotationPeekIndex = annotationStartPosition;
+            sidIterator = raw.iterateAnnotationSids();
+            sidIterator.ready();
         }
 
         /**
@@ -416,7 +278,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
          * next call to {@link #ready()}.
          */
         void invalidate() {
-            nextAnnotationPeekIndex = Integer.MAX_VALUE;
+            sidIterator.invalidate();
         }
     }
 
@@ -432,7 +294,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         private int index = 0;
 
         SingleUseAnnotationIterator() {
-            annotationSids = new IntList(getAnnotationSids());
+            annotationSids = new IntList(raw.getAnnotationSids());
         }
 
         @Override
@@ -534,7 +396,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         // Note: Ion 1.1 currently proposes changes to the system symbol table. If this is finalized, then
         // 'majorVersion' cannot be used to look up the system symbol table; both 'majorVersion' and 'minorVersion'
         // will need to be used.
-        return SharedSymbolTable.getSystemSymbolTable(majorVersion);
+        return SharedSymbolTable.getSystemSymbolTable(raw.ionMajorVersion());
     }
 
     /**
@@ -730,7 +592,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
 
         @Override
         public void writeTo(IonWriter writer) throws IOException {
-            IonReader reader = new SymbolTableReader(this);
+            IonReader reader = new com.amazon.ion.impl.SymbolTableReader(this);
             writer.writeValues(reader);
         }
 
@@ -745,15 +607,6 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                 structCache = new SymbolTableStructCache(this, getImportedTables(), null);
             }
             return structCache.getIonRepresentation(valueFactory);
-        }
-    }
-
-    /**
-     * Throw if the reader is attempting to process an Ion version that it does not support.
-     */
-    private void requireSupportedIonVersion() {
-        if (majorVersion != 1 || minorVersion != 0) {
-            throw new IonException(String.format("Unsupported Ion version: %d.%d", majorVersion, minorVersion));
         }
     }
 
@@ -774,7 +627,6 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
      * Resets the value's annotations.
      */
     private void resetAnnotations() {
-        hasAnnotations = false;
         if (isAnnotationIteratorReuseEnabled) {
             annotationIterator.invalidate();
         }
@@ -885,8 +737,9 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
 
     /**
      * Reads a local symbol table from the buffer.
-     * @param marker marker for the start and end positions of the local symbol table in the buffer.
+     * @param //marker marker for the start and end positions of the local symbol table in the buffer.
      */
+    /*
     private void readSymbolTable(IonReaderLookaheadBufferArbitraryDepth.Marker marker) {
         peekIndex = marker.startIndex;
         boolean isAppend = false;
@@ -976,7 +829,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
             valueEndPosition = symbolsEndPosition;
             stepIn();
             while (next() != null) {
-                if (valueType != IonType.STRING) {
+                if (getType() != IonType.STRING) {
                     symbols.add(null);
                 } else {
                     symbols.add(stringValue());
@@ -986,241 +839,252 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
             peekIndex = valueEndPosition;
         }
     }
-
-    /**
-     * Advance the reader to the next top-level value. Buffers an entire top-level value, reads any IVMs and/or local
-     * symbol tables that precede the value, and sets the byte positions of important components of the value.
      */
-    private void nextAtTopLevel() {
-        if (completeValueBuffered) {
-            // There is already data buffered, but the user is choosing to skip it.
-            buffer.seekTo(valueEndPosition);
-            completeValueBuffered = false;
-        }
-        try {
-            lookahead.fillInput();
-        } catch (Exception e) {
-            throw new IonException(e);
-        }
-        if (lookahead.moreDataRequired()) {
-            valueType = null;
-            valueTypeID = null;
-            return;
-        }
-        completeValueBuffered = true;
-        if (lookahead.getIvmIndex() > -1) {
-            peekIndex = lookahead.getIvmIndex();
-            majorVersion = buffer.peek(peekIndex++);
-            minorVersion = buffer.peek(peekIndex++);
-            if (buffer.peek(peekIndex++) != IVM_FINAL_BYTE) {
-                throw new IonException("Invalid Ion version marker.");
-            }
-            requireSupportedIonVersion();
-            resetSymbolTable();
-            resetImports();
-            lookahead.resetIvmIndex();
-        } else if (peekIndex < 0) {
-            // peekIndex is initialized to -1 and only increases. This branch is reached if the IVM does not occur
-            // first in the stream. This is necessary because currently a binary incremental reader will be created if
-            // an empty stream is provided to the IonReaderBuilder. If, once bytes appear in the stream, those bytes do
-            // not represent valid binary Ion, a quick failure is necessary.
-            throw new IonException("Binary Ion must start with an Ion version marker.");
-        }
-        /*
-        List<IonReaderLookaheadBufferArbitraryDepth.Marker> symbolTableMarkers = lookahead.getSymbolTableMarkers();
-        if (!symbolTableMarkers.isEmpty()) {
-            // The cached SymbolTable (if any) is a snapshot in time, so it must be cleared whenever a new symbol
-            // table is read regardless of whether the new LST is an append or a reset.
-            cachedReadOnlySymbolTable = null;
-            for (IonReaderLookaheadBufferArbitraryDepth.Marker symbolTableMarker : symbolTableMarkers) {
-                readSymbolTable(symbolTableMarker);
-            }
-            lookahead.resetSymbolTableMarkers();
+
+    private class SymbolTableReader {
+
+        private boolean hasSeenImports;
+        private boolean hasSeenSymbols;
+        private boolean isAppend;
+
+        private String name = null;
+        private int version = -1;
+        private int maxId = -1;
+
+        private List<SymbolTable> newImports = null;
+        private List<String> newSymbols = null;
+
+        private void resetState() {
+            hasSeenImports = false;
+            hasSeenSymbols = false;
+            isAppend = false;
+            newImports = null;
+            newSymbols = null;
+            resetImportInfo();
         }
 
-         */
-        peekIndex = lookahead.getValueStart();
-        hasAnnotations = lookahead.hasAnnotations();
-        if (hasAnnotations) {
-            if (peekIndex >= lookahead.getValueEnd()) {
-                throw new IonException("Annotation wrappers without values are invalid.");
-            }
-            annotationSids.clear();
-            IonReaderLookaheadBufferArbitraryDepth.Marker annotationSidsMarker = lookahead.getAnnotationSidsMarker();
-            annotationStartPosition = annotationSidsMarker.startIndex;
-            annotationEndPosition = annotationSidsMarker.endIndex;
-            peekIndex = annotationEndPosition;
-            valueTypeID = IonTypeID.TYPE_IDS[buffer.peek(peekIndex++)];
-            int wrappedValueLength = valueTypeID.length;
-            if (valueTypeID.variableLength) {
-                wrappedValueLength = readVarUInt();
-            }
-            valueType = valueTypeID.type;
-            if (valueType == IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {
-                throw new IonException("Nested annotations are invalid.");
-            }
-            if (peekIndex + wrappedValueLength != lookahead.getValueEnd()) {
-                throw new IonException("Mismatched annotation wrapper length.");
-            }
-        } else {
-            valueTypeID = lookahead.getValueTid();
-            valueType = valueTypeID.type;
+        private void resetImportInfo() {
+            name = null;
+            version = -1;
+            maxId = -1;
         }
-        valueStartPosition = peekIndex;
-        valueEndPosition = lookahead.getValueEnd();
-        lookahead.resetNopPadIndex();
+
+        private void readSymbolTable() {
+            Event event;
+            while (true) {
+                switch (state) {
+                    case ON_SYMBOL_TABLE_STRUCT:
+                        if (Event.NEEDS_DATA == raw.next(Instruction.STEP_IN)) {
+                            return;
+                        }
+                        state = State.ON_SYMBOL_TABLE_FIELD;
+                        break;
+                    case ON_SYMBOL_TABLE_FIELD:
+                        event = raw.next(Instruction.NEXT_VALUE);
+                        if (Event.NEEDS_DATA == event) {
+                            return;
+                        }
+                        if (event == Event.END_CONTAINER) {
+                            raw.next(Instruction.STEP_OUT);
+                            if (!hasSeenImports) {
+                                resetSymbolTable();
+                                resetImports();
+                            }
+                            symbols.addAll(newSymbols);
+                            state = State.READING_VALUE;
+                            return;
+                        }
+                        int fieldId = raw.getFieldId();
+                        if (fieldId == SystemSymbolIDs.SYMBOLS_ID) {
+                            state = State.ON_SYMBOL_TABLE_SYMBOLS;
+                            if (hasSeenSymbols) {
+                                throw new IonException("Symbol table contained multiple symbols fields.");
+                            }
+                            hasSeenSymbols = true;
+                        } else if (fieldId == SystemSymbolIDs.IMPORTS_ID) {
+                            state = State.ON_SYMBOL_TABLE_IMPORTS;
+                            if (hasSeenImports) {
+                                throw new IonException("Symbol table contained multiple imports fields.");
+                            }
+                            hasSeenImports = true;
+                        }
+                        break;
+                    case ON_SYMBOL_TABLE_SYMBOLS:
+                        if (raw.getType() == IonType.LIST) {
+                            if (Event.NEEDS_DATA == raw.next(Instruction.STEP_IN)) {
+                                return;
+                            }
+                            newSymbols = new ArrayList<String>(8);
+                            state = State.READING_SYMBOL_TABLE_SYMBOLS_LIST;
+                        } else {
+                            state = State.ON_SYMBOL_TABLE_FIELD;
+                        }
+                        break;
+                    case ON_SYMBOL_TABLE_IMPORTS:
+                        if (raw.getType() == IonType.LIST) {
+                            if (Event.NEEDS_DATA == raw.next(Instruction.STEP_IN)) {
+                                return;
+                            }
+                            resetImports();
+                            newImports = new ArrayList<SymbolTable>(3);
+                            newImports.add(getSystemSymbolTable());
+                            state = State.READING_SYMBOL_TABLE_IMPORTS_LIST;
+                        } else if (raw.getType() == IonType.SYMBOL) {
+                            if (Event.NEEDS_DATA == raw.next(Instruction.LOAD_SCALAR)) {
+                                return;
+                            }
+                            if (raw.symbolValueId() == SystemSymbolIDs.ION_SYMBOL_TABLE_ID) {
+                                isAppend = true;
+                            } else {
+                                resetSymbolTable();
+                            }
+                            state = State.ON_SYMBOL_TABLE_FIELD;
+                        } else {
+                            state = State.ON_SYMBOL_TABLE_FIELD;
+                        }
+                        break;
+                    case READING_SYMBOL_TABLE_SYMBOLS_LIST:
+                        event = raw.next(Instruction.NEXT_VALUE);
+                        if (event == Event.NEEDS_DATA) {
+                            return;
+                        }
+                        if (event == Event.END_CONTAINER) {
+                            raw.next(Instruction.STEP_OUT);
+                            state = State.ON_SYMBOL_TABLE_FIELD;
+                            break;
+                        }
+                        if (raw.getType() == IonType.STRING) {
+                            state = State.READING_SYMBOL_TABLE_SYMBOL;
+                        } else {
+                            newSymbols.add(null);
+                        }
+                        break;
+                    case READING_SYMBOL_TABLE_SYMBOL:
+                        if (Event.NEEDS_DATA == raw.next(Instruction.LOAD_SCALAR)) {
+                            return;
+                        }
+                        newSymbols.add(raw.stringValue());
+                        state = State.READING_SYMBOL_TABLE_SYMBOLS_LIST;
+                        break;
+                    case READING_SYMBOL_TABLE_IMPORTS_LIST:
+                        event = raw.next(Instruction.NEXT_VALUE);
+                        if (event == Event.NEEDS_DATA) {
+                            return;
+                        }
+                        if (event == Event.END_CONTAINER) {
+                            raw.next(Instruction.STEP_OUT);
+                            imports = new LocalSymbolTableImports(newImports);
+                            state = State.ON_SYMBOL_TABLE_FIELD;
+                            break;
+                        }
+                        resetImportInfo();
+                        if (raw.getType() == IonType.STRUCT) {
+                            state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
+                        }
+                        break;
+                    case READING_SYMBOL_TABLE_IMPORT_STRUCT:
+                        event = raw.next(Instruction.STEP_IN);
+                        if (event == Event.NEEDS_DATA) {
+                            return;
+                        }
+                        if (event == Event.END_CONTAINER) {
+                            raw.next(Instruction.STEP_OUT);
+                            newImports.add(createImport(name, version, maxId));
+                            state = State.READING_SYMBOL_TABLE_IMPORTS_LIST;
+                            break;
+                        } else if (event != Event.START_SCALAR) {
+                            break;
+                        }
+                        fieldId = raw.getFieldId();
+                        if (fieldId == SystemSymbolIDs.NAME_ID) {
+                            state = State.READING_SYMBOL_TABLE_IMPORT_NAME;
+                        } else if (fieldId == SystemSymbolIDs.VERSION_ID) {
+                            state = State.READING_SYMBOL_TABLE_IMPORT_VERSION;
+                        } else if (fieldId == SystemSymbolIDs.MAX_ID_ID) {
+                            state = State.READING_SYMBOL_TABLE_IMPORT_MAX_ID;
+                        }
+                        break;
+                    case READING_SYMBOL_TABLE_IMPORT_NAME:
+                        if (Event.NEEDS_DATA == raw.next(Instruction.LOAD_SCALAR)) {
+                            return;
+                        }
+                        if (raw.getType() == IonType.STRING) {
+                            name = raw.stringValue();
+                        }
+                        state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
+                        break;
+                    case READING_SYMBOL_TABLE_IMPORT_VERSION:
+                        if (Event.NEEDS_DATA == raw.next(Instruction.LOAD_SCALAR)) {
+                            return;
+                        }
+                        if (raw.getType() == IonType.INT) {
+                            version = raw.intValue();
+                        }
+                        state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
+                        break;
+                    case READING_SYMBOL_TABLE_IMPORT_MAX_ID:
+                        if (Event.NEEDS_DATA == raw.next(Instruction.LOAD_SCALAR)) {
+                            return;
+                        }
+                        if (raw.getType() == IonType.INT) {
+                            maxId = raw.intValue();
+                        }
+                        state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
+                        break;
+                }
+            }
+        }
     }
 
-    /**
-     * Reads the type ID byte.
-     * @return the TypeAndLength descriptor for the type ID byte.
-     */
-    private IonTypeID readTypeId() {
-        valueTypeID = IonTypeID.TYPE_IDS[buffer.peek(peekIndex++)];
-        if (!valueTypeID.isValid) {
-            throw new IonException("Invalid type ID.");
-        }
-        valueType = valueTypeID.type;
-        return valueTypeID;
+    private enum State {
+        ON_SYMBOL_TABLE_STRUCT,
+        ON_SYMBOL_TABLE_FIELD,
+        ON_SYMBOL_TABLE_SYMBOLS,
+        READING_SYMBOL_TABLE_SYMBOLS_LIST,
+        READING_SYMBOL_TABLE_SYMBOL,
+        ON_SYMBOL_TABLE_IMPORTS,
+        READING_SYMBOL_TABLE_IMPORTS_LIST,
+        READING_SYMBOL_TABLE_IMPORT_STRUCT,
+        READING_SYMBOL_TABLE_IMPORT_NAME,
+        READING_SYMBOL_TABLE_IMPORT_VERSION,
+        READING_SYMBOL_TABLE_IMPORT_MAX_ID,
+        READING_VALUE
     }
 
-    /**
-     * Calculates the end position for the given type ID descriptor.
-     * @param typeID the type ID descriptor.
-     */
-    private void calculateEndPosition(IonTypeID typeID) {
-        if (typeID.variableLength) {
-            valueEndPosition = readVarUInt() + peekIndex;
-        } else {
-            valueEndPosition = typeID.length + peekIndex;
-        }
-    }
-
-    @Override
-    public boolean hasNext() {
-        throw new UnsupportedOperationException("Not implemented");
-    }
-
-    /**
-     * Marks the end of the current container by indicating that the reader is no longer positioned on a value.
-     */
-    private void endContainer() {
-        valueType = null;
-        valueTypeID = null;
-        annotationStartPosition = -1;
-        annotationEndPosition = -1;
-        hasAnnotations = false;
-    }
-
-    /**
-     * Advance the reader to the next value within a container, which must already be buffered.
-     */
-    private void nextBelowTopLevel() {
-        // Seek past the previous value.
-        if (peekIndex < valueEndPosition) {
-            peekIndex = valueEndPosition;
-        }
-        if (peekIndex >= containerStack.peek().endPosition) {
-            endContainer();
-        } else {
-            if (containerStack.peek().type == IonType.STRUCT) {
-                fieldNameSid = readVarUInt();
-            }
-            IonTypeID typeID = readTypeId();
-            while (typeID.isNopPad) {
-                calculateEndPosition(typeID);
-                peekIndex = valueEndPosition;
-                if (peekIndex >= containerStack.peek().endPosition) {
-                    endContainer();
-                    return;
-                }
-                if (containerStack.peek().type == IonType.STRUCT) {
-                    fieldNameSid = readVarUInt();
-                }
-                typeID = readTypeId();
-            }
-            calculateEndPosition(typeID);
-            if (valueType == IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {
-                hasAnnotations = true;
-                annotationSids.clear();
-                int annotationsLength = readVarUInt();
-                annotationStartPosition = peekIndex;
-                annotationEndPosition = annotationStartPosition + annotationsLength;
-                peekIndex = annotationEndPosition;
-                typeID = readTypeId();
-                if (typeID.isNopPad) {
-                    throw new IonException(
-                        "Invalid annotation wrapper: NOP pad may not occur inside an annotation wrapper."
-                    );
-                }
-                if (valueType == IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {
-                    throw new IonException("Nested annotations are invalid.");
-                }
-                long annotationWrapperEndPosition = valueEndPosition;
-                calculateEndPosition(typeID);
-                if (annotationWrapperEndPosition != valueEndPosition) {
-                    throw new IonException(
-                        "Invalid annotation wrapper: end of the wrapper did not match end of the value."
-                    );
-                }
-            } else {
-                annotationStartPosition = -1;
-                annotationEndPosition = -1;
-                hasAnnotations = false;
-                if (valueEndPosition > containerStack.peek().endPosition) {
-                    throw new IonException("Value overflowed its container.");
-                }
-            }
-            if (!valueTypeID.isValid) {
-                throw new IonException("Invalid type ID.");
-            }
-            valueStartPosition = peekIndex;
-        }
-    }
+    private State state = State.READING_VALUE;
 
     @Override
     public Event next(Instruction instruction) {
-        /*
-        switch (instruction) {
-            case STEP_IN:
-                // TODO
-                lookahead.stepIn();
-                break;
-            case STEP_OUT:
-                try {
-                    lookahead.stepOut();
-                } catch (Exception e) {
-                    throw new IonException(e);
+        Event event;
+        while (true) {
+            if (state.ordinal() < State.READING_VALUE.ordinal()) {
+                symbolTableReader.readSymbolTable();
+                if (state != State.READING_VALUE) {
+                    event = Event.NEEDS_DATA;
+                    break;
                 }
-                break;
-            case NEXT_VALUE:
-                try {
-                    lookahead.nextHeader();
-                } catch (Exception e) {
-                    throw new IonException(e);
-                }
-                break;
+            }
+            event = raw.next(instruction);
+            resetAnnotations(); // TODO check
+            if (
+                getDepth() == 0 &&
+                event == Event.START_CONTAINER &&
+                raw.getType() == IonType.STRUCT &&
+                raw.hasAnnotations() &&
+                raw.iterateAnnotationSids().next() == SystemSymbolIDs.ION_SYMBOL_TABLE_ID
+            ) {
+                symbolTableReader.resetState();
+                state = State.ON_SYMBOL_TABLE_STRUCT;
+                continue;
+            }
+            break;
         }
-        if (lookahead.moreDataRequired()) {
-            return Event.NEEDS_DATA;
-        }
-        return Event.;
-
-         */
-        Event event = lookahead.next(instruction);
-        if (event == Event.NEEDS_DATA) {
-            //lookahead.fill(lookahead.getInput()); // TODO remove the InputStream reference from lookahead
-            return event;
-        }
-        if (event == Event.START_CONTAINER) {
-            // TODO check if it's a symbol table; consume
-        }
-        return null; // todo
+        return event;
     }
 
     @Override
     public Event getCurrentEvent() {
-        return null; // TODO
+        return raw.getCurrentEvent(); // TODO
     }
 
     @Override
@@ -1228,66 +1092,10 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         // todo
     }
 
-    @Override
-    public IonType next() { // TODO call next(NEXT_VALUE) and return getType() or null?
-        fieldNameSid = -1;
-        lobBytesRead = 0;
-        valueStartPosition = -1;
-        resetAnnotations();
-        if (containerStack.isEmpty()) {
-            nextAtTopLevel();
-        } else {
-            nextBelowTopLevel();
-        }
-        // Note: the following check is necessary to catch empty ordered structs, which are prohibited by the spec.
-        // Unfortunately, this requires a check on every value for a condition that will probably never happen.
-        if (
-            valueType == IonType.STRUCT &&
-            valueTypeID.lowerNibble == IonTypeID.ORDERED_STRUCT_NIBBLE &&
-            valueStartPosition == valueEndPosition
-        ) {
-            throw new IonException("Ordered struct must not be empty.");
-        }
-        return valueType;
-    }
-
-    @Override
-    public void stepIn() {
-        if (!IonType.isContainer(valueType)) {
-            throw new IonException("Must be positioned on a container to step in.");
-        }
-        // Note: the IonReader interface dictates that stepping into a null container has the same behavior as
-        // an empty container.
-        ContainerInfo containerInfo = containerStack.push();
-        containerInfo.type = valueType;
-        containerInfo.endPosition = valueEndPosition;
-        valueType = null;
-        valueTypeID = null;
-        valueEndPosition = -1;
-        fieldNameSid = -1;
-        valueStartPosition = -1;
-    }
-
-    @Override
-    public void stepOut() {
-        if (containerStack.isEmpty()) {
-            // Note: this is IllegalStateException for consistency with the other binary IonReader implementation.
-            throw new IllegalStateException("Cannot step out at top level.");
-        }
-        ContainerInfo containerInfo = containerStack.pop();
-        valueEndPosition = containerInfo.endPosition;
-        valueType = null;
-        valueTypeID = null;
-        fieldNameSid = -1;
-        valueStartPosition = -1;
-    }
-
-    @Override
     public int getDepth() {
-        return containerStack.size();
+        return raw.getDepth();
     }
 
-    @Override
     public SymbolTable getSymbolTable() {
         if (cachedReadOnlySymbolTable == null) {
             if (symbols.size() == 0 && imports == ION_1_0_IMPORTS) {
@@ -1311,351 +1119,21 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         return symbolTableLastTransferred;
     }
 
-    @Override
     public IonType getType() {
-        return valueType;
+        return raw.getType();
     }
 
-    @Override
-    public IntegerSize getIntegerSize() {
-        if (valueType != IonType.INT || isNullValue()) {
-            return null;
-        }
-        if (valueTypeID.length < INT_SIZE_IN_BYTES) {
-            // Note: this is conservative. Most integers of size 4 also fit in an int, but since exactly the
-            // same parsing code is used for ints and longs, there is no point wasting the time to determine the
-            // smallest possible type.
-            return IntegerSize.INT;
-        } else if (valueTypeID.length < LONG_SIZE_IN_BYTES) {
-            return IntegerSize.LONG;
-        } else if (valueTypeID.length == LONG_SIZE_IN_BYTES) {
-            // Because creating BigIntegers is so expensive, it is worth it to look ahead and determine exactly
-            // which 8-byte integers can fit in a long.
-            if (valueTypeID.isNegativeInt) {
-                // The smallest negative 8-byte integer that can fit in a long is -0x80_00_00_00_00_00_00_00.
-                int firstByte = buffer.peek(valueStartPosition);
-                if (firstByte < MOST_SIGNIFICANT_BYTE_OF_MIN_LONG) {
-                    return IntegerSize.LONG;
-                } else if (firstByte > MOST_SIGNIFICANT_BYTE_OF_MIN_LONG) {
-                    return IntegerSize.BIG_INTEGER;
-                }
-                for (int i = valueStartPosition + 1; i < valueEndPosition; i++) {
-                    if (0x00 != buffer.peek(i)) {
-                        return IntegerSize.BIG_INTEGER;
-                    }
-                }
-            } else {
-                // The largest positive 8-byte integer that can fit in a long is 0x7F_FF_FF_FF_FF_FF_FF_FF.
-                if (buffer.peek(valueStartPosition) > MOST_SIGNIFICANT_BYTE_OF_MAX_LONG) {
-                    return IntegerSize.BIG_INTEGER;
-                }
-            }
-            return IntegerSize.LONG;
-        }
-        return IntegerSize.BIG_INTEGER;
-    }
-
-    /**
-     * Require that the given type matches the type of the current value.
-     * @param required the required type of current value.
-     */
-    private void requireType(IonType required) {
-        if (required != valueType) {
-            // Note: this is IllegalStateException to match the behavior of the other binary IonReader implementation.
-            throw new IllegalStateException(
-                String.format("Invalid type. Required %s but found %s.", required, valueType)
-            );
-        }
-    }
-
-    /**
-     * Reads a VarUInt.
-     * @return the value.
-     */
-    private int readVarUInt() {
-        int currentByte = 0;
-        int result = 0;
-        while ((currentByte & HIGHEST_BIT_BITMASK) == 0) {
-            currentByte = buffer.peek(peekIndex++);
-            result = (result << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
-        }
-        return result;
-    }
-
-    /**
-     * Reads a UInt.
-     * @param limit the position of the first byte after the end of the UInt value.
-     * @return the value.
-     */
-    private long readUInt(int startIndex, int limit) {
-        long result = 0;
-        for (int i = startIndex; i < limit; i++) {
-            result = (result << VALUE_BITS_PER_UINT_BYTE) | buffer.peek(i);
-        }
-        return result;
-    }
-
-    /**
-     * Reads a UInt starting at `valueStartPosition` and ending at `valueEndPosition`.
-     * @return the value.
-     */
-    private long readUInt() {
-        return readUInt(valueStartPosition, valueEndPosition);
-    }
-
-    /**
-     * Reads a VarInt.
-     * @param firstByte the first byte of the VarInt representation, which has already been retrieved from the buffer.
-     * @return the value.
-     */
-    private int readVarInt(int firstByte) {
-        int currentByte = firstByte;
-        int sign = (currentByte & VAR_INT_SIGN_BITMASK) == 0 ? 1 : -1;
-        int result = currentByte & LOWER_SIX_BITS_BITMASK;
-        while ((currentByte & HIGHEST_BIT_BITMASK) == 0) {
-            currentByte = buffer.peek(peekIndex++);
-            result = (result << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
-        }
-        return result * sign;
-    }
-
-    /**
-     * Reads a VarInt.
-     * @return the value.
-     */
-    private int readVarInt() {
-        return readVarInt(buffer.peek(peekIndex++));
-    }
-
-    // Scratch space for various byte sizes. Only for use while computing a single value.
-    private static final byte[][] SCRATCH_FOR_SIZE = new byte[][] {
-        new byte[0],
-        new byte[1],
-        new byte[2],
-        new byte[3],
-        new byte[4],
-        new byte[5],
-        new byte[6],
-        new byte[7],
-        new byte[8],
-        new byte[9],
-        new byte[10],
-        new byte[11],
-        new byte[12],
-    };
-
-    /**
-     * Copy the requested number of bytes from the buffer into a scratch buffer of exactly the requested length.
-     * @param startIndex the start index from which to copy.
-     * @param length the number of bytes to copy.
-     * @return the scratch byte array.
-     */
-    private byte[] copyBytesToScratch(int startIndex, int length) {
-        // Note: using reusable scratch buffers makes reading ints and decimals 1-5% faster and causes much less
-        // GC churn.
-        byte[] bytes = null;
-        if (length < SCRATCH_FOR_SIZE.length) {
-            bytes = SCRATCH_FOR_SIZE[length];
-        }
-        if (bytes == null) {
-            bytes = new byte[length];
-        }
-        // The correct number of bytes will be requested from the buffer, so the limit is set at the capacity to
-        // avoid having to calculate a limit.
-        buffer.copyBytes(startIndex, bytes, 0, bytes.length);
-        return bytes;
-    }
-
-    /**
-     * Reads a UInt value into a BigInteger.
-     * @param isNegative true if the resulting BigInteger value should be negative; false if it should be positive.
-     * @return the value.
-     */
-    private BigInteger readUIntAsBigInteger(boolean isNegative) {
-        int length = valueEndPosition - valueStartPosition;
-        // NOTE: unfortunately, there is no BigInteger(int signum, byte[] bits, int offset, int length) constructor
-        // until JDK 9, so copying to scratch space is always required. Migrating to the new constructor will
-        // lead to a significant performance improvement.
-        byte[] magnitude = copyBytesToScratch(valueStartPosition, length);
-        int signum = isNegative ? -1 : 1;
-        return new BigInteger(signum, magnitude);
-    }
-
-    /**
-     * Get and clear the most significant bit in the given byte array.
-     * @param intBytes bytes representing a signed int.
-     * @return -1 if the most significant bit was set; otherwise, 1.
-     */
-    private int getAndClearSignBit(byte[] intBytes) {
-        boolean isNegative = (intBytes[0] & HIGHEST_BIT_BITMASK) != 0;
-        int signum = isNegative ? -1 : 1;
-        if (isNegative) {
-            intBytes[0] &= LOWER_SEVEN_BITS_BITMASK;
-        }
-        return signum;
-    }
-
-    /**
-     * Reads an Int value into a BigInteger.
-     * @param limit the position of the first byte after the end of the UInt value.
-     * @return the value.
-     */
-    private BigInteger readIntAsBigInteger(int limit) {
-        BigInteger value;
-        int length = limit - peekIndex;
-        if (length > 0) {
-            // NOTE: unfortunately, there is no BigInteger(int signum, byte[] bits, int offset, int length) constructor
-            // until JDK 9, so copying to scratch space is always required. Migrating to the new constructor will
-            // lead to a significant performance improvement.
-            byte[] bytes = copyBytesToScratch(peekIndex, length);
-            value = new BigInteger(getAndClearSignBit(bytes), bytes);
-        }
-        else {
-            value = BigInteger.ZERO;
-        }
-        return value;
-    }
-
-    @Override
-    public long longValue() {
-        long value;
-        if (valueType == IonType.INT) {
-            if (valueTypeID.length == 0) {
-                return 0;
-            }
-            value = readUInt();
-            if (valueTypeID.isNegativeInt) {
-                if (value == 0) {
-                    throw new IonException("Int zero may not be negative.");
-                }
-                value *= -1;
-            }
-        } else if (valueType == IonType.FLOAT) {
-            scalarConverter.addValue(doubleValue());
-            scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.double_value);
-            scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.long_value));
-            value = scalarConverter.getLong();
-            scalarConverter.clear();
-        } else if (valueType == IonType.DECIMAL) {
-            scalarConverter.addValue(decimalValue());
-            scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.decimal_value);
-            scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.long_value));
-            value = scalarConverter.getLong();
-            scalarConverter.clear();
-        } else {
-            throw new IllegalStateException("longValue() may only be called on values of type int, float, or decimal.");
-        }
-        return value;
-    }
-
-    @Override
-    public BigInteger bigIntegerValue() {
-        BigInteger value;
-        if (valueType == IonType.INT) {
-            if (isNullValue()) {
-                // NOTE: this mimics existing behavior, but should probably be undefined (as, e.g., longValue() is in this
-                //  case).
-                return null;
-            }
-            if (valueTypeID.length == 0) {
-                return BigInteger.ZERO;
-            }
-            value = readUIntAsBigInteger(valueTypeID.isNegativeInt);
-            if (valueTypeID.isNegativeInt && value.signum() == 0) {
-                throw new IonException("Int zero may not be negative.");
-            }
-        } else if (valueType == IonType.FLOAT) {
-            if (isNullValue()) {
-                value = null;
-            } else {
-                scalarConverter.addValue(doubleValue());
-                scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.double_value);
-                scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.bigInteger_value));
-                value = scalarConverter.getBigInteger();
-                scalarConverter.clear();
-            }
-        } else if (valueType == IonType.DECIMAL) {
-            if (isNullValue()) {
-                value = null;
-            } else {
-                scalarConverter.addValue(decimalValue());
-                scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.decimal_value);
-                scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.bigInteger_value));
-                value = scalarConverter.getBigInteger();
-                scalarConverter.clear();
-            }
-        } else {
-            throw new IllegalStateException("longValue() may only be called on values of type int, float, or decimal.");
-        }
-        return value;
-    }
-
-    @Override
-    public Date dateValue() {
-        Timestamp timestamp = timestampValue();
-        if (timestamp == null) {
-            return null;
-        }
-        return timestamp.dateValue();
-    }
-
-    @Override
-    public int intValue() {
-        return (int) longValue();
-    }
-
-    @Override
-    public double doubleValue() {
-        double value;
-        if (valueType == IonType.FLOAT) {
-            int length = valueEndPosition - valueStartPosition;
-            if (length == 0) {
-                return 0.0d;
-            }
-            ByteBuffer bytes = buffer.getByteBuffer(valueStartPosition, valueEndPosition);
-            if (length == FLOAT_32_BYTE_LENGTH) {
-                value = bytes.getFloat();
-            } else {
-                // Note: there is no need to check for other lengths here; the type ID byte is validated during next().
-                value = bytes.getDouble();
-            }
-        }  else if (valueType == IonType.DECIMAL) {
-            scalarConverter.addValue(decimalValue());
-            scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.decimal_value);
-            scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.double_value));
-            value = scalarConverter.getDouble();
-            scalarConverter.clear();
-        } else {
-            throw new IllegalStateException("doubleValue() may only be called on values of type float or decimal.");
-        }
-        return value;
-    }
-
-    /**
-     * Decodes a string from the buffer into a String value.
-     * @param valueStart the position in the buffer of the first byte in the string.
-     * @param valueEnd the position in the buffer of the last byte in the string.
-     * @return the value.
-     */
-    private String readString(int valueStart, int valueEnd) {
-        ByteBuffer utf8InputBuffer = buffer.getByteBuffer(valueStart, valueEnd);
-        int numberOfBytes = valueEnd - valueStart;
-        return utf8Decoder.decode(utf8InputBuffer, numberOfBytes);
-    }
-
-    @Override
     public String stringValue() {
         String value;
-        if (valueType == IonType.STRING) {
-            if (isNullValue()) {
+        IonType type = getType();
+        if (type == IonType.STRING) {
+            value = raw.stringValue();
+        } else if (type == IonType.SYMBOL) {
+            int sid = raw.symbolValueId();
+            if (sid < 0) {
+                // The raw reader uses this to denote null.symbol.
                 return null;
             }
-            value = readString(valueStartPosition, valueEndPosition);
-        } else if (valueType == IonType.SYMBOL) {
-            if (isNullValue()) {
-                return null;
-            }
-            int sid = (int) readUInt();
             value = getSymbol(sid);
             if (value == null) {
                 throw new UnknownSymbolException(sid);
@@ -1666,211 +1144,18 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         return value;
     }
 
-    @Override
     public SymbolToken symbolValue() {
-        requireType(IonType.SYMBOL);
-        if (isNullValue()) {
+        int sid = raw.symbolValueId();
+        if (sid < 0) {
+            // The raw reader uses this to denote null.symbol.
             return null;
         }
-        int sid = (int) readUInt();
         return getSymbolToken(sid);
     }
 
-    @Override
-    public int byteSize() {
-        if (!IonType.isLob(valueType) && !isNullValue()) {
-            throw new IonException("Reader must be positioned on a blob or clob.");
-        }
-        return valueEndPosition - valueStartPosition;
-    }
-
-    @Override
-    public byte[] newBytes() {
-        byte[] bytes = new byte[byteSize()];
-        // The correct number of bytes will be requested from the buffer, so the limit is set at the capacity to
-        // avoid having to calculate a limit.
-        buffer.copyBytes(valueStartPosition, bytes, 0, bytes.length);
-        return bytes;
-    }
-
-    @Override
-    public int getBytes(byte[] bytes, int offset, int len) {
-        int length = Math.min(len, byteSize() - lobBytesRead);
-        // The correct number of bytes will be requested from the buffer, so the limit is set at the capacity to
-        // avoid having to calculate a limit.
-        buffer.copyBytes(valueStartPosition + lobBytesRead, bytes, offset, length);
-        lobBytesRead += length;
-        return length;
-    }
-
-    /**
-     * Reads a decimal value as a BigDecimal.
-     * @return the value.
-     */
-    private BigDecimal readBigDecimal() {
-        int length = valueEndPosition - peekIndex;
-        if (length == 0) {
-            return BigDecimal.ZERO;
-        }
-        int scale = -readVarInt();
-        BigDecimal value;
-        if (length < LONG_SIZE_IN_BYTES) {
-            // No need to allocate a BigInteger to hold the coefficient.
-            long coefficient = 0;
-            int sign = 1;
-            if (peekIndex < valueEndPosition) {
-                int firstByte = buffer.peek(peekIndex++);
-                sign = (firstByte & HIGHEST_BIT_BITMASK) == 0 ? 1 : -1;
-                coefficient = firstByte & LOWER_SEVEN_BITS_BITMASK;
-            }
-            while (peekIndex < valueEndPosition) {
-                coefficient = (coefficient << VALUE_BITS_PER_UINT_BYTE) | buffer.peek(peekIndex++);
-            }
-            value = BigDecimal.valueOf(coefficient * sign, scale);
-        } else {
-            // The coefficient may overflow a long, so a BigInteger is required.
-            value = new BigDecimal(readIntAsBigInteger(valueEndPosition), scale);
-        }
-        return value;
-    }
-
-    /**
-     * Reads a decimal value as a Decimal.
-     * @return the value.
-     */
-    private Decimal readDecimal() {
-        int length = valueEndPosition - peekIndex;
-        if (length == 0) {
-            return Decimal.ZERO;
-        }
-        int scale = -readVarInt();
-        BigInteger coefficient;
-        length = valueEndPosition - peekIndex;
-        if (length > 0) {
-            // NOTE: unfortunately, there is no BigInteger(int signum, byte[] bits, int offset, int length) constructor,
-            // so copying to scratch space is always required.
-            byte[] bits = copyBytesToScratch(peekIndex, length);
-            int signum = getAndClearSignBit(bits);
-            // NOTE: there is a BigInteger.valueOf(long unscaledValue, int scale) factory method that avoids allocating
-            // a BigInteger for coefficients that fit in a long. See its use in readBigDecimal() above. Unfortunately,
-            // it is not possible to use this for Decimal because the necessary BigDecimal constructor is
-            // package-private. If a compatible BigDecimal constructor is added in a future JDK revision, a
-            // corresponding factory method should be added to Decimal to enable this optimization.
-            coefficient = new BigInteger(signum, bits);
-            if (coefficient.signum() == 0 && signum < 0) {
-                return Decimal.negativeZero(scale);
-            }
-        }
-        else {
-            coefficient = BigInteger.ZERO;
-        }
-        return Decimal.valueOf(coefficient, scale);
-    }
-
-    @Override
-    public BigDecimal bigDecimalValue() {
-        requireType(IonType.DECIMAL);
-        if (isNullValue()) {
-            return null;
-        }
-        peekIndex = valueStartPosition;
-        return readBigDecimal();
-    }
-
-    @Override
-    public Decimal decimalValue() {
-        requireType(IonType.DECIMAL);
-        if (isNullValue()) {
-            return null;
-        }
-        peekIndex = valueStartPosition;
-        return readDecimal();
-    }
-
-    @Override
-    public Timestamp timestampValue() {
-        requireType(IonType.TIMESTAMP);
-        if (isNullValue()) {
-            return null;
-        }
-        peekIndex = valueStartPosition;
-        int firstByte = buffer.peek(peekIndex++);
-        Integer offset = null;
-        if (firstByte != VAR_INT_NEGATIVE_ZERO) {
-            offset = readVarInt(firstByte);
-        }
-        int year = readVarUInt();
-        int month = 0;
-        int day = 0;
-        int hour = 0;
-        int minute = 0;
-        int second = 0;
-        BigDecimal fractionalSecond = null;
-        Timestamp.Precision precision = Timestamp.Precision.YEAR;
-        if (peekIndex < valueEndPosition) {
-            month = readVarUInt();
-            precision = Timestamp.Precision.MONTH;
-            if (peekIndex < valueEndPosition) {
-                day = readVarUInt();
-                precision = Timestamp.Precision.DAY;
-                if (peekIndex < valueEndPosition) {
-                    hour = readVarUInt();
-                    if (peekIndex >= valueEndPosition) {
-                        throw new IonException("Timestamps may not specify hour without specifying minute.");
-                    }
-                    minute = readVarUInt();
-                    precision = Timestamp.Precision.MINUTE;
-                    if (peekIndex < valueEndPosition) {
-                        second = readVarUInt();
-                        precision = Timestamp.Precision.SECOND;
-                        if (peekIndex < valueEndPosition) {
-                            fractionalSecond = readBigDecimal();
-                            if (fractionalSecond.signum() < 0 || fractionalSecond.compareTo(BigDecimal.ONE) >= 0) {
-                                throw new IonException("The fractional seconds value in a timestamp must be greater" +
-                                        "than or equal to zero and less than one.");
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        try {
-            return Timestamp.createFromUtcFields(
-                    precision,
-                    year,
-                    month,
-                    day,
-                    hour,
-                    minute,
-                    second,
-                    fractionalSecond,
-                    offset
-            );
-        } catch (IllegalArgumentException e) {
-            throw new IonException("Illegal timestamp encoding. ", e);
-        }
-    }
-
-    /**
-     * Gets the annotation symbol IDs for the current value, reading them from the buffer first if necessary.
-     * @return the annotation symbol IDs, or an empty list if the current value is not annotated.
-     */
-    private IntList getAnnotationSids() {
-        if (annotationSids.isEmpty()) {
-            int savedPeekIndex = peekIndex;
-            peekIndex = annotationStartPosition;
-            while (peekIndex < annotationEndPosition) {
-                annotationSids.add(readVarUInt());
-            }
-            peekIndex = savedPeekIndex;
-        }
-        return annotationSids;
-    }
-
-    @Override
     public String[] getTypeAnnotations() {
-        if (hasAnnotations) {
-            IntList annotationSids = getAnnotationSids();
+        if (raw.hasAnnotations()) {
+            IntList annotationSids = raw.getAnnotationSids();
             String[] annotationArray = new String[annotationSids.size()];
             for (int i = 0; i < annotationArray.length; i++) {
                 String symbol = getSymbol(annotationSids.get(i));
@@ -1884,10 +1169,9 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         return _Private_Utils.EMPTY_STRING_ARRAY;
     }
 
-    @Override
     public SymbolToken[] getTypeAnnotationSymbols() {
-        if (hasAnnotations) {
-            IntList annotationSids = getAnnotationSids();
+        if (raw.hasAnnotations()) {
+            IntList annotationSids = raw.getAnnotationSids();
             SymbolToken[] annotationArray = new SymbolToken[annotationSids.size()];
             for (int i = 0; i < annotationArray.length; i++) {
                 annotationArray[i] = getSymbolToken(annotationSids.get(i));
@@ -1915,9 +1199,8 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         }
     };
 
-    @Override
     public Iterator<String> iterateTypeAnnotations() {
-        if (hasAnnotations) {
+        if (raw.hasAnnotations()) {
             if (isAnnotationIteratorReuseEnabled) {
                 annotationIterator.ready();
                 return annotationIterator;
@@ -1928,13 +1211,12 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         return EMPTY_ITERATOR;
     }
 
-    @Override
     public int getFieldId() {
-        return fieldNameSid;
+        return raw.getFieldId();
     }
 
-    @Override
     public String getFieldName() {
+        int fieldNameSid = getFieldId();
         if (fieldNameSid < 0) {
             return null;
         }
@@ -1945,31 +1227,14 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         return fieldName;
     }
 
-    @Override
     public SymbolToken getFieldNameSymbol() {
+        int fieldNameSid = getFieldId();
         if (fieldNameSid < 0) {
             return null;
         }
         return getSymbolToken(fieldNameSid);
     }
 
-    @Override
-    public boolean isNullValue() {
-        return valueTypeID != null && valueTypeID.isNull;
-    }
-
-    @Override
-    public boolean isInStruct() {
-        return !containerStack.isEmpty() && containerStack.peek().type == IonType.STRUCT;
-    }
-
-    @Override
-    public boolean booleanValue() {
-        requireType(IonType.BOOL);
-        return valueTypeID.lowerNibble == 1;
-    }
-
-    @Override
     public <T> T asFacet(Class<T> facetType) {
         return null;
     }
@@ -1980,22 +1245,14 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         // validation could be performed in next() if incremental mode is not enabled. That would allow this
         // implementation to behave in the same way as the other implementation when an incomplete value is
         // encountered.
-        if (lookahead.isSkippingCurrentValue()) {
+        if (raw.getCurrentEvent() == Event.NEEDS_DATA) {
             throw new IonException("Unexpected EOF.");
-        }
-        if (lookahead.available() > 0 && lookahead.moreDataRequired()) {
-            if (lookahead.getIvmIndex() < 0
-                || lookahead.available() != _Private_IonConstants.BINARY_VERSION_MARKER_SIZE) {
-                throw new IonException("Unexpected EOF.");
-            }
         }
     }
 
-    @Override
     public void close() throws IOException {
         requireCompleteValue();
         inputStream.close();
-        utf8Decoder.close();
     }
 
 }

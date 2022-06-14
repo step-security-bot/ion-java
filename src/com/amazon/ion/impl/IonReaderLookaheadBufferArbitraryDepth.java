@@ -26,6 +26,7 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
     // Note: because long is a signed type, Long.MAX_VALUE is represented in Long.SIZE - 1 bits.
     private static final int MAXIMUM_SUPPORTED_VAR_UINT_BYTES = (Long.SIZE - 1) / VALUE_BITS_PER_VARUINT_BYTE;
     private static final int IVM_START_BYTE = 0xE0;
+    private static final int IVM_FINAL_BYTE = 0xEA;
     private static final int IVM_REMAINING_LENGTH = 3; // Length of the IVM after the first byte.
     private static final int ION_SYMBOL_TABLE_SID = 3;
     // The following is a limitation imposed by this implementation, not the Ion specification.
@@ -175,10 +176,16 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         }
     }
 
+    interface IvmNotificationConsumer {
+        void ivmEncountered(int majorVersion, int minorVersion);
+    }
+
     /**
      * Holds the information that the binary reader must keep track of for containers at any depth.
      */
     private static class ContainerInfo {
+
+        private IonType type;
 
         /**
          * The container's type.
@@ -226,6 +233,10 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
      */
     private final Marker annotationSidsMarker = new Marker(-1, 0);
 
+    private final Marker scalarMarker = new Marker(-1, 0);
+
+    private final IvmNotificationConsumer ivmConsumer;
+
     private Event event = Event.NEEDS_DATA;
 
     /**
@@ -240,7 +251,7 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
      * must be able to identify system values so that their bytes can be included in `pipe` before
      * {@link #moreDataRequired()} returns false.
      */
-    private boolean isSystemValue;
+    private boolean isIvm;
 
     /**
      * The number of bytes of annotation SIDs left to read from the value's annotation wrapper.
@@ -288,6 +299,8 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
      */
     private int valueEndIndex;
 
+    private int fieldSid;
+
     /**
      * The index of the first byte of the first no-op pad that precedes the current value. -1 indicates either that
      * the current value was not preceded by no-op padding or that the space occupied by the no-op padding that preceded
@@ -310,13 +323,21 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
      */
     private boolean handlerNeedsToBeNotifiedOfOversizedValue = true;
 
+    // The major version of the Ion encoding currently being read.
+    private int majorVersion = 1;
+
+    // The minor version of the Ion encoding currently being read.
+    private int minorVersion = 0;
+
+    private boolean ivmEncountered = false;
+
     /**
      * Resets the wrapper to the start of a new value.
      */
     private void reset() {
         event = Event.NEEDS_DATA;
         additionalBytesNeeded = 0;
-        isSystemValue = false;
+        isIvm = false;
         numberOfAnnotationSidBytesRemaining = 0;
         currentNumberOfAnnotations = 0;
         valuePreHeaderIndex = -1;
@@ -324,6 +345,8 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         valueTid = null;
         valueEndIndex = -1;
         annotationSidsMarker.startIndex = -1;
+        scalarMarker.startIndex = -1;
+        fieldSid = -1;
         valueStartAvailable = pipe.available();
         startNewValue();
     }
@@ -333,8 +356,9 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
      * @param configuration the configuration for the new instance.
      * @param inputStream an InputStream over binary Ion data.
      */
-    public IonReaderLookaheadBufferArbitraryDepth(final IonBufferConfiguration configuration, final InputStream inputStream) {
+    public IonReaderLookaheadBufferArbitraryDepth(final IonBufferConfiguration configuration, final IvmNotificationConsumer ivmConsumer, final InputStream inputStream) {
         super(configuration, inputStream);
+        this.ivmConsumer = ivmConsumer;
         pipe.registerNotificationConsumer(
             new ResizingPipedInputStream.NotificationConsumer() {
                 @Override
@@ -442,6 +466,7 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
     }
 
     private void setNextStateFromTypeId() {
+        // TODO when "buffer entire top level value" is enabled, go directly to SKIPPING_BYTES
         if (valueTid.isNopPad) {
             state = State.SKIPPING_BYTES;
         } else if (IonType.isContainer(valueTid.type)) {
@@ -465,12 +490,12 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         valueTid = IonTypeID.TYPE_IDS[header];
         dataHandler.onData(1);
         subtractConsumedBytesFromParent(1);
-        if (header == IVM_START_BYTE) {
+        if (header == IVM_START_BYTE && containerStack.isEmpty()) {
             if (!isUnannotated) {
                 throw new IonException("Invalid annotation header.");
             }
             additionalBytesNeeded = IVM_REMAINING_LENGTH;
-            isSystemValue = true;
+            isIvm = true;
             // Encountering an IVM resets the symbol table context; no need to parse any previous symbol tables.
             //resetSymbolTableMarkers();
             ivmSecondByteIndex = peekIndex;
@@ -500,6 +525,11 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
                 if (valueTid.variableLength) {
                     initializeVarUInt(VarUInt.Location.VALUE_LENGTH);
                 } else {
+                    if (valueTid.isNopPad && !isUnannotated) {
+                        throw new IonException(
+                            "Invalid annotation wrapper: NOP pad may not occur inside an annotation wrapper."
+                        );
+                    }
                     setAdditionalBytesNeeded(valueTid.length, isUnannotated);
                     setNextStateFromTypeId();
                 }
@@ -543,6 +573,10 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
             //initializeVarUInt(VarUInt.Location.ANNOTATION_WRAPPER_SID);
             annotationSidsMarker.startIndex = peekIndex;
             annotationSidsMarker.endIndex = annotationSidsMarker.startIndex + (int) numberOfAnnotationSidBytesRemaining;
+            if (additionalBytesNeeded <= 0) { // TODO check
+                throw new IonException("Annotation wrappers without values are invalid.");
+            }
+            // TODO when "buffer entire top level value" is enabled, go directly to SKIPPING_BYTES
             state = State.SKIPPING_ANNOTATION_SIDS;
         }
         /*
@@ -834,6 +868,15 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
     }
 
     /**
+     * Throw if the reader is attempting to process an Ion version that it does not support.
+     */
+    private void requireSupportedIonVersion() {
+        if (majorVersion != 1 || minorVersion != 0) {
+            throw new IonException(String.format("Unsupported Ion version: %d.%d", majorVersion, minorVersion));
+        }
+    }
+
+    /**
      * Reads past the next value header at the current depth.
      * @throws Exception
      */
@@ -845,7 +888,7 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
             state = State.SKIPPING_PREVIOUS_VALUE;
         }
         if (state == State.BEFORE_SCALAR || state == State.BEFORE_CONTAINER) {
-            state = State.SKIPPING_PREVIOUS_VALUE; // tODO check
+            state = State.SKIPPING_PREVIOUS_VALUE;
         }
         if (state == State.SKIPPING_PREVIOUS_VALUE) {
             event = Event.NEEDS_DATA;
@@ -856,7 +899,6 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
                 }
                 additionalBytesNeeded -= numberOfBytesSkipped;
             }
-            // TODO determine if the end of the container has been reached
             if (!containerStack.isEmpty()) {
                 if (containerStack.peek().remainingLength == 0) {
                     state = State.AFTER_CONTAINER;
@@ -878,7 +920,7 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
                 if (!inProgressVarUInt.isComplete) {
                     return;
                 }
-                // TODO save the field name from inProgressVarUInt
+                fieldSid = (int) inProgressVarUInt.value;
                 state = State.BEFORE_TYPE_ID;
             }
             if (state == State.BEFORE_TYPE_ID || state == State.READING_TYPE_ID) {
@@ -890,6 +932,7 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
                     valuePostHeaderIndex = peekIndex;
                     valuePreHeaderIndex = valuePostHeaderIndex - 1;
                     valueStartWriteIndex = valuePreHeaderIndex;
+                    valueEndIndex = valuePostHeaderIndex + valueTid.length; // TODO not right for variable length, but doesn't matter
                 }
             }
             if (state == State.READING_HEADER) {
@@ -898,6 +941,7 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
                     return;
                 }
                 valuePostHeaderIndex = peekIndex;
+                valueEndIndex = valuePostHeaderIndex + (int) additionalBytesNeeded; // TODO check
                 // TODO seek past the header (freeing that space in the buffer) unless the value is annotated.
             }
             /*
@@ -976,11 +1020,13 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
                     }
                     additionalBytesNeeded -= numberOfBytesSkipped;
                 }
+                // TODO when "buffer entire top level value" is enabled, return to the state and position where the
+                //  buffering began. Ensure additional buffering does not occur until the end of the value.
                 state = State.BEFORE_TYPE_ID;
             }
             if (state == State.BEFORE_TYPE_ID) {
                 valueEndIndex = peekIndex;
-                if (isSystemValue || isSkippingCurrentValue() || valueTid.isNopPad) {
+                if (isIvm || isSkippingCurrentValue() || valueTid.isNopPad) {
                     if (valueTid.isNopPad && nopPadStartIndex < 0) {
                         // This is the first NOP before the next value. Mark the start index in case the space needs to
                         // be reclaimed later.
@@ -1007,14 +1053,25 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
                         continue;
                     }
                      */
-                    if (isSystemValue && nopPadStartIndex > -1) {
-                        // Reclaim any NOP pad space that precedes system values. This will usually not be strictly
-                        // necessary, but it simplifies the implementation and will be rare in practice. Without
-                        // this simplification, we would need to keep track of a list of NOP pad start/end indexes
-                        // as we do with the symbol table markers. This way, we know that there can only be one
-                        // uninterrupted run of NOP pad bytes immediately preceding any user value, making it easy
-                        // to reclaim this space if necessary.
-                        reclaimNopPadding(); // TODO check if necessary.
+                    if (isIvm) {
+                        if (nopPadStartIndex > -1) {
+                            // Reclaim any NOP pad space that precedes system values. This will usually not be strictly
+                            // necessary, but it simplifies the implementation and will be rare in practice. Without
+                            // this simplification, we would need to keep track of a list of NOP pad start/end indexes
+                            // as we do with the symbol table markers. This way, we know that there can only be one
+                            // uninterrupted run of NOP pad bytes immediately preceding any user value, making it easy
+                            // to reclaim this space if necessary.
+                            reclaimNopPadding(); // TODO check if necessary.
+                        }
+                        majorVersion = pipe.peek(ivmSecondByteIndex++);
+                        minorVersion = pipe.peek(ivmSecondByteIndex++);
+                        if (pipe.peek(ivmSecondByteIndex++) != IVM_FINAL_BYTE) {
+                            throw new IonException("Invalid Ion version marker.");
+                        }
+                        requireSupportedIonVersion();
+                        ivmConsumer.ivmEncountered(majorVersion, minorVersion);
+                        // TODO seek the pipe past the IVM, freeing space if necessary (check)
+                        pipe.seekTo(ivmSecondByteIndex);
                     }
                     continue;
                 }
@@ -1026,6 +1083,15 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
                 event = Event.START_SCALAR;
                 break;
             case BEFORE_CONTAINER:
+                // Note: the following check is necessary to catch empty ordered structs, which are prohibited by the spec.
+                // Unfortunately, this requires a check on every value for a condition that will probably never happen.
+                if (
+                    valueTid.type == IonType.STRUCT &&
+                    valueTid.lowerNibble == IonTypeID.ORDERED_STRUCT_NIBBLE &&
+                    getValueStart() == valueEndIndex // TODO check whether getValueStart() is correct
+                ) {
+                    throw new IonException("Ordered struct must not be empty.");
+                }
                 event = Event.START_CONTAINER;
                 break;
             default:
@@ -1033,11 +1099,17 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         }
     }
 
-    public void fillScalar() throws Exception {
+    /**
+     *
+     * @return a marker for the buffered value, or null if the value is not yet completely buffered.
+     * @throws Exception
+     */
+    private void fillScalar() throws Exception {
         // Must be positioned on a scalar.
         if (state != State.BEFORE_SCALAR) {
             throw new IllegalStateException();
         }
+        event = Event.NEEDS_DATA;
         while (additionalBytesNeeded > 0) {
             long numberOfBytesSkipped = skip(additionalBytesNeeded);
             if (numberOfBytesSkipped < 1) {
@@ -1045,15 +1117,19 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
             }
             additionalBytesNeeded -= numberOfBytesSkipped;
         }
+        scalarMarker.startIndex = valuePostHeaderIndex;
+        scalarMarker.endIndex = valueEndIndex;
+        event = Event.SCALAR_READY;
     }
 
     public void stepIn() {
         // Must be positioned on a container.
         if (state != State.BEFORE_CONTAINER) {
-            throw new IllegalStateException();
+            throw new IonException("Must be positioned on a container to step in.");
         }
         // Push the remaining length onto the stack, seek past the container's header, and increase the depth.
         ContainerInfo containerInfo = containerStack.push();
+        containerInfo.type = valueTid.type;
         containerInfo.totalLength = additionalBytesNeeded;
         containerInfo.remainingLength = containerInfo.totalLength;
         // TODO seek past header (no need to hold onto it)
@@ -1064,6 +1140,9 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         } else {
             state = State.BEFORE_SCALAR;
         }
+        // TODO reset other state
+        valueTid = null;
+        fieldSid = -1;
         event = Event.NEEDS_INSTRUCTION;
     }
 
@@ -1071,7 +1150,10 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         // Seek past the remaining bytes at this depth, pop from the stack, and subtract the number of bytes
         // consumed at the previous depth from the remaining bytes needed at the current depth. Set the state to
         // BEFORE_TYPE_ID
-
+        if (containerStack.isEmpty()) {
+            // Note: this is IllegalStateException for consistency with the other binary IonReader implementation.
+            throw new IllegalStateException("Cannot step out at top level.");
+        }
         ContainerInfo containerInfo = containerStack.pop();
         additionalBytesNeeded = containerInfo.remainingLength;
 
@@ -1089,9 +1171,16 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
             }
             additionalBytesNeeded -= numberOfBytesSkipped;
         }
-        state = State.BEFORE_TYPE_ID;
+        if (!containerStack.isEmpty() && containerStack.peek().type == IonType.STRUCT) {
+            state = State.BEFORE_FIELD_NAME;
+        } else {
+            state = State.BEFORE_TYPE_ID;
+        }
         event = Event.NEEDS_INSTRUCTION;
-        //subtractConsumedBytesFromParent(containerInfo.totalLength);
+        subtractConsumedBytesFromParent(containerInfo.totalLength);
+        // tODO reset other state (e.g. annotations?)
+        valueTid = null;
+        fieldSid = -1;
     }
 
     @Override
@@ -1103,6 +1192,13 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
             case NEXT_VALUE:
                 try {
                     nextHeader();
+                } catch (Exception e) {
+                    throw new IonException(e);
+                }
+                break;
+            case LOAD_SCALAR: // TODO should load apply to anything, even containers? Then the top-level only version would just call load on every value rather than being a different kind of special case.
+                try {
+                    fillScalar();
                 } catch (Exception e) {
                     throw new IonException(e);
                 }
@@ -1136,23 +1232,25 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
     }
 
     @Override
-    public boolean moreDataRequired() {
-        // TODO
-        return pipe.available() <= 0 || state != State.BEFORE_TYPE_ID;
+    public boolean moreDataRequired() { // TODO API no longer needed?
+        return event == Event.NEEDS_DATA;
     }
 
     /**
-     * @return the index of the second byte of the IVM.
+     * Checks and clears the IVM indicator. Should be called between user values.
      */
-    int getIvmIndex() {
-        return ivmSecondByteIndex;
+    boolean checkAndResetIvm() { // TODO no longer needed?
+        boolean isIvmEncountered = ivmEncountered;
+        ivmEncountered = false;
+        return isIvmEncountered;
     }
 
-    /**
-     * Clears the IVM index. Should be called between user values.
-     */
-    void resetIvmIndex() {
-        ivmSecondByteIndex = -1;
+    int ionMajorVersion() {
+        return majorVersion;
+    }
+
+    int ionMinorVersion() {
+        return minorVersion;
     }
 
     /**
@@ -1186,28 +1284,6 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         return valueEndIndex;
     }
 
-    /**
-     * Returns markers for any symbol tables that occurred in the stream between the last value and the current value.
-     * The startIndex of the returned markers is the index of the first byte of the symbol table struct's contents.
-     * The endIndex of the returned markers is the index of the first byte after the end of the symbol table.
-     * @return the markers.
-     */
-    /*
-    List<Marker> getSymbolTableMarkers() {
-        return symbolTableMarkers;
-    }
-
-     */
-
-    /**
-     * Clears the symbol table markers.
-     */
-    /*
-    void resetSymbolTableMarkers() {
-        symbolTableMarkers.clear();
-    }
-
-     */
 
     /**
      * @return true if the current value has annotations; otherwise, false.
@@ -1223,6 +1299,22 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
      */
     Marker getAnnotationSidsMarker() {
         return annotationSidsMarker;
+    }
+
+    Marker getScalarMarker() {
+        return scalarMarker;
+    }
+
+    public boolean isInStruct() {
+        return !containerStack.isEmpty() && containerStack.peek().type == IonType.STRUCT;
+    }
+
+    int getFieldId() {
+        return fieldSid;
+    }
+
+    public int getDepth() {
+        return containerStack.size();
     }
 
 }
