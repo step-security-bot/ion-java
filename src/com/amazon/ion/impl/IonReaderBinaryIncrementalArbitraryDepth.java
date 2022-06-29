@@ -1,5 +1,7 @@
 package com.amazon.ion.impl;
 
+import com.amazon.ion.Decimal;
+import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
@@ -11,6 +13,7 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
+import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.impl.bin.IntList;
@@ -20,7 +23,10 @@ import com.amazon.ion.system.SimpleCatalog;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -278,7 +284,9 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
          * next call to {@link #ready()}.
          */
         void invalidate() {
-            sidIterator.invalidate();
+            if (sidIterator != null) {
+                sidIterator.invalidate();
+            }
         }
     }
 
@@ -890,7 +898,9 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                                 resetSymbolTable();
                                 resetImports();
                             }
-                            symbols.addAll(newSymbols);
+                            if (newSymbols != null) {
+                                symbols.addAll(newSymbols);
+                            }
                             state = State.READING_VALUE;
                             return;
                         }
@@ -930,7 +940,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                             newImports.add(getSystemSymbolTable());
                             state = State.READING_SYMBOL_TABLE_IMPORTS_LIST;
                         } else if (raw.getType() == IonType.SYMBOL) {
-                            if (Event.NEEDS_DATA == raw.next(Instruction.LOAD_SCALAR)) {
+                            if (Event.NEEDS_DATA == raw.next(Instruction.LOAD_VALUE)) {
                                 return;
                             }
                             if (raw.symbolValueId() == SystemSymbolIDs.ION_SYMBOL_TABLE_ID) {
@@ -960,7 +970,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                         }
                         break;
                     case READING_SYMBOL_TABLE_SYMBOL:
-                        if (Event.NEEDS_DATA == raw.next(Instruction.LOAD_SCALAR)) {
+                        if (Event.NEEDS_DATA == raw.next(Instruction.LOAD_VALUE)) {
                             return;
                         }
                         newSymbols.add(raw.stringValue());
@@ -1005,7 +1015,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                         }
                         break;
                     case READING_SYMBOL_TABLE_IMPORT_NAME:
-                        if (Event.NEEDS_DATA == raw.next(Instruction.LOAD_SCALAR)) {
+                        if (Event.NEEDS_DATA == raw.next(Instruction.LOAD_VALUE)) {
                             return;
                         }
                         if (raw.getType() == IonType.STRING) {
@@ -1014,7 +1024,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                         state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
                         break;
                     case READING_SYMBOL_TABLE_IMPORT_VERSION:
-                        if (Event.NEEDS_DATA == raw.next(Instruction.LOAD_SCALAR)) {
+                        if (Event.NEEDS_DATA == raw.next(Instruction.LOAD_VALUE)) {
                             return;
                         }
                         if (raw.getType() == IonType.INT) {
@@ -1023,7 +1033,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                         state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
                         break;
                     case READING_SYMBOL_TABLE_IMPORT_MAX_ID:
-                        if (Event.NEEDS_DATA == raw.next(Instruction.LOAD_SCALAR)) {
+                        if (Event.NEEDS_DATA == raw.next(Instruction.LOAD_VALUE)) {
                             return;
                         }
                         if (raw.getType() == IonType.INT) {
@@ -1073,6 +1083,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                 raw.hasAnnotations() &&
                 raw.iterateAnnotationSids().next() == SystemSymbolIDs.ION_SYMBOL_TABLE_ID
             ) {
+                cachedReadOnlySymbolTable = null;
                 symbolTableReader.resetState();
                 state = State.ON_SYMBOL_TABLE_STRUCT;
                 continue;
@@ -1123,6 +1134,10 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         return raw.getType();
     }
 
+    public IntegerSize getIntegerSize() {
+        return raw.getIntegerSize();
+    }
+
     public String stringValue() {
         String value;
         IonType type = getType();
@@ -1151,6 +1166,18 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
             return null;
         }
         return getSymbolToken(sid);
+    }
+
+    public int byteSize() {
+        return raw.byteSize();
+    }
+
+    public byte[] newBytes() {
+        return raw.newBytes();
+    }
+
+    public int getBytes(byte[] buffer, int offset, int len) {
+        return raw.getBytes(buffer, offset, len);
     }
 
     public String[] getTypeAnnotations() {
@@ -1235,6 +1262,50 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         return getSymbolToken(fieldNameSid);
     }
 
+    public boolean isNullValue() {
+        return raw.isNullValue();
+    }
+
+    public boolean isInStruct() {
+        return raw.isInStruct();
+    }
+
+    public boolean booleanValue() {
+        return raw.booleanValue();
+    }
+
+    public int intValue() {
+        return raw.intValue();
+    }
+
+    public long longValue() {
+        return raw.longValue();
+    }
+
+    public BigInteger bigIntegerValue() {
+        return raw.bigIntegerValue();
+    }
+
+    public double doubleValue() {
+        return raw.doubleValue();
+    }
+
+    public BigDecimal bigDecimalValue() {
+        return raw.bigDecimalValue();
+    }
+
+    public Decimal decimalValue() {
+        return raw.decimalValue();
+    }
+
+    public Date dateValue() {
+        return raw.dateValue();
+    }
+
+    public Timestamp timestampValue() {
+        return raw.timestampValue();
+    }
+
     public <T> T asFacet(Class<T> facetType) {
         return null;
     }
@@ -1245,13 +1316,13 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         // validation could be performed in next() if incremental mode is not enabled. That would allow this
         // implementation to behave in the same way as the other implementation when an incomplete value is
         // encountered.
-        if (raw.getCurrentEvent() == Event.NEEDS_DATA) {
+        if (raw.getCurrentEvent() == Event.NEEDS_DATA) { // TODO not correct. Figure out the right logic, and when/if it's needed
             throw new IonException("Unexpected EOF.");
         }
     }
 
     public void close() throws IOException {
-        requireCompleteValue();
+        //requireCompleteValue();
         inputStream.close();
     }
 

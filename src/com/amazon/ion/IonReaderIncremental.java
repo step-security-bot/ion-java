@@ -8,14 +8,14 @@ public interface IonReaderIncremental {
         NEEDS_DATA,
         NEEDS_INSTRUCTION, // TODO consider adding START_ANNOTATION, allowing users to skip a value after reading an annotation
         START_SCALAR,
-        SCALAR_READY,
+        VALUE_READY,
         START_CONTAINER,
         END_CONTAINER
     }
 
     enum Instruction {
         NEXT_VALUE,
-        LOAD_SCALAR,
+        LOAD_VALUE,
         STEP_IN,
         STEP_OUT
     }

@@ -7,7 +7,6 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonReaderIncremental;
 import com.amazon.ion.IonType;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.bin.IntList;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoder;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoderPool;
@@ -17,7 +16,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Date;
-import java.util.Iterator;
 
 public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderIncremental {
 
@@ -100,12 +98,14 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
     @Override
     public Event next(Instruction instruction) {
         lobBytesRead = 0;
-        if (instruction != Instruction.LOAD_SCALAR) {
+        if (instruction != Instruction.LOAD_VALUE) {
             // Keep the annotations if remaining positioned on the same scalar; otherwise, drop them.
             annotationSids.clear(); // TODO is there a better place for this?
             valueTid = null;
         }
-        return buffer.next(instruction);
+        Event event = buffer.next(instruction);
+        valueTid = buffer.getValueTid();
+        return event;
     }
 
     @Override
@@ -270,11 +270,11 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
     }
 
     private void prepareScalar() {
-        if (getCurrentEvent() != Event.SCALAR_READY) {
+        if (getCurrentEvent() != Event.VALUE_READY) {
             throw new IonException("No scalar has been loaded.");
         }
         valueTid = buffer.getValueTid();
-        scalarMarker = buffer.getScalarMarker();
+        scalarMarker = buffer.getValueMarker();
         peekIndex = scalarMarker.startIndex;
     }
 
@@ -636,9 +636,9 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
     public String stringValue() {
         prepareScalar();
         requireType(IonType.STRING);
-            if (isNullValue()) {
-                return null;
-            }
+        if (isNullValue()) {
+            return null;
+        }
         return readString(scalarMarker.startIndex, scalarMarker.endIndex);
     }
 
@@ -725,7 +725,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
     }
 
     public IonType getType() {
-        return valueTid.type;
+        return valueTid == null ? null : valueTid.type;
     }
 
     public int getDepth() {
