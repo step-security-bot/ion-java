@@ -42,6 +42,7 @@ public class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_R
             //}
             //throw new IllegalStateException("The implementation failed to load the top-level value.");
         }
+        // TODO can the following be moved to prepareValue()?
         if (event == IonReaderIncremental.Event.START_SCALAR || (getDepth() == 0 && event == IonReaderIncremental.Event.START_CONTAINER)) {
             nextInstruction = IonReaderIncremental.Instruction.LOAD_VALUE;
             event = reader.next(nextInstruction);
@@ -218,7 +219,7 @@ public class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_R
 
     @Override
     public void close() throws IOException {
-        // requireCompleteValue(); // tODO
+        requireCompleteValue();
         reader.close();
     }
 }

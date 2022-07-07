@@ -1322,7 +1322,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         // validation could be performed in next() if incremental mode is not enabled. That would allow this
         // implementation to behave in the same way as the other implementation when an incomplete value is
         // encountered.
-        if (raw.getCurrentEvent() == Event.NEEDS_DATA) { // TODO not correct. Figure out the right logic, and when/if it's needed
+        if (raw.getCurrentEvent() == Event.NEEDS_DATA && raw.isAwaitingMoreData()) { // TODO not correct. Figure out the right logic, and when/if it's needed
             throw new IonException("Unexpected EOF.");
         }
     }

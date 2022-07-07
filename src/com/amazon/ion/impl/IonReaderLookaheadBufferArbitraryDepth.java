@@ -889,6 +889,21 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         }
     }
 
+    private boolean checkContainerEnd() {
+        if (!containerStack.isEmpty()) {
+            if (containerStack.peek().remainingLength == 0) {
+                state = State.AFTER_CONTAINER;
+                event = Event.END_CONTAINER;
+                // TODO reset other state?
+                valueTid = null;
+                return true;
+            } else if (containerStack.peek().remainingLength < 0) {
+                throw new IonException("Contained values overflowed the parent container length.");
+            }
+        }
+        return false;
+    }
+
     /**
      * Reads past the next value header at the current depth.
      * @throws Exception
@@ -913,16 +928,8 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
                 state = State.BEFORE_TYPE_ID;
             }
         }
-        if (!containerStack.isEmpty()) {
-            if (containerStack.peek().remainingLength == 0) {
-                state = State.AFTER_CONTAINER;
-                event = Event.END_CONTAINER;
-                // TODO reset other state?
-                valueTid = null;
-                return;
-            } else if (containerStack.peek().remainingLength < 0) {
-                throw new IonException("Contained values overflowed the parent container length.");
-            }
+        if (checkContainerEnd()) {
+            return;
         }
         while (true) {
             if (state == State.BEFORE_FIELD_NAME) {
@@ -1028,6 +1035,7 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
                     if (pipe.availableBeyondBoundary() <= additionalBytesNeeded) {
                         // There cannot be any meaningful data beyond the NOP pad, so the buffer can be truncated
                         // immediately and the rest of the NOP pad skipped.
+                        subtractConsumedBytesFromParent(pipe.availableBeyondBoundary());
                         additionalBytesNeeded -= pipe.availableBeyondBoundary();
                         startSkippingValue();
                         // NOP padding will not be buffered, so it is never considered oversized.
@@ -1046,9 +1054,16 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
                 }
                 // TODO when "buffer entire top level value" is enabled, return to the state and position where the
                 //  buffering began. Ensure additional buffering does not occur until the end of the value.
-                state = State.BEFORE_TYPE_ID;
+                if (isInStruct()) {
+                    state = State.BEFORE_FIELD_NAME;
+                } else {
+                    state = State.BEFORE_TYPE_ID;
+                }
+                if (checkContainerEnd()) {
+                    return;
+                }
             }
-            if (state == State.BEFORE_TYPE_ID) {
+            if (state == State.BEFORE_TYPE_ID || state == State.BEFORE_FIELD_NAME) {
                 valueEndIndex = peekIndex;
                 if (isIvm || isSkippingCurrentValue() || valueTid.isNopPad) {
                     if (valueTid.isNopPad && nopPadStartIndex < 0) {
@@ -1351,6 +1366,10 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
 
     public int getDepth() {
         return containerStack.size();
+    }
+
+    boolean isAwaitingMoreData() {
+        return additionalBytesNeeded > 0;
     }
 
 }

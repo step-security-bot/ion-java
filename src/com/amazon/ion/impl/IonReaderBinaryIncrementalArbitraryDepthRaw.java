@@ -744,6 +744,10 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         return buffer.hasAnnotations();
     }
 
+    boolean isAwaitingMoreData() {
+        return buffer.isAwaitingMoreData();
+    }
+
 
     public void close() {
         utf8Decoder.close();
