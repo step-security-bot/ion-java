@@ -936,6 +936,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                                 return;
                             }
                             resetImports();
+                            resetSymbolTable();
                             newImports = new ArrayList<SymbolTable>(3);
                             newImports.add(getSystemSymbolTable());
                             state = State.READING_SYMBOL_TABLE_IMPORTS_LIST;
@@ -989,11 +990,12 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                         }
                         resetImportInfo();
                         if (raw.getType() == IonType.STRUCT) {
+                            raw.next(Instruction.STEP_IN);
                             state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
                         }
                         break;
                     case READING_SYMBOL_TABLE_IMPORT_STRUCT:
-                        event = raw.next(Instruction.STEP_IN);
+                        event = raw.next(Instruction.NEXT_VALUE);
                         if (event == Event.NEEDS_DATA) {
                             return;
                         }
@@ -1063,11 +1065,15 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
 
     private State state = State.READING_VALUE;
 
+    private boolean isReadingSymbolTable() {
+        return state.ordinal() < State.READING_VALUE.ordinal();
+    }
+
     @Override
     public Event next(Instruction instruction) {
         Event event;
         while (true) {
-            if (state.ordinal() < State.READING_VALUE.ordinal()) {
+            if (isReadingSymbolTable()) {
                 symbolTableReader.readSymbolTable();
                 if (state != State.READING_VALUE) {
                     event = Event.NEEDS_DATA;

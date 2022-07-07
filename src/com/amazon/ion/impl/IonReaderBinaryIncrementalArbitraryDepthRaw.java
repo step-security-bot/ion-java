@@ -547,6 +547,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
     }
 
     public Timestamp timestampValue() {
+        prepareScalar();
         requireType(IonType.TIMESTAMP);
         if (isNullValue()) {
             return null;

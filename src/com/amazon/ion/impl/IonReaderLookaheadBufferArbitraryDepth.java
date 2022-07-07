@@ -506,7 +506,7 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
             throw new IonException("Invalid type ID.");
         } else if (valueTid.type == IonType.BOOL) {
             // bool values are always a single byte.
-            state = State.BEFORE_TYPE_ID;
+            state = State.BEFORE_SCALAR;
         } else if (valueTid.type == IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {
             // Annotation.
             if (!isUnannotated) {
@@ -521,7 +521,7 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         } else {
             if (valueTid.isNull) {
                 // null values are always a single byte.
-                state = State.BEFORE_TYPE_ID;
+                state = IonType.isContainer(valueTid.type) ? State.BEFORE_CONTAINER : State.BEFORE_SCALAR;
             } else {
                 // Not null
                 if (valueTid.variableLength) {
@@ -614,6 +614,7 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         peekIndex = Math.max(peekIndex - shiftAmount, 0);
         valuePreHeaderIndex -= shiftAmount;
         valuePostHeaderIndex -= shiftAmount;
+        valueEndIndex -= shiftAmount;
         valueStartWriteIndex -= shiftAmount;
         /*
         for (Marker symbolTableMarker : symbolTableMarkers) {
@@ -753,8 +754,8 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
             bytesFilled = Math.min(additionalBytesNeeded, bytesFilled);
             if (shouldExtendBoundary) {
                 pipe.extendBoundary((int) bytesFilled);
+                peekIndex += (int) bytesFilled;
             }
-            peekIndex += (int) bytesFilled;
         }
         return bytesFilled;
     }
@@ -880,6 +881,14 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         }
     }
 
+    private void verifyValueLength() {
+        if (!containerStack.isEmpty()) {
+            if (additionalBytesNeeded > containerStack.peek().remainingLength) {
+                throw new IonException("Value exceeds the length of its parent container.");
+            }
+        }
+    }
+
     /**
      * Reads past the next value header at the current depth.
      * @throws Exception
@@ -938,6 +947,7 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
                     valuePreHeaderIndex = valuePostHeaderIndex - 1;
                     valueStartWriteIndex = valuePreHeaderIndex;
                     valueEndIndex = valuePostHeaderIndex + valueTid.length; // TODO not right for variable length, but doesn't matter
+                    verifyValueLength();
                 }
             }
             if (state == State.READING_HEADER) {
@@ -1005,10 +1015,12 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
                     valuePostHeaderIndex = peekIndex;
                     valuePreHeaderIndex = valuePostHeaderIndex - 1;
                     valueStartWriteIndex = valuePreHeaderIndex;
-                }
-                if (state == State.READING_HEADER) {
-                    // Consume the length byte(s) from the header of the wrapped value.
-                    continue;
+                    if (state == State.READING_HEADER) {
+                        // Consume the length byte(s) from the header of the wrapped value.
+                        continue;
+                    } else if (valueEndIndex != valuePostHeaderIndex + valueTid.length) {
+                        throw new IonException("Annotation wrapper length mismatch.");
+                    }
                 }
             }
             if (state == State.SKIPPING_BYTES) {
@@ -1092,6 +1104,7 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         }
         switch (state) {
             case BEFORE_SCALAR:
+                verifyValueLength();
                 event = Event.START_SCALAR;
                 break;
             case BEFORE_CONTAINER:
@@ -1145,6 +1158,8 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         if (additionalBytesNeeded > 0) {
             containerInfo.totalLength = additionalBytesNeeded;
             setAdditionalBytesNeeded(0, true);
+        } else if (valueTid.length == 0) {
+            containerInfo.totalLength = 0;
         } else {
             // The user must have requested to load the container. // TODO check
             containerInfo.totalLength = valueMarker.endIndex - valueMarker.startIndex;
@@ -1183,12 +1198,13 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         }
 
         while (additionalBytesNeeded > 0) {
-            long numberOfBytesSkipped = skip(additionalBytesNeeded);
+            long numberOfBytesSkipped = skip(additionalBytesNeeded); // TODO does this buffer unnecessarily? Skip, don't buffer
             if (numberOfBytesSkipped < 1) {
                 return;
             }
             additionalBytesNeeded -= numberOfBytesSkipped;
         }
+        pipe.seekTo(peekIndex); // TODO check
         if (!containerStack.isEmpty() && containerStack.peek().type == IonType.STRUCT) {
             state = State.BEFORE_FIELD_NAME;
         } else {
@@ -1224,6 +1240,8 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
             case STEP_OUT:
                 try {
                     stepOut();
+                } catch (RuntimeException e) {
+                    throw e;
                 } catch (Exception e) {
                     throw new IonException(e);
                 }
