@@ -34,22 +34,29 @@ public class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_R
 
     @Override
     public IonType next() {
-        IonReaderIncremental.Event event = reader.next(nextInstruction);
-        if (event == IonReaderIncremental.Event.NEEDS_DATA) {
-            type = null;
-            //if (getDepth() == 0) {
-                return null;
-            //}
-            //throw new IllegalStateException("The implementation failed to load the top-level value.");
-        }
-        // TODO can the following be moved to prepareValue()?
-        if (event == IonReaderIncremental.Event.START_SCALAR || (getDepth() == 0 && event == IonReaderIncremental.Event.START_CONTAINER)) {
-            nextInstruction = IonReaderIncremental.Instruction.LOAD_VALUE;
-            event = reader.next(nextInstruction);
+        while (true) {
+            IonReaderIncremental.Event event = reader.next(nextInstruction);
             if (event == IonReaderIncremental.Event.NEEDS_DATA) {
                 type = null;
+                //if (getDepth() == 0) {
                 return null;
+                //}
+                //throw new IllegalStateException("The implementation failed to load the top-level value.");
             }
+            // TODO can the following be moved to prepareValue()?
+            if (event == IonReaderIncremental.Event.START_SCALAR || (getDepth() == 0 && event == IonReaderIncremental.Event.START_CONTAINER)) {
+                nextInstruction = IonReaderIncremental.Instruction.LOAD_VALUE;
+                event = reader.next(nextInstruction);
+                if (event == IonReaderIncremental.Event.NEEDS_DATA) {
+                    type = null;
+                    return null;
+                } else if (event == IonReaderIncremental.Event.NEEDS_INSTRUCTION) {
+                    // The value was skipped for being too large. Get the next one.
+                    nextInstruction = IonReaderIncremental.Instruction.NEXT_VALUE;
+                    continue;
+                }
+            }
+            break;
         }
         if (nextInstruction == IonReaderIncremental.Instruction.LOAD_VALUE) {
             nextInstruction = IonReaderIncremental.Instruction.NEXT_VALUE;

@@ -659,14 +659,15 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         }
     }
 
-    /**
-     * Retrieve and buffer up to {@link #pageSize} bytes from the input.
-     * @param numberOfBytesRequested the minimum amount of space that must be available before the buffer reaches
-     *                               its configured maximum size.
-     * @return the number of bytes buffered by this operation.
-     * @throws Exception if thrown by the underlying InputStream.
-     */
-    private int fillPage(int numberOfBytesRequested) throws Exception {
+    private int checkOversized(int numberOfBytesRequested) throws Exception {
+        if (additionalBytesNeeded > MAXIMUM_VALUE_SIZE) {
+            throw new IonException("The size of the value exceeds the limits of the implementation.");
+        }
+        if (additionalBytesNeeded > getMaximumBufferSize()) {
+            state = State.SKIPPING_BYTES;
+            startSkippingValue();
+            return 0;
+        }
         int amountToFill = pipe.capacity() - pipe.size();
         if (amountToFill <= 0) {
             // Try to fill the remainder of the existing buffer to avoid growing unnecessarily. If there is no
@@ -678,6 +679,7 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
                     // Reclaim the NOP pad space if doing so would allow the value to fit.
                     reclaimNopPadding();
                 } else {
+                    state = State.SKIPPING_BYTES;
                     startSkippingValue();
                 }
                 amountToFill = numberOfBytesRequested;
@@ -685,6 +687,18 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
                 amountToFill = Math.min(pageSize, spaceAvailable);
             }
         }
+        return amountToFill;
+    }
+
+    /**
+     * Retrieve and buffer up to {@link #pageSize} bytes from the input.
+     * @param numberOfBytesRequested the minimum amount of space that must be available before the buffer reaches
+     *                               its configured maximum size.
+     * @return the number of bytes buffered by this operation.
+     * @throws Exception if thrown by the underlying InputStream.
+     */
+    private int fillPage(int numberOfBytesRequested) throws Exception {
+        int amountToFill = checkOversized(numberOfBytesRequested);
         int received;
         if (isSkippingCurrentValue()) {
             if (state == State.SKIPPING_BYTES) {
@@ -734,9 +748,6 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         if (isSkippingCurrentValue()) {
             bytesFilled = skipBytesFromInput(bytesRequested);
         } else {
-            if (additionalBytesNeeded > MAXIMUM_VALUE_SIZE) {
-                throw new IonException("The size of the value exceeds the limits of the implementation.");
-            }
             bytesFilled = fillPage((int) bytesRequested);
         }
         if (bytesFilled < 1) {
@@ -915,6 +926,7 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         }
         event = Event.NEEDS_DATA;
         if (state == State.SKIPPING_PREVIOUS_VALUE) {
+            // TODO don't fill the value if it's not already filled. Just skip
             while (additionalBytesNeeded > 0) {
                 long numberOfBytesSkipped = skip(additionalBytesNeeded);
                 if (numberOfBytesSkipped < 1) {
@@ -922,6 +934,7 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
                 }
                 additionalBytesNeeded -= numberOfBytesSkipped;
             }
+            pipe.seekTo(peekIndex); // TODO check
             if (isInStruct()) {
                 state = State.BEFORE_FIELD_NAME;
             } else {
@@ -959,13 +972,14 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
             }
             if (state == State.READING_HEADER) {
                 readHeader();
-                if (!inProgressVarUInt.isComplete) {
-                    return;
+                if (inProgressVarUInt.isComplete) {
+                    valuePostHeaderIndex = peekIndex;
+                    valueEndIndex = valuePostHeaderIndex + (int) additionalBytesNeeded; // TODO check
+                    // TODO seek past the header (freeing that space in the buffer) unless the value is annotated.
                 }
-                valuePostHeaderIndex = peekIndex;
-                valueEndIndex = valuePostHeaderIndex + (int) additionalBytesNeeded; // TODO check
-                // TODO seek past the header (freeing that space in the buffer) unless the value is annotated.
             }
+            // TODO doesn't need to be called if already SKIPPING_BYTES
+            checkOversized((int) additionalBytesNeeded - pipe.availableBeyondBoundary());
             /*
             if (state == State.READING_VALUE_WITH_SYMBOL_TABLE_ANNOTATION) {
                 // Skip annotations until positioned on the value's type ID.
@@ -1036,7 +1050,6 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
                         // There cannot be any meaningful data beyond the NOP pad, so the buffer can be truncated
                         // immediately and the rest of the NOP pad skipped.
                         subtractConsumedBytesFromParent(pipe.availableBeyondBoundary());
-                        additionalBytesNeeded -= pipe.availableBeyondBoundary();
                         startSkippingValue();
                         // NOP padding will not be buffered, so it is never considered oversized.
                         handlerNeedsToBeNotifiedOfOversizedValue = false;
@@ -1048,6 +1061,7 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
                 while (additionalBytesNeeded > 0) {
                     long numberOfBytesSkipped = skip(additionalBytesNeeded);
                     if (numberOfBytesSkipped < 1) {
+                        event = Event.NEEDS_DATA;
                         return;
                     }
                     additionalBytesNeeded -= numberOfBytesSkipped;
@@ -1100,7 +1114,7 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
                             // as we do with the symbol table markers. This way, we know that there can only be one
                             // uninterrupted run of NOP pad bytes immediately preceding any user value, making it easy
                             // to reclaim this space if necessary.
-                            reclaimNopPadding(); // TODO check if necessary.
+                            //reclaimNopPadding(); // TODO check if necessary.
                         }
                         majorVersion = pipe.peek(ivmSecondByteIndex++);
                         minorVersion = pipe.peek(ivmSecondByteIndex++);
@@ -1151,12 +1165,15 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         }
         event = Event.NEEDS_DATA;
 
-        if (pipe.availableBeyondBoundary() < additionalBytesNeeded) {
-            fillOrSkip(false);
-            if (pipe.availableBeyondBoundary() < additionalBytesNeeded) {
+        long bytesFilled = 0;
+        while (pipe.availableBeyondBoundary() < additionalBytesNeeded && bytesFilled < additionalBytesNeeded) {
+            long bytesFilledThisIteration = fillOrSkip(false);
+            bytesFilled += bytesFilledThisIteration;
+            if (bytesFilledThisIteration < 1) {
                 return;
             }
         }
+
         valueMarker.startIndex = valuePostHeaderIndex;
         valueMarker.endIndex = valueEndIndex;
         event = Event.VALUE_READY;
@@ -1276,7 +1293,9 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
     }
 
     @Override
-    void truncateToEndOfPreviousValue() {
+    void truncateToEndOfPreviousValue() throws Exception {
+        additionalBytesNeeded -= pipe.availableBeyondBoundary();
+        dataHandler.onData(pipe.availableBeyondBoundary());
         peekIndex = valueStartWriteIndex;
         pipe.truncate(valueStartWriteIndex, valueStartAvailable);
         handlerNeedsToBeNotifiedOfOversizedValue = true;

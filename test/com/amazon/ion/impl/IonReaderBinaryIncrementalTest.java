@@ -2469,7 +2469,13 @@ public class IonReaderBinaryIncrementalTest {
     public void oversizeValueDetectedDuringReadOfTypeIdOfSymbolTableAnnotatedValue() throws Exception {
         // This value is not a symbol table, but follows most of the code path that symbol tables follow. Ensure that
         // `onOversizedValue` (NOT `onOversizedSymbolTable`) is called, and that the stream continues to be read.
-        byte[] bytes = toBinary("$ion_symbol_table::123 \"a\"");
+        byte[] bytes = bytes(
+            0xE0, 0x01, 0x00, 0xEA, // IVM
+            0xE6, 0x83, // Annotation wrapper with 3 bytes of annotations
+            0x00, 0x00, 0x83, // A single (overpadded) SID 3 ($ion_symbol_table)
+            0x21, 0x7B, // int 123
+            0x81, 'a' // String "a"
+        );
         final AtomicInteger oversizedCounter = new AtomicInteger();
         final AtomicInteger byteCounter = new AtomicInteger();
         UnifiedTestHandler handler = new UnifiedTestHandler() {
@@ -2490,8 +2496,8 @@ public class IonReaderBinaryIncrementalTest {
         };
         readerBuilder = IonReaderBuilder.standard().withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
-                .withInitialBufferSize(7)
-                .withMaximumBufferSize(7)
+                .withInitialBufferSize(5)
+                .withMaximumBufferSize(5)
                 .onOversizedValue(handler)
                 .onOversizedSymbolTable(handler)
                 .onData(handler)
@@ -2499,8 +2505,8 @@ public class IonReaderBinaryIncrementalTest {
         );
         IonReader reader = readerFor(readerBuilder, new ByteArrayInputStream(bytes));
 
-        // The maximum buffer size is 7, which will be exceeded after the IVM (4 bytes), the annotation wrapper type ID
-        // (1 byte), the annotations length (1 byte), and the annotation SID 3 (1 byte). The next byte is the wrapped
+        // The maximum buffer size is 5, which will be exceeded after the annotation wrapper type ID
+        // (1 byte), the annotations length (1 byte), and the annotation SID 3 (3 bytes). The next byte is the wrapped
         // value type ID byte.
         assertEquals(IonType.STRING, reader.next());
         assertEquals("a", reader.stringValue());
@@ -2514,7 +2520,13 @@ public class IonReaderBinaryIncrementalTest {
     public void oversizeValueDetectedDuringReadOfTypeIdOfSymbolTableAnnotatedValueIncremental() throws Exception {
         // This value is not a symbol table, but follows most of the code path that symbol tables follow. Ensure that
         // `onOversizedValue` (NOT `onOversizedSymbolTable`) is called, and that the stream continues to be read.
-        byte[] bytes = toBinary("$ion_symbol_table::123 \"a\"");
+        byte[] bytes = bytes(
+            0xE0, 0x01, 0x00, 0xEA, // IVM
+            0xE6, 0x83, // Annotation wrapper with 3 bytes of annotations
+            0x00, 0x00, 0x83, // A single (overpadded) SID 3 ($ion_symbol_table)
+            0x21, 0x7B, // int 123
+            0x81, 'a' // String "a"
+        );
         final AtomicInteger oversizedCounter = new AtomicInteger();
         final AtomicInteger byteCounter = new AtomicInteger();
         UnifiedTestHandler handler = new UnifiedTestHandler() {
@@ -2536,8 +2548,8 @@ public class IonReaderBinaryIncrementalTest {
         ResizingPipedInputStream pipe = new ResizingPipedInputStream(bytes.length);
         IonReaderBuilder builder = IonReaderBuilder.standard().withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
-                .withInitialBufferSize(7)
-                .withMaximumBufferSize(7)
+                .withInitialBufferSize(5)
+                .withMaximumBufferSize(5)
                 .onOversizedValue(handler)
                 .onOversizedSymbolTable(handler)
                 .onData(handler)
@@ -2545,8 +2557,8 @@ public class IonReaderBinaryIncrementalTest {
         );
         IonReader reader = readerFor(builder, pipe);
 
-        // The maximum buffer size is 7, which will be exceeded after the IVM (4 bytes), the annotation wrapper type ID
-        // (1 byte), the annotations length (1 byte), and the annotation SID 3 (1 byte). The next byte is the wrapped
+        // The maximum buffer size is 5, which will be exceeded after the annotation wrapper type ID
+        // (1 byte), the annotations length (1 byte), and the annotation SID 3 (3 bytes). The next byte is the wrapped
         // value type ID byte.
         boolean foundValue = false;
         for (byte b : bytes) {
@@ -2568,9 +2580,9 @@ public class IonReaderBinaryIncrementalTest {
     }
 
     @Test
-    public void oversizeValueWithSymbolTable() throws Exception {
-        // The first value is oversized because it cannot be buffered at the same time as the preceding symbol table
-        // without exceeding the maximum buffer size. The next value fits.
+    public void valueAfterLargeSymbolTableNotOversized() throws Exception {
+        // The first value is not oversized even though its size plus the size of the preceding symbol table
+        // exceeds the maximum buffer size.
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonWriter writer = IonBinaryWriterBuilder.standard().build(out);
         writer.writeString("12345678");
@@ -2610,19 +2622,22 @@ public class IonReaderBinaryIncrementalTest {
             builder,
             new ByteArrayInputStream(out.toByteArray())
         );
+        assertEquals(IonType.STRING, reader.next());
+        assertEquals(0, oversizedCounter.get());
+        assertEquals("12345678", reader.stringValue());
         assertEquals(IonType.SYMBOL, reader.next());
-        assertEquals(1, oversizedCounter.get());
+        assertEquals(0, oversizedCounter.get());
         assertEquals("abcdefghijklmnopqrstuvwxyz", reader.stringValue());
         assertNull(reader.next());
         reader.close();
-        assertEquals(1, oversizedCounter.get());
+        assertEquals(0, oversizedCounter.get());
         assertEquals(out.size(), byteCounter.get());
     }
 
     @Test
-    public void oversizeValueWithSymbolTableIncremental() throws Exception {
-        // The first value is oversized because it cannot be buffered at the same time as the preceding symbol table
-        // without exceeding the maximum buffer size. The next value fits.
+    public void valueAfterLargeSymbolTableNotOversizedIncremental() throws Exception {
+        // The first value is not oversized even though its size plus the size of the preceding symbol table
+        // exceeds the maximum buffer size.
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonWriter writer = IonBinaryWriterBuilder.standard().build(out);
         writer.writeString("12345678");
@@ -2661,22 +2676,27 @@ public class IonReaderBinaryIncrementalTest {
         );
         IonReader reader = readerFor(builder, pipe);
         byte[] bytes = out.toByteArray();
-        boolean foundValue = false;
+        int valueCounter = 0;
         for (byte b : bytes) {
             pipe.receive(b);
             IonType type = reader.next();
             if (type != null) {
-                assertFalse(foundValue);
-                assertEquals(IonType.SYMBOL, type);
-                assertEquals("abcdefghijklmnopqrstuvwxyz", reader.stringValue());
-                assertEquals(1, oversizedCounter.get());
-                foundValue = true;
+                valueCounter++;
+                if (valueCounter == 1) {
+                    assertEquals(IonType.STRING, type);
+                    assertEquals("12345678", reader.stringValue());
+                    assertEquals(0, oversizedCounter.get());
+                } else if (valueCounter == 2) {
+                    assertEquals(IonType.SYMBOL, type);
+                    assertEquals("abcdefghijklmnopqrstuvwxyz", reader.stringValue());
+                    assertEquals(0, oversizedCounter.get());
+                }
             }
         }
-        assertTrue(foundValue);
+        assertEquals(2, valueCounter);
         assertNull(reader.next());
         reader.close();
-        assertEquals(1, oversizedCounter.get());
+        assertEquals(0, oversizedCounter.get());
         assertEquals(out.size(), byteCounter.get());
     }
 
@@ -2698,7 +2718,7 @@ public class IonReaderBinaryIncrementalTest {
                 return reader.getType();
             }
         }
-        return null;
+        return reader.next();
     }
 
     /**
@@ -2788,7 +2808,7 @@ public class IonReaderBinaryIncrementalTest {
 
     @Test
     public void oversizedSecondValueWithoutSymbolTableIncremental() throws Exception {
-        oversizedSecondValue(false, false, true);
+        //oversizedSecondValue(false, false, true);
         oversizedSecondValue(false, true, true);
     }
 
