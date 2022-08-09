@@ -7,8 +7,8 @@ com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderTextSystemX,627,1076,110,17
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonTokenConstsX.CharacterSequence,3,0,0,0,1,0,1,0,1,0
 com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_IonTextWriterBuilder.Mutable,0,18,0,0,0,6,0,5,0,5
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderLookaheadBuffer.State,0,74,0,0,0,8,0,1,0,1
-com.amazon.ion:ion-java,com.amazon.ion.impl,IonTokenReader.LocalReader,72,0,6,0,21,0,8,0,5,0
 com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_Utils,400,720,106,110,93,189,85,79,17,37
+com.amazon.ion:ion-java,com.amazon.ion.impl,IonTokenReader.LocalReader,72,0,6,0,21,0,8,0,5,0
 com.amazon.ion:ion-java,com.amazon.ion.impl,SimpleByteBuffer.SimpleByteReader,1255,0,214,0,258,0,134,0,23,0
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderLookaheadBuffer,4,1117,3,155,3,269,3,105,0,29
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderBinaryUserX.IonReaderBinarySpan,0,15,0,0,0,6,0,4,0,4
@@ -38,8 +38,8 @@ com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderBinaryUserX.SpanProviderFac
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonTextBufferedStream,20,0,0,0,4,0,4,0,4,0
 com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_Utils.new ListIterator() {...},16,15,0,0,4,6,4,6,4,6
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonWriterSystemBinary,451,986,58,117,94,279,58,86,14,33
-com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_ScalarConversions.ValueVariant,652,497,94,46,171,152,117,64,40,50
 com.amazon.ion:ion-java,com.amazon.ion.impl,SubstituteSymbolTable.SymbolIterator,6,47,1,5,2,13,2,5,1,3
+com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_ScalarConversions.ValueVariant,652,497,94,46,171,152,117,64,40,50
 com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_IonReaderBuilder.Mutable,0,19,0,0,0,7,0,5,0,5
 com.amazon.ion:ion-java,com.amazon.ion.impl,UnifiedInputBufferX.Bytes,2,35,0,0,1,10,1,4,1,4
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderTreeSystem.Children,13,97,2,16,3,25,3,10,1,3
@@ -50,18 +50,18 @@ com.amazon.ion:ion-java,com.amazon.ion.impl,UnifiedInputStreamX,202,652,53,93,38
 com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_Utils.IntIterator,53,0,4,0,12,0,7,0,5,0
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderTextSystemX.Radix.new IonReaderTextSystemX.Radix() {...},0,18,0,0,0,3,0,3,0,3
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderTextSystemX.Radix.new IonReaderTextSystemX.Radix() {...},0,18,0,0,0,3,0,3,0,3
-com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderTextSystemX.Radix.new IonReaderTextSystemX.Radix() {...},0,18,0,0,0,3,0,3,0,3
 com.amazon.ion:ion-java,com.amazon.ion.impl,SymbolTableReader.Op,0,24,0,0,0,1,0,1,0,1
+com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderTextSystemX.Radix.new IonReaderTextSystemX.Radix() {...},0,18,0,0,0,3,0,3,0,3
 com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_IonBinaryWriterImpl,35,21,0,0,12,7,3,3,3,3
 com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_ScalarConversions.AS_TYPE,3,40,0,0,1,12,1,2,1,2
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderTreeUserX.SeekableReaderFacet,0,15,0,0,0,4,0,3,0,3
 com.amazon.ion:ion-java,com.amazon.ion.impl,BlockedBuffer.CompareMonitor,0,13,0,0,0,3,0,3,0,3
-com.amazon.ion:ion-java,com.amazon.ion.impl,IonTypeID,0,273,0,62,0,38,0,34,0,3
 com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_IonWriterFactory,3,52,0,0,1,13,1,3,1,3
+com.amazon.ion:ion-java,com.amazon.ion.impl,IonTypeID,0,273,0,62,0,38,0,34,0,3
 com.amazon.ion:ion-java,com.amazon.ion.impl,SimpleByteBuffer.UserByteWriter,238,0,8,0,63,0,25,0,21,0
 com.amazon.ion:ion-java,com.amazon.ion.impl,SubstituteSymbolTable,24,161,6,26,6,49,10,28,4,18
 com.amazon.ion:ion-java,com.amazon.ion.impl,UnifiedDataPageX.Bytes,48,25,4,0,10,8,6,2,4,2
-com.amazon.ion:ion-java,com.amazon.ion.impl,BlockedBuffer,742,1654,155,235,101,345,149,81,7,28
+com.amazon.ion:ion-java,com.amazon.ion.impl,BlockedBuffer,740,1656,154,236,101,345,148,82,7,28
 com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_SymtabExtendsCache,7,58,5,11,0,12,5,6,0,3
 com.amazon.ion:ion-java,com.amazon.ion.impl,LocalSymbolTable.Factory,0,36,0,2,0,8,0,3,0,2
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderLookaheadBuffer.VarUInt.Location,0,44,0,0,0,5,0,1,0,1
@@ -86,15 +86,15 @@ com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderTextRawTokensX.Radix.new Io
 com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_ScalarConversions.ValueNotSetException,13,0,0,0,6,0,3,0,3,0
 com.amazon.ion:ion-java,com.amazon.ion.impl,UnifiedSavePointManagerX.SavePoint.SavePointState,0,34,0,0,0,1,0,1,0,1
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderTextRawTokensX.Radix,6,46,3,3,0,6,3,2,0,2
-com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_IonConstants.HighNibble,280,0,19,0,45,0,23,0,6,0
 com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_CommandLine,191,0,32,0,59,0,25,0,8,0
+com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_IonConstants.HighNibble,280,0,19,0,45,0,23,0,6,0
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonWriterSystemBinary.CountingStream,45,0,0,0,13,0,5,0,5,0
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderBinaryUserX.SeekableReaderFacet,0,26,0,4,0,5,0,4,0,2
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderTextRawTokensX.ProhibitedCharacters,0,70,1,15,0,7,1,11,0,4
 com.amazon.ion:ion-java,com.amazon.ion.impl,SymbolTokenImpl,34,92,10,18,1,23,11,12,1,8
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonTextBufferedStream.SimpleBufferStream,112,0,14,0,23,0,14,0,7,0
 com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_FastAppendableDecorator,43,32,3,1,13,12,8,5,6,5
-com.amazon.ion:ion-java,com.amazon.ion.impl,BlockedBuffer.BlockedByteOutputStream,435,455,90,42,75,88,71,21,11,15
+com.amazon.ion:ion-java,com.amazon.ion.impl,BlockedBuffer.BlockedByteOutputStream,435,455,89,43,75,88,70,22,11,15
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonBinary.Writer,1180,788,214,92,272,165,144,48,26,12
 com.amazon.ion:ion-java,com.amazon.ion.impl,LocalSymbolTableAsStruct.Factory,6,84,3,5,0,18,3,6,0,5
 com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_RecyclingStack,0,95,0,6,0,22,0,9,0,6
@@ -120,9 +120,9 @@ com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderLookaheadBuffer.new Resizin
 com.amazon.ion:ion-java,com.amazon.ion.impl,ResizingPipedInputStream,0,625,0,44,0,149,0,54,0,32
 com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_CurriedValueFactory,239,225,0,0,72,72,24,24,24,24
 com.amazon.ion:ion-java,com.amazon.ion.impl,BlockedBuffer.BlockedByteInputStream,419,266,58,24,73,61,44,15,8,10
+com.amazon.ion:ion-java,com.amazon.ion.impl,IonTokenConstsX.EscapeType,44,0,0,0,5,0,1,0,1,0
 com.amazon.ion:ion-java,com.amazon.ion.impl,ImportLocation,38,35,3,3,6,9,5,4,2,4
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonTokenReader.Type,809,0,34,0,84,0,31,0,11,0
-com.amazon.ion:ion-java,com.amazon.ion.impl,IonTokenConstsX.EscapeType,44,0,0,0,5,0,1,0,1,0
 com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_IonConstants,53,119,10,12,10,24,12,9,3,7
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderTextRawX.LOB_STATE,0,34,0,0,0,1,0,1,0,1
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderTreeUserX,43,295,10,46,6,77,11,30,1,12
@@ -131,13 +131,13 @@ com.amazon.ion:ion-java,com.amazon.ion.impl,IonBinary.Writer.lhNode,12,0,0,0,5,0
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderBinaryUserX,52,441,10,70,11,107,10,47,0,17
 com.amazon.ion:ion-java,com.amazon.ion.impl,LocalSymbolTable,151,915,44,145,19,233,43,89,3,33
 com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_IonBinaryWriterBuilder,49,285,4,20,15,92,6,33,2,25
-com.amazon.ion:ion-java,com.amazon.ion.impl,LocalSymbolTable.SymbolIterator,8,37,1,3,2,10,2,4,1,3
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonWriterSystemTextMarkup,19,254,0,4,8,86,2,24,2,22
+com.amazon.ion:ion-java,com.amazon.ion.impl,LocalSymbolTable.SymbolIterator,8,37,1,3,2,10,2,4,1,3
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderTreeSystem.new _Private_IonValue.SymbolTableProvider() {...},0,10,0,0,0,2,0,2,0,2
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonTokenConstsX,664,1509,222,225,159,307,174,143,12,32
 com.amazon.ion:ion-java,com.amazon.ion.impl,_Private_Utils.StringIterator,8,32,1,3,1,7,2,4,1,3
-com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderLookaheadBuffer.VarUInt,0,19,0,0,0,8,0,2,0,2
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonTextBufferedStream.StringStream,81,0,10,0,20,0,12,0,7,0
+com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderLookaheadBuffer.VarUInt,0,19,0,0,0,8,0,2,0,2
 com.amazon.ion:ion-java,com.amazon.ion.impl,BlockedBuffer.PositionMonitor,4,9,0,0,2,2,2,2,2,2
 com.amazon.ion:ion-java,com.amazon.ion.impl,ResizingPipedInputStream.new ResizingPipedInputStream.NotificationConsumer() {...},0,4,0,0,0,2,0,2,0,2
 com.amazon.ion:ion-java,com.amazon.ion.impl,SharedSymbolTable,69,559,18,92,7,152,19,66,1,28
@@ -162,8 +162,8 @@ com.amazon.ion:ion-java,com.amazon.ion.impl,IonReaderTextRawX,466,2105,96,217,10
 com.amazon.ion:ion-java,com.amazon.ion.impl,DowncastingFaceted,0,13,0,2,0,4,0,3,0,2
 com.amazon.ion:ion-java,com.amazon.ion.impl,Base64Encoder,31,639,9,13,4,23,7,9,1,4
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonTextBufferedStream.OffsetBufferStream,137,0,14,0,29,0,14,0,7,0
-com.amazon.ion:ion-java,com.amazon.ion.impl,IonWriterUserBinary.new _Private_ByteTransferSink() {...},0,15,0,0,0,3,0,2,0,2
 com.amazon.ion:ion-java,com.amazon.ion.impl,UnifiedSavePointManagerX.SavePoint,95,235,32,32,10,63,31,30,3,26
+com.amazon.ion:ion-java,com.amazon.ion.impl,IonWriterUserBinary.new _Private_ByteTransferSink() {...},0,15,0,0,0,3,0,2,0,2
 com.amazon.ion:ion-java,com.amazon.ion.impl,IonIteratorImpl,105,206,19,31,29,59,19,19,1,6
 com.amazon.ion:ion-java,com.amazon.ion.impl,UnifiedInputStreamX.FromCharStream,6,23,0,0,3,8,1,1,1,1
 com.amazon.ion:ion-java,com.amazon.ion.impl,Base64Encoder.TextStream,226,408,33,25,47,68,25,16,7,5
@@ -193,8 +193,8 @@ com.amazon.ion:ion-java,com.amazon.ion.impl.lite,_Private_LiteDomTrampoline,3,21
 com.amazon.ion:ion-java,com.amazon.ion.impl.lite,IonNullLite,0,41,0,0,0,14,0,9,0,9
 com.amazon.ion:ion-java,com.amazon.ion.impl.lite,IonValueLite.LazySymbolTableProvider,0,20,0,2,0,7,0,3,0,2
 com.amazon.ion:ion-java,com.amazon.ion.impl.lite,IonLoaderLite,33,163,6,14,8,43,7,14,1,10
-com.amazon.ion:ion-java,com.amazon.ion.impl.lite,IonStructLite,168,1006,39,135,30,276,29,100,2,40
 com.amazon.ion:ion-java,com.amazon.ion.impl.lite,IonDatagramLite.SystemContentIterator,274,171,58,20,64,42,46,14,10,11
+com.amazon.ion:ion-java,com.amazon.ion.impl.lite,IonStructLite,168,1006,39,135,30,276,29,100,2,40
 com.amazon.ion:ion-java,com.amazon.ion.impl.lite,IonFloatLite,6,150,3,13,1,42,3,22,0,17
 com.amazon.ion:ion-java,com.amazon.ion.impl.lite,IonDatagramLite,226,363,33,35,47,101,34,43,13,30
 com.amazon.ion:ion-java,com.amazon.ion.impl.lite,IonSexpLite,5,38,0,0,2,12,1,8,1,8
@@ -236,8 +236,8 @@ com.amazon.ion:ion-java,com.amazon.ion.impl.bin,Symbols.new AbstractSymbolTable(
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonRawBinaryWriter.StreamCloseMode,0,24,0,0,0,3,0,1,0,1
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonManagedBinaryWriter.UserState.new IonManagedBinaryWriter.UserState() {...},1,27,2,2,1,7,3,3,1,3
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,_Private_IonManagedBinaryWriterBuilder.new IonBinaryWriterAdapter.Factory() {...},11,0,0,0,2,0,2,0,2,0
-com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonManagedBinaryWriter.UserState.new IonManagedBinaryWriter.UserState() {...},0,26,0,4,0,7,0,6,0,4
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonManagedBinaryWriter.ImportedSymbolResolverMode.new IonManagedBinaryWriter.ImportedSymbolResolverMode() {...},0,33,0,2,0,6,0,3,0,2
+com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonManagedBinaryWriter.UserState.new IonManagedBinaryWriter.UserState() {...},0,26,0,4,0,7,0,6,0,4
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonManagedBinaryWriter.ImportedSymbolResolverMode.new IonManagedBinaryWriter.ImportedSymbolResolverMode() {...},0,24,0,0,0,4,0,2,0,2
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonManagedBinaryWriter.UserState.new IonManagedBinaryWriter.UserState() {...},65,111,14,18,6,28,14,8,0,5
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonManagedBinaryWriter.UserState.new IonManagedBinaryWriter.UserState() {...},24,121,6,15,2,33,6,9,0,4
@@ -250,8 +250,8 @@ com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonRawBinaryWriter.PatchPoint,27
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,_Private_IonManagedBinaryWriterBuilder,84,203,9,15,18,57,11,23,5,17
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonManagedBinaryWriter.ImportedSymbolResolverMode,0,24,0,0,0,3,0,1,0,1
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonManagedBinaryWriter.ImportedSymbolResolverMode.1.1.new IonManagedBinaryWriter.SymbolResolver() {...},0,13,0,0,0,2,0,2,0,2
-com.amazon.ion:ion-java,com.amazon.ion.impl.bin,BlockAllocatorProviders,0,8,0,0,0,2,0,2,0,2
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonRawBinaryWriter.PreallocationMode.new IonRawBinaryWriter.PreallocationMode() {...},0,13,0,0,0,3,0,2,0,2
+com.amazon.ion:ion-java,com.amazon.ion.impl.bin,BlockAllocatorProviders,0,8,0,0,0,2,0,2,0,2
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonRawBinaryWriter.PreallocationMode.new IonRawBinaryWriter.PreallocationMode() {...},5,8,0,0,1,1,1,1,1,1
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonRawBinaryWriter.PreallocationMode.new IonRawBinaryWriter.PreallocationMode() {...},0,13,0,0,0,3,0,2,0,2
 com.amazon.ion:ion-java,com.amazon.ion.impl.bin,IonManagedBinaryWriter.LocalSymbolTableView,51,91,10,4,13,22,9,13,3,12
