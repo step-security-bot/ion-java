@@ -298,7 +298,7 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
      * @param inputStream an InputStream over binary Ion data.
      */
     public IonReaderLookaheadBuffer(final IonBufferConfiguration configuration, final InputStream inputStream) {
-        super(configuration, inputStream);
+        super(configuration, configuration.getOversizedValueHandler(), inputStream);
         pipe.registerNotificationConsumer(
             new ResizingPipedInputStream.NotificationConsumer() {
                 @Override

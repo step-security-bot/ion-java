@@ -1,5 +1,6 @@
 package com.amazon.ion.impl;
 
+import com.amazon.ion.BufferConfiguration;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonBufferConfiguration;
@@ -206,9 +207,8 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
             isAnnotationIteratorReuseEnabled = false;
             annotationIterator = null;
         }
-        IonBufferConfiguration configuration = builder.getBufferConfiguration();
-        if (configuration == null) {
-            configuration = STANDARD_BUFFER_CONFIGURATION;
+        final IonBufferConfiguration configuration;
+        if (builder.getBufferConfiguration() == null) {
             if (inputStream instanceof ByteArrayInputStream) {
                 // ByteArrayInputStreams are fixed-size streams. Clamp the reader's internal buffer size at the size of
                 // the stream to avoid wastefully allocating extra space that will never be needed. It is still
@@ -221,13 +221,29 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                     // ByteArrayInputStream.available() does not throw.
                     throw new IllegalStateException(e);
                 }
-                if (configuration.getInitialBufferSize() > fixedBufferSize) {
+                if (STANDARD_BUFFER_CONFIGURATION.getInitialBufferSize() > fixedBufferSize) {
                     configuration = FIXED_SIZE_CONFIGURATIONS[logBase2(fixedBufferSize)];
+                } else {
+                    configuration = STANDARD_BUFFER_CONFIGURATION;
                 }
+            } else {
+                configuration = STANDARD_BUFFER_CONFIGURATION;
             }
+        } else {
+            configuration = builder.getBufferConfiguration();
         }
         raw = new IonReaderBinaryIncrementalArbitraryDepthRaw(
             configuration,
+            new BufferConfiguration.OversizedValueHandler() {
+                @Override
+                public void onOversizedValue() throws Exception {
+                    if (isReadingSymbolTable()) {
+                        configuration.getOversizedSymbolTableHandler().onOversizedSymbolTable();
+                    } else {
+                        configuration.getOversizedValueHandler().onOversizedValue();
+                    }
+                }
+            },
             new IonReaderLookaheadBufferArbitraryDepth.IvmNotificationConsumer() {
                 @Override
                 public void ivmEncountered(int majorVersion, int minorVersion) {

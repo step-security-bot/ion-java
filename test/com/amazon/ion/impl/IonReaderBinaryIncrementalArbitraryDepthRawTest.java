@@ -43,6 +43,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRawTest {
     private void initializeBuffer(byte[] bytes) {
         reader = new IonReaderBinaryIncrementalArbitraryDepthRaw(
             STANDARD_BUFFER_CONFIGURATION,
+            STANDARD_BUFFER_CONFIGURATION.getOversizedValueHandler(),
             countingIvmConsumer,
             new ByteArrayInputStream(bytes)
         );

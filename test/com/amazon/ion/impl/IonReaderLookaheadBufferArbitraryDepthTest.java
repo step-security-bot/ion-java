@@ -54,6 +54,7 @@ public class IonReaderLookaheadBufferArbitraryDepthTest {
     private void initializeBuffer(byte[] bytes) {
         buffer = new IonReaderLookaheadBufferArbitraryDepth(
             STANDARD_BUFFER_CONFIGURATION,
+            STANDARD_BUFFER_CONFIGURATION.getOversizedValueHandler(),
             countingIvmConsumer,
             new ByteArrayInputStream(bytes)
         );

@@ -1,5 +1,6 @@
 package com.amazon.ion.impl;
 
+import com.amazon.ion.BufferConfiguration;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonBufferConfiguration;
@@ -84,13 +85,14 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
 
     IonReaderBinaryIncrementalArbitraryDepthRaw(
         IonBufferConfiguration bufferConfiguration,
+        BufferConfiguration.OversizedValueHandler oversizedValueHandler,
         IonReaderLookaheadBufferArbitraryDepth.IvmNotificationConsumer ivmConsumer,
         InputStream inputStream
     ) {
         scalarConverter = new _Private_ScalarConversions.ValueVariant();
         // Note: implementing Ion 1.1 support may require handling of Ion version changes in this class, rather
         // than simple upward delegation.
-        buffer = new IonReaderLookaheadBufferArbitraryDepth(bufferConfiguration, ivmConsumer, inputStream);
+        buffer = new IonReaderLookaheadBufferArbitraryDepth(bufferConfiguration, oversizedValueHandler, ivmConsumer, inputStream);
         annotationSids = new IntList(ANNOTATIONS_LIST_INITIAL_CAPACITY);
         annotationIterator = new AnnotationIterator(); // TODO only if reusable is enabled?
     }

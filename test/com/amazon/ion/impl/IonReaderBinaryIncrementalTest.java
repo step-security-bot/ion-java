@@ -2808,7 +2808,7 @@ public class IonReaderBinaryIncrementalTest {
 
     @Test
     public void oversizedSecondValueWithoutSymbolTableIncremental() throws Exception {
-        //oversizedSecondValue(false, false, true);
+        oversizedSecondValue(false, false, true);
         oversizedSecondValue(false, true, true);
     }
 

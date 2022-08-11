@@ -1,5 +1,6 @@
 package com.amazon.ion.impl;
 
+import com.amazon.ion.BufferConfiguration;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReaderIncremental;
@@ -358,8 +359,13 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
      * @param configuration the configuration for the new instance.
      * @param inputStream an InputStream over binary Ion data.
      */
-    public IonReaderLookaheadBufferArbitraryDepth(final IonBufferConfiguration configuration, final IvmNotificationConsumer ivmConsumer, final InputStream inputStream) {
-        super(configuration, inputStream);
+    public IonReaderLookaheadBufferArbitraryDepth(
+        final IonBufferConfiguration configuration,
+        final BufferConfiguration.OversizedValueHandler oversizedValueHandler,
+        final IvmNotificationConsumer ivmConsumer,
+        final InputStream inputStream
+    ) {
+        super(configuration, oversizedValueHandler, inputStream);
         this.ivmConsumer = ivmConsumer;
         pipe.registerNotificationConsumer(
             new ResizingPipedInputStream.NotificationConsumer() {
@@ -663,11 +669,14 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         if (additionalBytesNeeded > MAXIMUM_VALUE_SIZE) {
             throw new IonException("The size of the value exceeds the limits of the implementation.");
         }
+        /*
         if (additionalBytesNeeded > getMaximumBufferSize()) {
             state = State.SKIPPING_BYTES;
             startSkippingValue();
             return 0;
         }
+
+         */
         int amountToFill = pipe.capacity() - pipe.size();
         if (amountToFill <= 0) {
             // Try to fill the remainder of the existing buffer to avoid growing unnecessarily. If there is no
@@ -777,14 +786,14 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
      * @return the number of bytes actually skipped.
      * @throws Exception if thrown by the event handler.
      */
-    private long skip(long numberOfBytesToSkip) throws Exception {
+    private long skip(long numberOfBytesToSkip, boolean shouldExtendBoundary) throws Exception {
         long numberOfBytesSkipped;
         if (pipe.availableBeyondBoundary() >= numberOfBytesToSkip) {
             numberOfBytesSkipped = (int) numberOfBytesToSkip;
             pipe.extendBoundary((int) numberOfBytesSkipped);
             peekIndex = pipe.getBoundary(); //+= (int) numberOfBytesSkipped; // TODO check
         } else {
-            numberOfBytesSkipped = fillOrSkip(true);
+            numberOfBytesSkipped = fillOrSkip(shouldExtendBoundary);
         }
         if (numberOfBytesSkipped > 0) {
             long numberOfBytesToReport = numberOfBytesSkipped;
@@ -928,7 +937,7 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         if (state == State.SKIPPING_PREVIOUS_VALUE) {
             // TODO don't fill the value if it's not already filled. Just skip
             while (additionalBytesNeeded > 0) {
-                long numberOfBytesSkipped = skip(additionalBytesNeeded);
+                long numberOfBytesSkipped = skip(additionalBytesNeeded, true);
                 if (numberOfBytesSkipped < 1) {
                     return;
                 }
@@ -1019,12 +1028,12 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
              */
             if (state == State.SKIPPING_ANNOTATION_SIDS) {
                 while (numberOfAnnotationSidBytesRemaining > 0) {
-                    long numberOfBytesSkipped = skip(numberOfAnnotationSidBytesRemaining);
+                    long numberOfBytesSkipped = skip(numberOfAnnotationSidBytesRemaining, false);
                     if (numberOfBytesSkipped < 1) {
                         return;
                     }
-                    numberOfAnnotationSidBytesRemaining -= numberOfBytesSkipped;
-                    additionalBytesNeeded -= numberOfBytesSkipped;
+                    //numberOfAnnotationSidBytesRemaining -= numberOfBytesSkipped;
+                    //additionalBytesNeeded -= numberOfBytesSkipped;
                 }
                 // TODO reading the header of the wrapped value could technically be deferred, but it adds complexity
                 //  to this code and only saves time in the case where the user chooses to skip based on annotations
@@ -1059,7 +1068,7 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
                     // large enough that it doesn't fit within the buffer's configured maximum size.
                 }
                 while (additionalBytesNeeded > 0) {
-                    long numberOfBytesSkipped = skip(additionalBytesNeeded);
+                    long numberOfBytesSkipped = skip(additionalBytesNeeded, true);
                     if (numberOfBytesSkipped < 1) {
                         event = Event.NEEDS_DATA;
                         return;
@@ -1165,6 +1174,15 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         }
         event = Event.NEEDS_DATA;
 
+        /*
+        if (additionalBytesNeeded > getMaximumBufferSize()) {
+            state = State.SKIPPING_BYTES;
+            startSkippingValue();
+            return;
+        }
+        */
+
+
         long bytesFilled = 0;
         while (pipe.availableBeyondBoundary() < additionalBytesNeeded && bytesFilled < additionalBytesNeeded) {
             long bytesFilledThisIteration = fillOrSkip(false);
@@ -1230,7 +1248,7 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         }
 
         while (additionalBytesNeeded > 0) {
-            long numberOfBytesSkipped = skip(additionalBytesNeeded); // TODO does this buffer unnecessarily? Skip, don't buffer
+            long numberOfBytesSkipped = skip(additionalBytesNeeded, true); // TODO does this buffer unnecessarily? Skip, don't buffer
             if (numberOfBytesSkipped < 1) {
                 return;
             }
