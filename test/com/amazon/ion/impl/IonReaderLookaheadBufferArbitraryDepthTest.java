@@ -25,19 +25,19 @@ public class IonReaderLookaheadBufferArbitraryDepthTest {
 
     private static final IonBufferConfiguration STANDARD_BUFFER_CONFIGURATION = IonBufferConfiguration.Builder.standard().build();
 
-    private static IonReaderLookaheadBufferArbitraryDepth.Marker loadScalar(IonReaderLookaheadBufferArbitraryDepth buffer) {
+    private static IonBinaryLexerBase.Marker loadScalar(IonBinaryLexerRefillable buffer) {
         IonReaderIncremental.Event event = buffer.next(LOAD_VALUE);
         assertEquals(VALUE_READY, event);
-        IonReaderLookaheadBufferArbitraryDepth.Marker marker = buffer.getValueMarker();
+        IonBinaryLexerBase.Marker marker = buffer.getValueMarker();
         assertNotNull(marker);
         return marker;
     }
 
-    IonReaderLookaheadBufferArbitraryDepth buffer = null;
+    IonBinaryLexerRefillable buffer = null;
     int numberOfIvmsEncountered = 0;
 
-    private final IonReaderLookaheadBufferArbitraryDepth.IvmNotificationConsumer countingIvmConsumer =
-        new IonReaderLookaheadBufferArbitraryDepth.IvmNotificationConsumer() {
+    private final IonBinaryLexerBase.IvmNotificationConsumer countingIvmConsumer =
+        new IonBinaryLexerBase.IvmNotificationConsumer() {
 
         @Override
         public void ivmEncountered(int majorVersion, int minorVersion) {
@@ -52,7 +52,7 @@ public class IonReaderLookaheadBufferArbitraryDepthTest {
     }
 
     private void initializeBuffer(byte[] bytes) {
-        buffer = new IonReaderLookaheadBufferArbitraryDepth(
+        buffer = new IonBinaryLexerRefillable(
             STANDARD_BUFFER_CONFIGURATION,
             STANDARD_BUFFER_CONFIGURATION.getOversizedValueHandler(),
             countingIvmConsumer,
@@ -66,7 +66,7 @@ public class IonReaderLookaheadBufferArbitraryDepthTest {
         assertEquals(START_CONTAINER, buffer.next(NEXT_VALUE));
         assertEquals(NEEDS_INSTRUCTION, buffer.next(STEP_IN));
         assertEquals(START_SCALAR, buffer.next(NEXT_VALUE));
-        IonReaderLookaheadBufferArbitraryDepth.Marker marker = loadScalar(buffer);
+        IonBinaryLexerBase.Marker marker = loadScalar(buffer);
         assertEquals(7, marker.startIndex);
         assertEquals(8, marker.endIndex);
         assertEquals(END_CONTAINER, buffer.next(NEXT_VALUE));
@@ -78,7 +78,7 @@ public class IonReaderLookaheadBufferArbitraryDepthTest {
     public void basicStrings() throws Exception {
         initializeBuffer(bytes(0xE0, 0x01, 0x00, 0xEA, 0x83, 'f', 'o', 'o', 0x83, 'b', 'a', 'r'));
         assertEquals(START_SCALAR, buffer.next(NEXT_VALUE));
-        IonReaderLookaheadBufferArbitraryDepth.Marker marker = loadScalar(buffer);
+        IonBinaryLexerBase.Marker marker = loadScalar(buffer);
         assertEquals(5, marker.startIndex);
         assertEquals(8, marker.endIndex);
         assertEquals(START_SCALAR, buffer.next(NEXT_VALUE));
@@ -121,7 +121,7 @@ public class IonReaderLookaheadBufferArbitraryDepthTest {
         initializeBuffer(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD3, 0x84, 0x21, 0x01, 0x21, 0x03));
         assertEquals(START_CONTAINER, buffer.next(NEXT_VALUE));
         assertEquals(START_SCALAR, buffer.next(NEXT_VALUE));
-        IonReaderLookaheadBufferArbitraryDepth.Marker marker = loadScalar(buffer);
+        IonBinaryLexerBase.Marker marker = loadScalar(buffer);
         assertEquals(9, marker.startIndex);
         assertEquals(10, marker.endIndex);
         assertEquals(NEEDS_DATA, buffer.next(NEXT_VALUE));
@@ -137,7 +137,7 @@ public class IonReaderLookaheadBufferArbitraryDepthTest {
         assertEquals(START_SCALAR, buffer.next(NEXT_VALUE));
         assertEquals(NEEDS_INSTRUCTION, buffer.next(STEP_OUT));
         assertEquals(START_SCALAR, buffer.next(NEXT_VALUE));
-        IonReaderLookaheadBufferArbitraryDepth.Marker marker = loadScalar(buffer);
+        IonBinaryLexerBase.Marker marker = loadScalar(buffer);
         assertEquals(10, marker.startIndex);
         assertEquals(11, marker.endIndex);
         assertEquals(NEEDS_INSTRUCTION, buffer.next(STEP_OUT));
@@ -149,7 +149,7 @@ public class IonReaderLookaheadBufferArbitraryDepthTest {
         initializeBuffer(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD6, 0x83, 0xB1, 0x40, 0x84, 0x21, 0x01));
         assertEquals(START_CONTAINER, buffer.next(NEXT_VALUE));
         assertEquals(VALUE_READY, buffer.next(LOAD_VALUE));
-        IonReaderLookaheadBufferArbitraryDepth.Marker marker = buffer.getValueMarker();
+        IonBinaryLexerBase.Marker marker = buffer.getValueMarker();
         assertEquals(5, marker.startIndex);
         assertEquals(11, marker.endIndex);
 
@@ -173,7 +173,7 @@ public class IonReaderLookaheadBufferArbitraryDepthTest {
         assertEquals(NEEDS_INSTRUCTION, buffer.next(STEP_IN));
         assertEquals(START_CONTAINER, buffer.next(NEXT_VALUE));
         assertEquals(VALUE_READY, buffer.next(LOAD_VALUE));
-        IonReaderLookaheadBufferArbitraryDepth.Marker marker = buffer.getValueMarker();
+        IonBinaryLexerBase.Marker marker = buffer.getValueMarker();
         assertEquals(7, marker.startIndex);
         assertEquals(8, marker.endIndex);
 

@@ -25,8 +25,8 @@ public class IonReaderBinaryIncrementalArbitraryDepthRawTest {
     IonReaderBinaryIncrementalArbitraryDepthRaw reader = null;
     int numberOfIvmsEncountered = 0;
 
-    private final IonReaderLookaheadBufferArbitraryDepth.IvmNotificationConsumer countingIvmConsumer =
-        new IonReaderLookaheadBufferArbitraryDepth.IvmNotificationConsumer() {
+    private final IonBinaryLexerRefillable.IvmNotificationConsumer countingIvmConsumer =
+        new IonBinaryLexerRefillable.IvmNotificationConsumer() {
 
             @Override
             public void ivmEncountered(int majorVersion, int minorVersion) {

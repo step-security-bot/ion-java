@@ -244,7 +244,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                     }
                 }
             },
-            new IonReaderLookaheadBufferArbitraryDepth.IvmNotificationConsumer() {
+            new IonBinaryLexerRefillable.IvmNotificationConsumer() {
                 @Override
                 public void ivmEncountered(int majorVersion, int minorVersion) {
                     // TODO use the versions to set the proper system symbol table and local symbol table processing
