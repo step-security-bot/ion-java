@@ -10,8 +10,6 @@ import java.io.InputStream;
 
 abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonReaderIncremental {
 
-
-
     private static final int LOWER_SEVEN_BITS_BITMASK = 0x7F;
     private static final int HIGHEST_BIT_BITMASK = 0x80;
     private static final int VALUE_BITS_PER_VARUINT_BYTE = 7;
@@ -30,6 +28,8 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         AFTER_SCALAR_HEADER,
         AFTER_CONTAINER_HEADER
     }
+
+    // TODO all indexes should be longs.
 
     /**
      * Holds the start and end indices of a slice of the buffer.
@@ -69,12 +69,18 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         /**
          * The container's type.
          */
-        private long totalLength;
+        private int startIndex;
 
         /**
          * The byte position of the end of the container.
          */
-        private long remainingLength;
+        private int endIndex;
+
+        void set(IonType type, Marker marker) {
+            this.type = type;
+            this.startIndex = marker.startIndex;
+            this.endIndex = marker.endIndex;
+        }
     }
 
     // Constructs ContainerInfo instances.
@@ -129,15 +135,10 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
     private CheckpointLocation checkpointLocation = CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID;
 
     private int fieldSid;
-
-    private int valueLengthRemaining = 0;
     
     protected int checkpoint = 0;
 
     protected int peekIndex = 0;
-    
-    
-
 
     IonBinaryLexerBase(
         final Buffer buffer,
@@ -155,12 +156,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
 
     protected abstract int readByte() throws Exception; // TODO remove throws Exception
 
-    private void subtractConsumedBytesFromParent(long numberOfBytesConsumed) {
-        if (!containerStack.isEmpty()) {
-            containerStack.peek().remainingLength -= numberOfBytesConsumed;
-        }
-    }
-
     /**
      * Throw if the reader is attempting to process an Ion version that it does not support.
      */
@@ -172,7 +167,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
 
     private void verifyValueLength() {
         if (!containerStack.isEmpty()) {
-            if (valueLengthRemaining > containerStack.peek().remainingLength) {
+            if (valueMarker.endIndex > containerStack.peek().endIndex) {
                 throw new IonException("Value exceeds the length of its parent container.");
             }
         }
@@ -180,14 +175,13 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
 
     private boolean checkContainerEnd() {
         if (!containerStack.isEmpty()) {
-            if (containerStack.peek().remainingLength == 0) {
-                //state = IonReaderLookaheadBufferArbitraryDepth.State.AFTER_CONTAINER;
+            if (containerStack.peek().endIndex == peekIndex) {
                 // TODO set checkpoint?
                 event = Event.END_CONTAINER;
                 // TODO reset other state?
                 valueTid = null;
                 return true;
-            } else if (containerStack.peek().remainingLength < 0) {
+            } else if (containerStack.peek().endIndex < peekIndex) {
                 throw new IonException("Contained values overflowed the parent container length.");
             }
         }
@@ -207,22 +201,8 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
             reset();
             buffer.seekTo(peekIndex);
         }
-        subtractConsumedBytesFromParent(peekIndex - checkpoint);
         checkpointLocation = location;
         checkpoint = peekIndex;
-    }
-
-    /**
-     * Sets `valueLengthRemaining` if and only if the value is not within an annotation wrapper. When the
-     * value is contained in an annotation wrapper, `valueLengthRemaining` was set when reading the annotation
-     * wrapper's length and already includes the value's length.
-     * @param value the new value of `valueLengthRemaining`.
-     * @param isUnannotated true if this type ID is not on a value within an annotation wrapper; false if it is.
-     */
-    private void setValueLengthRemaining(final long value, final boolean isUnannotated) {
-        if (isUnannotated) {
-            valueLengthRemaining = (int) value; // TODO unify typing
-        }
     }
 
     /**
@@ -233,7 +213,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
     private boolean parseTypeID(final int typeIdByte, final boolean isUnannotated) throws Exception {
         valueTid = IonTypeID.TYPE_IDS[typeIdByte];
         dataHandler.onData(1);
-        //subtractConsumedBytesFromParent(1);
+        int valueLength = 0;
         if (typeIdByte == IVM_START_BYTE && containerStack.isEmpty()) {
             if (!isUnannotated) {
                 throw new IonException("Invalid annotation header.");
@@ -251,12 +231,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
             // TODO seek the pipe past the IVM, freeing space if necessary (check)
             buffer.seekTo(peekIndex);
             setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
-            //setvalueLengthRemaining(IVM_REMAINING_LENGTH, true);
-            //isIvm = true;
-            // Encountering an IVM resets the symbol table context; no need to parse any previous symbol tables.
-            //resetSymbolTableMarkers();
-            //ivmSecondByteIndex = peekIndex;
-            //state = IonReaderLookaheadBufferArbitraryDepth.State.SKIPPING_BYTES;
         } else if (!valueTid.isValid) {
             throw new IonException("Invalid type ID.");
         } else if (valueTid.type == IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {
@@ -265,16 +239,14 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                 throw new IonException("Nested annotation wrappers are invalid.");
             }
             if (valueTid.variableLength) {
-                long length = readVarUInt();
-                if (length < 0) {
+                valueLength = (int) readVarUInt(); // TODO unify typing
+                if (valueLength < 0) {
                     return false;
                 }
-                setValueLengthRemaining(length, true);
-                //initializeVarUInt(IonReaderLookaheadBufferArbitraryDepth.VarUInt.Location.ANNOTATION_WRAPPER_LENGTH);
             } else {
-                setValueLengthRemaining(valueTid.length, true);
-                //initializeVarUInt(IonReaderLookaheadBufferArbitraryDepth.VarUInt.Location.ANNOTATION_WRAPPER_SIDS_LENGTH);
+                valueLength = valueTid.length;
             }
+            int postLengthIndex = peekIndex;
             long annotationsLength = readVarUInt();
             if (annotationsLength < 0) {
                 return false;
@@ -285,28 +257,27 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
             annotationSidsMarker.startIndex = peekIndex;
             annotationSidsMarker.endIndex = annotationSidsMarker.startIndex + (int) annotationsLength;
             peekIndex = annotationSidsMarker.endIndex;
+            valueLength -= peekIndex - postLengthIndex; // TODO might not be necessary
             setCheckpoint(CheckpointLocation.BEFORE_ANNOTATED_TYPE_ID);
         } else {
             if (valueTid.isNull || valueTid.type == IonType.BOOL) {
                 // null values are always a single byte.
-                //state = IonType.isContainer(valueTid.type) ? IonReaderLookaheadBufferArbitraryDepth.State.BEFORE_CONTAINER : IonReaderLookaheadBufferArbitraryDepth.State.BEFORE_SCALAR;
             } else {
                 // Not null
                 if (valueTid.variableLength) {
-                    long length = readVarUInt();
-                    if (length < 0) {
+                    // TODO only set to valueLength if unannotated? Is that necessary?
+                    valueLength = (int) readVarUInt(); // TODO unify typing
+                    if (valueLength < 0) {
                         return false;
                     }
-                    setValueLengthRemaining(length, isUnannotated); // todo CHECK
-                    //initializeVarUInt(IonReaderLookaheadBufferArbitraryDepth.VarUInt.Location.VALUE_LENGTH);
                 } else {
                     if (valueTid.isNopPad && !isUnannotated) {
                         throw new IonException(
                             "Invalid annotation wrapper: NOP pad may not occur inside an annotation wrapper."
                         );
                     }
-                    setValueLengthRemaining(valueTid.length, isUnannotated);
-                    //setNextStateFromTypeId();
+                    // TODO only set to valueLength if unannotated? Is that necessary?
+                    valueLength = valueTid.length;
                 }
             }
             if (IonType.isContainer(valueTid.type)) {
@@ -317,16 +288,17 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                 event = Event.START_SCALAR;
             }
             if (valueTid.isNopPad) {
-                if (!buffer.seek(valueLengthRemaining)) {
+                if (!buffer.seek(valueLength)) {
                     return false;
                 }
-                //subtractConsumedBytesFromParent(valueLengthRemaining);
-                peekIndex += valueLengthRemaining;
-                valueLengthRemaining = 0;
+                peekIndex += valueLength;
+                valueLength = 0;
                 setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
                 checkContainerEnd();
             }
         }
+        valueMarker.startIndex = checkpoint;
+        valueMarker.endIndex = checkpoint + valueLength; // TODO check
         verifyValueLength(); // TODO check
         return true;
     }
@@ -350,7 +322,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                 (value << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
             if ((currentByte & HIGHEST_BIT_BITMASK) != 0) {
                 dataHandler.onData(numberOfBytesRead);
-                //subtractConsumedBytesFromParent(numberOfBytesRead); // TODO what if the user steps out before completing the VarUInt?
                 return value;
             }
         }
@@ -374,7 +345,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         peekIndex = checkpoint;
         event = Event.NEEDS_DATA;
         while (true) {
-            if (!makeBufferReady()) {
+            if (!makeBufferReady() || checkContainerEnd()) {
                 return;
             }
             switch (checkpointLocation) {
@@ -427,18 +398,11 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                     return;
                 case AFTER_SCALAR_HEADER:
                 case AFTER_CONTAINER_HEADER: // TODO can we unify these two states?
-                    int postValueIndex;
-                    if (valueMarker.endIndex > -1) {
-                        postValueIndex = valueMarker.endIndex;
-                    } else {
-                        postValueIndex = checkpoint + valueLengthRemaining;
-                    }
                     // TODO redundant?
-                    if (!buffer.seekTo(postValueIndex)) {
+                    if (!buffer.seekTo(valueMarker.endIndex)) {
                         return;
                     }
-                    //subtractConsumedBytesFromParent(postValueIndex - peekIndex);
-                    peekIndex = postValueIndex;
+                    peekIndex = valueMarker.endIndex;
                     setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
                     // The previous value's bytes have now been skipped; continue.
             }
@@ -461,16 +425,14 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         }
         event = Event.NEEDS_DATA;
 
-        if (buffer.fill(valueLengthRemaining)) {
-            valueMarker.startIndex = checkpoint; // TODO return a "slice" abstraction of the buffer?
-            valueMarker.endIndex = checkpoint + valueLengthRemaining; // TODO check
-            valueLengthRemaining = 0; // TODO check
+        // TODO does something like fillTo() make sense?
+        if (buffer.fill(valueMarker.endIndex - valueMarker.startIndex)) {
             event = Event.VALUE_READY;
         }
     }
 
     public void stepIn() throws IOException {
-        if (!makeBufferReady()) {
+        if (!makeBufferReady() || checkContainerEnd()) { // TODO check need for checkContainerEnd
             return;
         }
         // Must be positioned on a container.
@@ -479,29 +441,9 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         }
         // Push the remaining length onto the stack, seek past the container's header, and increase the depth.
         ContainerInfo containerInfo = containerStack.push();
-        containerInfo.type = valueTid.type;
-        if (valueLengthRemaining > 0) {
-            containerInfo.totalLength = valueLengthRemaining;
-            setValueLengthRemaining(0, true);
-        } else if (valueTid.length == 0) {
-            containerInfo.totalLength = 0;
-        } else {
-            // The user must have requested to load the container. // TODO check
-            containerInfo.totalLength = valueMarker.endIndex - valueMarker.startIndex;
-        }
-        containerInfo.remainingLength = containerInfo.totalLength;
+        containerInfo.set(valueTid.type, valueMarker);
         setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
         // TODO seek past header (no need to hold onto it)
-        //buffer.seekTo(valuePostHeaderIndex); // tODO check
-        //valueLengthRemaining = 0;
-        /*
-        if (valueTid.type == IonType.STRUCT) {
-            state = IonReaderLookaheadBufferArbitraryDepth.State.BEFORE_FIELD_NAME;
-        } else {
-            state = IonReaderLookaheadBufferArbitraryDepth.State.BEFORE_TYPE_ID;
-        }
-
-         */
         // TODO reset other state
         valueTid = null;
         //fieldSid = -1;
@@ -509,8 +451,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
     }
 
     public void stepOut() throws Exception {
-        makeBufferReady(); // TODO factor out the container end check from makeBufferReady?
-        if (event == Event.NEEDS_DATA) {
+        if (!makeBufferReady()) {
             return;
         }
         // Seek past the remaining bytes at this depth, pop from the stack, and subtract the number of bytes
@@ -519,22 +460,16 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
             // Note: this is IllegalStateException for consistency with the other binary IonReader implementation.
             throw new IllegalStateException("Cannot step out at top level.");
         }
-        //ContainerInfo containerInfo = containerStack.pop();
         ContainerInfo containerInfo = containerStack.peek();
-        //setvalueLengthRemaining(containerInfo.remainingLength, true);
-
         event = Event.NEEDS_DATA;
         // Seek past any remaining bytes from the previous value.
-        if (!buffer.seek((int) containerInfo.remainingLength)) { // TODO accept long from seek?
+        if (!buffer.seekTo(containerInfo.endIndex)) {
             return;
         }
-        peekIndex += containerInfo.remainingLength;
-        containerInfo.remainingLength = 0;
+        peekIndex = containerInfo.endIndex;
         setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
         containerStack.pop();
         event = Event.NEEDS_INSTRUCTION;
-        subtractConsumedBytesFromParent(containerInfo.totalLength);
-        setValueLengthRemaining(0, true); // TODO necessary?
         // tODO reset other state (e.g. annotations?)
         valueTid = null;
         //fieldSid = -1;
@@ -550,7 +485,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         } catch (Exception e) {
             throw new IonException(e);
         }
-        return !checkContainerEnd();
+        return true;
     }
 
     @Override
@@ -693,6 +628,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
     }
 
     boolean isAwaitingMoreData() {
-        return !buffer.isReady();
+        // TODO still probably not quite right, check
+        return peekIndex > checkpoint; //!buffer.isReady();
     }
 }
