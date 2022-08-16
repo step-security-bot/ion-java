@@ -95,7 +95,6 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
         if (isSkipping) {
             peekIndex = buffer.limit;
             setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
-            buffer.seek(peekIndex); // TODO check
         }
         return isSkipping;
     }

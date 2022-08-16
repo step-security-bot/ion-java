@@ -247,11 +247,18 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                 throw new IonException("Nested annotation wrappers are invalid.");
             }
             if (valueTid.variableLength) {
+                // TODO small optimization: at this point the value must be at least 4 more bytes: 1 for the smallest-
+                //  possible wrapper length, 1 for the smallest-possible annotations length, one for the smallest-
+                //  possible annotation, and 1 for the smallest-possible value representation. Could ask the buffer for
+                //  4 bytes if that would provide a speedup.
                 valueLength = (int) readVarUInt(); // TODO unify typing
                 if (valueLength < 0) {
                     return false;
                 }
             } else {
+                // TODO small optimization: at this point the value must be at least 3 more bytes: 1 for the smallest-
+                //  possible annotations length, 1 for the smallest-possible annotation, and 1 for the smallest-possible
+                //  value representation. Could ask the buffer for 4 bytes if that would provide a speedup.
                 valueLength = valueTid.length;
             }
             int postLengthIndex = peekIndex;
@@ -273,13 +280,14 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
             } else {
                 // Not null
                 if (valueTid.variableLength) {
-                    // TODO only set to valueLength if unannotated? Is that necessary?
+                    // TODO small optimization: at this point the value must be at least 2 more bytes: 1 for the
+                    //  smallest-possible value length and 1 for the smallest-possible value representation. Could ask
+                    //  the buffer for 2 bytes if that would provide a speedup.
                     valueLength = (int) readVarUInt(); // TODO unify typing
                     if (valueLength < 0) {
                         return false;
                     }
                 } else {
-                    // TODO only set to valueLength if unannotated? Is that necessary?
                     valueLength = valueTid.length;
                 }
             }
@@ -300,7 +308,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                     event = Event.NEEDS_DATA;
                     return false;
                 }
-                peekIndex += valueLength;
+                peekIndex = buffer.getOffset();
                 valueLength = 0;
                 setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
                 checkContainerEnd();
@@ -359,6 +367,9 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                 case BEFORE_UNANNOTATED_TYPE_ID:
                     fieldSid = -1;
                     if (isInStruct()) {
+                        // TODO small optimization: the value must have at least 2 more bytes (unless dangling field
+                        //  names are allowed -- check): 1 for the smallest-possible field SID and 1 for the smallest-
+                        //  possible representation. Can ask for 2 more bytes if that would provide a speedup.
                         fieldSid = (int) readVarUInt(); // TODO type alignment
                         if (fieldSid < 0) {
                             return;

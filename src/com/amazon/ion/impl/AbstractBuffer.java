@@ -81,6 +81,10 @@ abstract class AbstractBuffer {
         }
     }
 
+    int getOffset() {
+        return offset;
+    }
+
     boolean isReady() {
         return instruction == Instruction.READY;
     }
