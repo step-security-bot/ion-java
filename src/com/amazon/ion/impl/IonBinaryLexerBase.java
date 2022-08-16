@@ -165,12 +165,19 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         }
     }
 
-    private void verifyValueLength() {
+    private void verifyValueLength(int valueLength, boolean isAnnotated) {
+        int endIndex = checkpoint + valueLength; // TODO check;
         if (!containerStack.isEmpty()) {
-            if (valueMarker.endIndex > containerStack.peek().endIndex) {
+            if (endIndex > containerStack.peek().endIndex) {
                 throw new IonException("Value exceeds the length of its parent container.");
             }
         }
+        if (isAnnotated && endIndex != valueMarker.endIndex) {
+            // valueMarker.endIndex refers to the end of the annotation wrapper.
+            throw new IonException("Annotation wrapper length does not match the length of the wrapped value.");
+        }
+        valueMarker.startIndex = checkpoint;
+        valueMarker.endIndex = endIndex;
     }
 
     private boolean checkContainerEnd() {
@@ -207,15 +214,15 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
 
     /**
      * Reads the type ID byte.
-     * @param isUnannotated true if this type ID is not on a value within an annotation wrapper; false if it is.
+     * @param isAnnotated true if this type ID is on a value within an annotation wrapper; false if it is not.
      * @throws Exception if thrown by a handler method or if an IOException is thrown by the underlying InputStream.
      */
-    private boolean parseTypeID(final int typeIdByte, final boolean isUnannotated) throws Exception {
+    private boolean parseTypeID(final int typeIdByte, final boolean isAnnotated) throws Exception {
         valueTid = IonTypeID.TYPE_IDS[typeIdByte];
         dataHandler.onData(1); // TODO don't report onData until a checkpoint is reached, otherwise it's overreported
         int valueLength = 0;
         if (typeIdByte == IVM_START_BYTE && containerStack.isEmpty()) {
-            if (!isUnannotated) {
+            if (isAnnotated) {
                 throw new IonException("Invalid annotation header.");
             }
             //if (!buffer.fill(IVM_REMAINING_LENGTH)) {
@@ -236,7 +243,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
             throw new IonException("Invalid type ID.");
         } else if (valueTid.type == IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {
             // Annotation.
-            if (!isUnannotated) {
+            if (isAnnotated) {
                 throw new IonException("Nested annotation wrappers are invalid.");
             }
             if (valueTid.variableLength) {
@@ -272,11 +279,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                         return false;
                     }
                 } else {
-                    if (valueTid.isNopPad && !isUnannotated) {
-                        throw new IonException(
-                            "Invalid annotation wrapper: NOP pad may not occur inside an annotation wrapper."
-                        );
-                    }
                     // TODO only set to valueLength if unannotated? Is that necessary?
                     valueLength = valueTid.length;
                 }
@@ -289,7 +291,13 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                 event = Event.START_SCALAR;
             }
             if (valueTid.isNopPad) {
-                if (!buffer.seek(valueLength)) {
+                if (isAnnotated) {
+                    throw new IonException(
+                        "Invalid annotation wrapper: NOP pad may not occur inside an annotation wrapper."
+                    );
+                }
+                if (!buffer.seekTo(peekIndex + valueLength)) {
+                    event = Event.NEEDS_DATA;
                     return false;
                 }
                 peekIndex += valueLength;
@@ -298,9 +306,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                 checkContainerEnd();
             }
         }
-        valueMarker.startIndex = checkpoint;
-        valueMarker.endIndex = checkpoint + valueLength; // TODO check
-        verifyValueLength(); // TODO check
+        verifyValueLength(valueLength, isAnnotated); // TODO check
         return true;
     }
 
@@ -362,7 +368,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                     if (b < 0) {
                         return;
                     }
-                    if (!parseTypeID(b, true)) {
+                    if (!parseTypeID(b, false)) {
                         return;
                     }
                     if (checkpointLocation == CheckpointLocation.AFTER_SCALAR_HEADER) {
@@ -384,7 +390,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                     if (b < 0) {
                         return;
                     }
-                    if (!parseTypeID(b, false)) {
+                    if (!parseTypeID(b, true)) {
                         return;
                     }
                     if (checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER) {
@@ -629,6 +635,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
 
     boolean isAwaitingMoreData() {
         // TODO still probably not quite right, check
-        return peekIndex > checkpoint; //!buffer.isReady();
+        return peekIndex > checkpoint || buffer.isAwaitingMoreData(); //!buffer.isReady();
     }
 }

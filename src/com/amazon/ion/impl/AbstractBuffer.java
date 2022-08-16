@@ -85,4 +85,9 @@ abstract class AbstractBuffer {
         return instruction == Instruction.READY;
     }
 
+    boolean isAwaitingMoreData() {
+        // TODO doesn't feel quite right
+        return instruction == Instruction.SEEK;
+    }
+
 }

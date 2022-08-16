@@ -51,7 +51,8 @@ public class RefillableBufferFromInputStream extends RefillableBuffer {
             return true;
         }
         //remainingBytesRequested = shortfall;
-        bytesRequested = numberOfBytes;
+        //bytesRequested = numberOfBytes;
+        bytesRequested = shortfall;
         instruction = Instruction.SEEK;
         return false;
     }
