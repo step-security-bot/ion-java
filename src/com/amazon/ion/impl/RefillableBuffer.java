@@ -122,15 +122,14 @@ abstract class RefillableBuffer extends AbstractBuffer {
      * @param minimumNumberOfBytesRequired the minimum number of additional bytes to buffer.
      */
     void ensureCapacity(int minimumNumberOfBytesRequired) throws Exception {
-        if (freeSpaceAtEndOfBuffer() >= minimumNumberOfBytesRequired) {
+        if (freeSpaceAt(offset) >= minimumNumberOfBytesRequired) {
             // No need to shift any bytes or grow the buffer.
             return;
         }
-        int size = available();
-        if (minimumNumberOfBytesRequired + size > maximumBufferSize) {
+        if (minimumNumberOfBytesRequired > maximumBufferSize) {
             notificationConsumer.bufferOverflowDetected();
         }
-        int shortfall = minimumNumberOfBytesRequired + size - capacity;
+        int shortfall = minimumNumberOfBytesRequired - capacity;
         if (shortfall > 0) {
             // TODO consider doubling the size rather than growing in increments of the initial buffer size.
             // TODO ensure alignment to a power of 2?
@@ -151,10 +150,11 @@ abstract class RefillableBuffer extends AbstractBuffer {
     boolean fillAt(int index, int numberOfBytes) throws Exception {
         int shortfall = numberOfBytes - availableAt(index);
         if (shortfall > 0) {
-            ensureCapacity(numberOfBytes);
+            bytesRequested = numberOfBytes + (index - offset);
+            ensureCapacity(bytesRequested);
             // Fill all the free space, not just the shortfall; this reduces I/O.
-            refill(freeSpaceAtEndOfBuffer());
-            shortfall = numberOfBytes - availableAt(index);
+            refill(freeSpaceAt(limit));
+            shortfall = bytesRequested - available();
         }
         if (shortfall <= 0) {
             bytesRequested = 0;
@@ -162,7 +162,6 @@ abstract class RefillableBuffer extends AbstractBuffer {
             return true;
         }
         //remainingBytesRequested = shortfall;
-        bytesRequested = numberOfBytes + (index - offset);
         instruction = Instruction.FILL;
         return false;
     }
@@ -188,7 +187,7 @@ abstract class RefillableBuffer extends AbstractBuffer {
     /**
      * @return the number of bytes that can be written at the end of the buffer.
      */
-    private int freeSpaceAtEndOfBuffer() {
-        return capacity - limit;
+    private int freeSpaceAt(int index) {
+        return capacity - index;
     }
 }
