@@ -25,8 +25,8 @@ class FixedBufferFromByteArray extends AbstractBuffer {
     }
 
     @Override
-    boolean fill(int numberOfBytes) {
-        if (numberOfBytes > available()) {
+    boolean fillAt(int index, int numberOfBytes) {
+        if (numberOfBytes > availableAt(index)) {
             // TODO? throw or notify user?
             instruction = Instruction.FILL;
             return false;

@@ -32,7 +32,7 @@ abstract class AbstractBuffer {
 
     Instruction instruction = Instruction.READY;
 
-    int remainingBytesRequested = 0;
+    int bytesRequested = 0;
 
     abstract int peek(int index);
 
@@ -47,12 +47,20 @@ abstract class AbstractBuffer {
     }
 
     int available() {
-        return limit - offset;
+        return availableAt(offset);
+    }
+
+    int availableAt(int index) {
+        return limit - index;
     }
 
     abstract void copyBytes(int position, byte[] destination, int destinationOffset, int length);
 
-    abstract boolean fill(int numberOfBytes) throws Exception;
+    boolean fill(int numberOfBytes) throws Exception {
+        return fillAt(offset, numberOfBytes);
+    }
+
+    abstract boolean fillAt(int index, int numberOfBytes) throws Exception;
 
     abstract boolean seek(int numberOfBytes) throws IOException;
 
@@ -65,9 +73,9 @@ abstract class AbstractBuffer {
             case READY:
                 return true;
             case SEEK:
-                return seek(remainingBytesRequested);
+                return seek(bytesRequested);
             case FILL:
-                return fill(remainingBytesRequested);
+                return fill(bytesRequested);
             default:
                 throw new IllegalStateException();
         }

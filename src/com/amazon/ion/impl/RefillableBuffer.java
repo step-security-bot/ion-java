@@ -140,24 +140,29 @@ abstract class RefillableBuffer extends AbstractBuffer {
             capacity = newSize;
             buffer = newBuffer;
             byteBuffer = ByteBuffer.wrap(buffer, offset, capacity);
+        } else {
+            // The current capacity can accommodate the requested size; move the existing bytes to the beginning
+            // to make room for the remaining requested bytes to be filled at the end.
+            moveBytesToStartOfBuffer(buffer);
         }
     }
 
     @Override
-    boolean fill(int numberOfBytes) throws Exception {
-        int shortfall = numberOfBytes - available();
+    boolean fillAt(int index, int numberOfBytes) throws Exception {
+        int shortfall = numberOfBytes - availableAt(index);
         if (shortfall > 0) {
             ensureCapacity(numberOfBytes);
             // Fill all the free space, not just the shortfall; this reduces I/O.
             refill(freeSpaceAtEndOfBuffer());
-            shortfall = numberOfBytes - available();
+            shortfall = numberOfBytes - availableAt(index);
         }
         if (shortfall <= 0) {
-            remainingBytesRequested = 0;
+            bytesRequested = 0;
             instruction = Instruction.READY;
             return true;
         }
-        remainingBytesRequested = shortfall;
+        //remainingBytesRequested = shortfall;
+        bytesRequested = numberOfBytes + (index - offset);
         instruction = Instruction.FILL;
         return false;
     }

@@ -80,7 +80,7 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
             //b = getInput().read();
             b = buffer.readByteWithoutBuffering();
         } else {
-            if (!buffer.fill(1)) {
+            if (!buffer.fillAt(peekIndex, 1)) {
                 return -1;
             }
             b = buffer.peek(peekIndex);

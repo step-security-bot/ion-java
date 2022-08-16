@@ -212,13 +212,14 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
      */
     private boolean parseTypeID(final int typeIdByte, final boolean isUnannotated) throws Exception {
         valueTid = IonTypeID.TYPE_IDS[typeIdByte];
-        dataHandler.onData(1);
+        dataHandler.onData(1); // TODO don't report onData until a checkpoint is reached, otherwise it's overreported
         int valueLength = 0;
         if (typeIdByte == IVM_START_BYTE && containerStack.isEmpty()) {
             if (!isUnannotated) {
                 throw new IonException("Invalid annotation header.");
             }
-            if (!buffer.fill(IVM_REMAINING_LENGTH)) {
+            //if (!buffer.fill(IVM_REMAINING_LENGTH)) {
+            if (!buffer.fillAt(peekIndex, _Private_IonConstants.BINARY_VERSION_MARKER_SIZE)) {
                 return false;
             }
             majorVersion = buffer.peek(peekIndex++);
@@ -229,7 +230,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
             requireSupportedIonVersion();
             ivmConsumer.ivmEncountered(majorVersion, minorVersion);
             // TODO seek the pipe past the IVM, freeing space if necessary (check)
-            buffer.seekTo(peekIndex);
+            //buffer.seekTo(peekIndex);
             setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
         } else if (!valueTid.isValid) {
             throw new IonException("Invalid type ID.");
@@ -251,7 +252,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
             if (annotationsLength < 0) {
                 return false;
             }
-            if (!buffer.fill((int) annotationsLength)) { // TODO skip if the value isalready oversized
+            if (!buffer.fillAt(peekIndex, (int) annotationsLength)) { // TODO skip if the value isalready oversized
                 return false;
             }
             annotationSidsMarker.startIndex = peekIndex;
@@ -425,14 +426,13 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         }
         event = Event.NEEDS_DATA;
 
-        // TODO does something like fillTo() make sense?
-        if (buffer.fill(valueMarker.endIndex - valueMarker.startIndex)) {
+        if (buffer.fillAt(peekIndex, valueMarker.endIndex - valueMarker.startIndex)) {
             event = Event.VALUE_READY;
         }
     }
 
     public void stepIn() throws IOException {
-        if (!makeBufferReady() || checkContainerEnd()) { // TODO check need for checkContainerEnd
+        if (!makeBufferReady()) {
             return;
         }
         // Must be positioned on a container.
