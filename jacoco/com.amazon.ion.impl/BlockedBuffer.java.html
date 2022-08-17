@@ -783,12 +783,12 @@ static final boolean test_with_no_version_checking = false;
 <span class="fc" id="L783">            temp.clearBlock();</span>
 <span class="fc" id="L784">            this._blocks.add(temp); // dump it at the end (marked as not in use)</span>
             // and we don't move currIdx because we bumped it out of the whole array
-<span class="fc bfc" id="L786" title="All 2 branches covered.">            if (currIdx &lt; this._next_block_position - removedBlocks) {</span>
+<span class="pc bpc" id="L786" title="1 of 2 branches missed.">            if (currIdx &lt; this._next_block_position - removedBlocks) {</span>
 <span class="fc" id="L787">                currBlock = this._blocks.get(currIdx);</span>
             }
-<span class="pc bpc" id="L789" title="1 of 2 branches missed.">            else if (currIdx &gt; 0) {</span>
-<span class="fc" id="L790">                currIdx--;</span>
-<span class="fc" id="L791">                currBlock = this._blocks.get(currIdx);</span>
+<span class="nc bnc" id="L789" title="All 2 branches missed.">            else if (currIdx &gt; 0) {</span>
+<span class="nc" id="L790">                currIdx--;</span>
+<span class="nc" id="L791">                currBlock = this._blocks.get(currIdx);</span>
             }
             else {
 <span class="nc" id="L794">                throw new BlockedBufferException(&quot;fatal - no current block!&quot;);</span>
