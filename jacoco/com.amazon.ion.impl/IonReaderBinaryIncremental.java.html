@@ -1374,7 +1374,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
     }
 
     // Scratch space for various byte sizes. Only for use while computing a single value.
-<span class="fc" id="L1377">    private static final byte[][] SCRATCH_FOR_SIZE = new byte[][] {</span>
+<span class="fc" id="L1377">    private final byte[][] scratchForSize = new byte[][] {</span>
         new byte[0],
         new byte[1],
         new byte[2],
@@ -1400,8 +1400,8 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
         // Note: using reusable scratch buffers makes reading ints and decimals 1-5% faster and causes much less
         // GC churn.
 <span class="fc" id="L1402">        byte[] bytes = null;</span>
-<span class="fc bfc" id="L1403" title="All 2 branches covered.">        if (length &lt; SCRATCH_FOR_SIZE.length) {</span>
-<span class="fc" id="L1404">            bytes = SCRATCH_FOR_SIZE[length];</span>
+<span class="fc bfc" id="L1403" title="All 2 branches covered.">        if (length &lt; scratchForSize.length) {</span>
+<span class="fc" id="L1404">            bytes = scratchForSize[length];</span>
         }
 <span class="fc bfc" id="L1406" title="All 2 branches covered.">        if (bytes == null) {</span>
 <span class="fc" id="L1407">            bytes = new byte[length];</span>
