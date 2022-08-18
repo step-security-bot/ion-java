@@ -28,10 +28,10 @@ class FixedBufferFromByteArray extends AbstractBuffer {
     boolean fillAt(int index, int numberOfBytes) {
         if (numberOfBytes > availableAt(index)) {
             // TODO? throw or notify user?
-            instruction = Instruction.FILL;
+            state = State.FILL;
             return false;
         }
-        instruction = Instruction.READY;
+        state = State.READY;
         return true;
     }
 
@@ -39,11 +39,11 @@ class FixedBufferFromByteArray extends AbstractBuffer {
     boolean seek(int numberOfBytes) {
         if (numberOfBytes < available()) {
             offset = limit;
-            instruction = Instruction.SEEK;
+            state = State.SEEK;
             return false;
         }
         offset += numberOfBytes;
-        instruction = Instruction.READY;
+        state = State.READY;
         return true;
     }
 }

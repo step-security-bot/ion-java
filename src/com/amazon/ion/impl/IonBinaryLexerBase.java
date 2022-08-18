@@ -165,7 +165,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         }
     }
 
-    private void verifyValueLength(int valueLength, boolean isAnnotated) {
+    protected void verifyValueLength(int valueLength, boolean isAnnotated) throws IOException {
         int endIndex = checkpoint + valueLength; // TODO check;
         if (!containerStack.isEmpty()) {
             if (endIndex > containerStack.peek().endIndex) {
@@ -261,7 +261,9 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                 //  value representation. Could ask the buffer for 4 bytes if that would provide a speedup.
                 valueLength = valueTid.length;
             }
-            int postLengthIndex = peekIndex;
+            //int postLengthIndex = peekIndex;
+            // Record the post-length index in a value that will be shifted in the even the buffer needs to refill.
+            valueMarker.startIndex = peekIndex;
             long annotationsLength = readVarUInt();
             if (annotationsLength < 0) {
                 return false;
@@ -272,7 +274,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
             annotationSidsMarker.startIndex = peekIndex;
             annotationSidsMarker.endIndex = annotationSidsMarker.startIndex + (int) annotationsLength;
             peekIndex = annotationSidsMarker.endIndex;
-            valueLength -= peekIndex - postLengthIndex; // TODO might not be necessary
+            valueLength -= peekIndex - valueMarker.startIndex; // TODO might not be necessary
             setCheckpoint(CheckpointLocation.BEFORE_ANNOTATED_TYPE_ID);
         } else {
             if (valueTid.isNull || valueTid.type == IonType.BOOL) {
@@ -352,7 +354,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         }
     }
 
-    protected boolean handleHeaderEnd() throws IOException {
+    protected boolean handleHeaderEnd() throws Exception {
         return false;
     }
 
@@ -428,6 +430,10 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
 
     }
 
+    protected Event handleFill() throws Exception {
+        return Event.VALUE_READY;
+    }
+
     /**
      *
      * @return a marker for the buffered value, or null if the value is not yet completely buffered.
@@ -444,7 +450,8 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         event = Event.NEEDS_DATA;
 
         if (buffer.fillAt(peekIndex, valueMarker.endIndex - valueMarker.startIndex)) {
-            event = Event.VALUE_READY;
+            //event = Event.VALUE_READY;
+            event = handleFill();
         }
     }
 

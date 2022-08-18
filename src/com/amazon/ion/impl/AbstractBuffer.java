@@ -5,10 +5,11 @@ import java.nio.ByteBuffer;
 
 abstract class AbstractBuffer {
 
-    protected enum Instruction {
+    protected enum State {
         FILL,
         SEEK,
-        READY
+        READY,
+        TERMINATED
     }
 
     /**
@@ -30,7 +31,7 @@ abstract class AbstractBuffer {
 
     ByteBuffer byteBuffer;
 
-    Instruction instruction = Instruction.READY;
+    State state = State.READY;
 
     int bytesRequested = 0;
 
@@ -69,13 +70,15 @@ abstract class AbstractBuffer {
     }
 
     boolean makeReady() throws Exception {
-        switch (instruction) {
+        switch (state) {
             case READY:
                 return true;
             case SEEK:
                 return seek(bytesRequested);
             case FILL:
                 return fill(bytesRequested);
+            case TERMINATED:
+                return false;
             default:
                 throw new IllegalStateException();
         }
@@ -86,12 +89,20 @@ abstract class AbstractBuffer {
     }
 
     boolean isReady() {
-        return instruction == Instruction.READY;
+        return state == State.READY;
     }
 
     boolean isAwaitingMoreData() {
         // TODO doesn't feel quite right
-        return instruction == Instruction.SEEK;
+        return state == State.SEEK;
+    }
+
+    void terminate() {
+        state = State.TERMINATED;
+    }
+
+    boolean isTerminated() {
+        return state == State.TERMINATED;
     }
 
 }

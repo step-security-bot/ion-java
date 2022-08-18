@@ -120,14 +120,16 @@ abstract class RefillableBuffer extends AbstractBuffer {
      * indices such that the `readIndex` points to the same byte and the `writeIndex` is positioned after the last
      * byte that is available to read.
      * @param minimumNumberOfBytesRequired the minimum number of additional bytes to buffer.
+     * @return true if the buffer has sufficient capacity; otherwise, false.
      */
-    void ensureCapacity(int minimumNumberOfBytesRequired) throws Exception {
+    boolean ensureCapacity(int minimumNumberOfBytesRequired) throws Exception {
         if (freeSpaceAt(offset) >= minimumNumberOfBytesRequired) {
             // No need to shift any bytes or grow the buffer.
-            return;
+            return true;
         }
         if (minimumNumberOfBytesRequired > maximumBufferSize) {
             notificationConsumer.bufferOverflowDetected();
+            return false;
         }
         int shortfall = minimumNumberOfBytesRequired - capacity;
         if (shortfall > 0) {
@@ -144,6 +146,7 @@ abstract class RefillableBuffer extends AbstractBuffer {
             // to make room for the remaining requested bytes to be filled at the end.
             moveBytesToStartOfBuffer(buffer);
         }
+        return true;
     }
 
     @Override
@@ -151,18 +154,23 @@ abstract class RefillableBuffer extends AbstractBuffer {
         int shortfall = numberOfBytes - availableAt(index);
         if (shortfall > 0) {
             bytesRequested = numberOfBytes + (index - offset);
-            ensureCapacity(bytesRequested);
-            // Fill all the free space, not just the shortfall; this reduces I/O.
-            refill(freeSpaceAt(limit));
-            shortfall = bytesRequested - available();
+            if (ensureCapacity(bytesRequested)) {
+                // Fill all the free space, not just the shortfall; this reduces I/O.
+                refill(freeSpaceAt(limit));
+                shortfall = bytesRequested - available();
+            } else {
+                // The request cannot be satisfied, but not because data was unavailable. Return normally; it is the
+                // caller's responsibility to recover.
+                shortfall = 0;
+            }
         }
         if (shortfall <= 0) {
             bytesRequested = 0;
-            instruction = Instruction.READY;
+            state = State.READY;
             return true;
         }
         //remainingBytesRequested = shortfall;
-        instruction = Instruction.FILL;
+        state = State.FILL;
         return false;
     }
 

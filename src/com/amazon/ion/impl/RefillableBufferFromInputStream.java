@@ -33,7 +33,7 @@ public class RefillableBufferFromInputStream extends RefillableBuffer {
         if (unbufferedBytesToSkip <= 0) {
             offset += numberOfBytes;
             bytesRequested = 0;
-            instruction = Instruction.READY;
+            state = State.READY;
             return true;
         }
         offset = limit;
@@ -47,13 +47,13 @@ public class RefillableBufferFromInputStream extends RefillableBuffer {
         int shortfall = numberOfBytes - skipped;
         if (shortfall <= 0) {
             bytesRequested = 0;
-            instruction = Instruction.READY;
+            state = State.READY;
             return true;
         }
         //remainingBytesRequested = shortfall;
         //bytesRequested = numberOfBytes;
         bytesRequested = shortfall;
-        instruction = Instruction.SEEK;
+        state = State.SEEK;
         return false;
     }
 

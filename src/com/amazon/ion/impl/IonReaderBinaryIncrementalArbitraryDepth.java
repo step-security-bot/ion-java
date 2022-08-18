@@ -237,8 +237,9 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
             new BufferConfiguration.OversizedValueHandler() {
                 @Override
                 public void onOversizedValue() throws Exception {
-                    if (isReadingSymbolTable()) {
+                    if (isReadingSymbolTable() || isPositionedOnSymbolTable()) {
                         configuration.getOversizedSymbolTableHandler().onOversizedSymbolTable();
+                        terminate();
                     } else {
                         configuration.getOversizedValueHandler().onOversizedValue();
                     }
@@ -258,6 +259,10 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         symbols = new ArrayList<String>(SYMBOLS_LIST_INITIAL_CAPACITY);
         symbolTableReader = new SymbolTableReader();
         resetImports();
+    }
+
+    private void terminate() {
+        raw.terminate();
     }
 
     /**
@@ -1085,6 +1090,13 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         return state.ordinal() < State.READING_VALUE.ordinal();
     }
 
+    private boolean isPositionedOnSymbolTable() {
+        return getDepth() == 0 &&
+            raw.getType() == IonType.STRUCT &&
+            raw.hasAnnotations() &&
+            raw.iterateAnnotationSids().next() == SystemSymbolIDs.ION_SYMBOL_TABLE_ID;
+    }
+
     @Override
     public Event next(Instruction instruction) {
         Event event;
@@ -1098,13 +1110,8 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
             }
             event = raw.next(instruction);
             resetAnnotations(); // TODO check
-            if (
-                getDepth() == 0 &&
-                event == Event.START_CONTAINER &&
-                raw.getType() == IonType.STRUCT &&
-                raw.hasAnnotations() &&
-                raw.iterateAnnotationSids().next() == SystemSymbolIDs.ION_SYMBOL_TABLE_ID
-            ) {
+            // TODO event check below unnecessary?
+            if (event == Event.START_CONTAINER && isPositionedOnSymbolTable()) {
                 cachedReadOnlySymbolTable = null;
                 symbolTableReader.resetState();
                 state = State.ON_SYMBOL_TABLE_STRUCT;

@@ -73,7 +73,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
 
     private int peekIndex = -1;
 
-    private IonTypeID valueTid = null;
+    private IonTypeID valueTid = null; // TODO remove
 
     IonBinaryLexerRefillable.Marker scalarMarker = null;
 
@@ -728,6 +728,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
     }
 
     public IonType getType() {
+        IonTypeID valueTid = lexer.getValueTid();
         return valueTid == null ? null : valueTid.type;
     }
 
@@ -750,6 +751,9 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         return lexer.isAwaitingMoreData();
     }
 
+    void terminate() {
+        lexer.buffer.terminate();
+    }
 
     public void close() {
         utf8Decoder.close();
