@@ -60,13 +60,12 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
     }
 
     private void handleOversizedValue() throws Exception {
-        //oversizedValueHandler.onOversizedValue();
-        // Reaching this point means the user wishes to skip the oversized value and continue.
         // Skip all bytes that have already been read.
         isSkippingCurrentValue = true;
         // Don't do the following because it throws away annotations, which are needed to determine if the skipped
         // value is a symbol table
-        // buffer.seekTo(peekIndex); // TODO check
+        // TODO check. Won't work if the value markers are not yet set
+        dataHandler.onData(valueMarker.endIndex - valueMarker.startIndex);
     }
 
     /**

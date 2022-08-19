@@ -203,11 +203,12 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         fieldSid = -1;
     }
 
-    void setCheckpoint(CheckpointLocation location) throws IOException {
+    void setCheckpoint(CheckpointLocation location) throws Exception {
         if (location == CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID) {
             reset();
             buffer.seekTo(peekIndex);
         }
+        dataHandler.onData(peekIndex - checkpoint);
         checkpointLocation = location;
         checkpoint = peekIndex;
     }
@@ -219,13 +220,11 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
      */
     private boolean parseTypeID(final int typeIdByte, final boolean isAnnotated) throws Exception {
         valueTid = IonTypeID.TYPE_IDS[typeIdByte];
-        dataHandler.onData(1); // TODO don't report onData until a checkpoint is reached, otherwise it's overreported
         int valueLength = 0;
         if (typeIdByte == IVM_START_BYTE && containerStack.isEmpty()) {
             if (isAnnotated) {
                 throw new IonException("Invalid annotation header.");
             }
-            //if (!buffer.fill(IVM_REMAINING_LENGTH)) {
             if (!buffer.fillAt(peekIndex, _Private_IonConstants.BINARY_VERSION_MARKER_SIZE)) {
                 return false;
             }
@@ -236,8 +235,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
             }
             requireSupportedIonVersion();
             ivmConsumer.ivmEncountered(majorVersion, minorVersion);
-            // TODO seek the pipe past the IVM, freeing space if necessary (check)
-            //buffer.seekTo(peekIndex);
             setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
         } else if (!valueTid.isValid) {
             throw new IonException("Invalid type ID.");
@@ -338,7 +335,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
             value =
                 (value << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
             if ((currentByte & HIGHEST_BIT_BITMASK) != 0) {
-                dataHandler.onData(numberOfBytesRead);
                 return value;
             }
         }
@@ -455,7 +451,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         }
     }
 
-    public void stepIn() throws IOException {
+    public void stepIn() throws Exception {
         if (!makeBufferReady()) {
             return;
         }
@@ -518,7 +514,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
             case STEP_IN:
                 try {
                     stepIn();
-                } catch (IOException e) {
+                } catch (Exception e) {
                     throw new IonException(e);
                 }
                 break;

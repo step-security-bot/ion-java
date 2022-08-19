@@ -2378,6 +2378,8 @@ public class IonReaderBinaryIncrementalTest {
         assertEquals(bytes.length, byteCounter.get());
     }
 
+    // TODO audit all oversize/oversized tests to ensure their names and comments align with what is being tested
+
     @Test
     public void oversizeValueDetectedDuringSingleByteRead() throws Exception {
         // Unlike the previous test, where excessive size is detected when trying to skip past the value portion,
@@ -2959,7 +2961,7 @@ public class IonReaderBinaryIncrementalTest {
         IonReaderBuilder builder = IonReaderBuilder.standard().withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(8)
-                .withMaximumBufferSize(32)
+                .withMaximumBufferSize(25)
                 .onOversizedValue(handler)
                 .onOversizedSymbolTable(handler)
                 .onData(handler)
