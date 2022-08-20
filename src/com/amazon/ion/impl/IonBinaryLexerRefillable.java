@@ -2,6 +2,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.BufferConfiguration;
 import com.amazon.ion.IonBufferConfiguration;
+import com.amazon.ion.IonException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,7 +25,6 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
         final IvmNotificationConsumer ivmConsumer,
         final InputStream inputStream
     ) {
-        //super(configuration, oversizedValueHandler, inputStream);
         super(
             new RefillableBufferFromInputStream(
                 inputStream,
@@ -44,8 +44,8 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
                 }
 
                 @Override
-                public void bufferOverflowDetected() throws Exception {
-                    handleOversizedValue();
+                public void bufferOverflowDetected() {
+                    isSkippingCurrentValue = true;
                 }
             }
         );
@@ -54,18 +54,37 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
     }
 
     @Override
-    protected void reset() {
-        super.reset();
-        isSkippingCurrentValue = false;
-    }
-
-    private void handleOversizedValue() throws Exception {
-        // Skip all bytes that have already been read.
-        isSkippingCurrentValue = true;
-        // Don't do the following because it throws away annotations, which are needed to determine if the skipped
-        // value is a symbol table
-        // TODO check. Won't work if the value markers are not yet set
-        dataHandler.onData(valueMarker.endIndex - valueMarker.startIndex);
+    public Event next(Instruction instruction) {
+        while (true) {
+            Event event = super.next(instruction);
+            if (isSkippingCurrentValue) {
+                // The value was oversized.
+                try {
+                    oversizedValueHandler.onOversizedValue();
+                    if (!buffer.isTerminated()) {
+                        // TODO reuse setCheckpoint
+                        if (!buffer.isTerminated()) { // TODO note: not required
+                            buffer.seekTo(valueMarker.endIndex);
+                        }
+                        dataHandler.onData(valueMarker.endIndex - checkpoint);
+                        checkpointLocation = CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID;
+                        peekIndex = buffer.getOffset();
+                        checkpoint = peekIndex;
+                        reset();
+                    }
+                } catch (Exception e) {
+                    throw new IonException(e); // TODO clean up
+                }
+                isSkippingCurrentValue = false;
+                if (instruction == Instruction.NEXT_VALUE) {
+                    // The user has requested a value. Continue to the next one.
+                    continue;
+                }
+                // This was a request to fill a value, but the request could not be completed because the value
+                // was oversized. Convey that NEXT is now required.
+            }
+            return event;
+        }
     }
 
     /**
@@ -96,37 +115,19 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
         return b;
     }
 
-    protected boolean handleHeaderEnd() throws Exception {
-        boolean isSkipping = isSkippingCurrentValue;
-        if (isSkipping) {
-            oversizedValueHandler.onOversizedValue();
-            peekIndex = buffer.limit;
-            if (!buffer.isTerminated()) {
-                setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
-            }
-        }
-        return isSkipping;
-    }
-
     @Override
     protected void verifyValueLength(int valueLength, boolean isAnnotated) throws IOException {
         if (isSkippingCurrentValue) {
             // If the value is being skipped, not all of its bytes will be buffered, so start/end indexes will not
-            // align to the expected values. This is fine, because the value will not be accessed. Skip any remaining
-            // bytes in the value.
-            buffer.seekTo(checkpoint + valueLength);
+            // align to the expected values. This is fine, because the value will not be accessed.
             return;
         }
         super.verifyValueLength(valueLength, isAnnotated);
     }
 
     @Override
-    protected Event handleFill() throws Exception {
-        if (isSkippingCurrentValue) {
-            oversizedValueHandler.onOversizedValue();
-            return Event.NEEDS_DATA;
-        }
-        return Event.VALUE_READY;
+    protected Event handleFill() {
+        return isSkippingCurrentValue ? Event.NEEDS_INSTRUCTION : Event.VALUE_READY;
     }
 
     /**

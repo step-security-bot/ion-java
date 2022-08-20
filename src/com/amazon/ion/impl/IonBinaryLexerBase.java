@@ -132,7 +132,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
      */
     private IonTypeID valueTid;
 
-    private CheckpointLocation checkpointLocation = CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID;
+    protected CheckpointLocation checkpointLocation = CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID;
 
     private int fieldSid;
     
@@ -350,7 +350,13 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         }
     }
 
-    protected boolean handleHeaderEnd() throws Exception {
+    protected boolean skipRemainingValueBytes() throws Exception {
+        // TODO redundant?
+        if (!buffer.seekTo(valueMarker.endIndex)) {
+            return true;
+        }
+        peekIndex = valueMarker.endIndex;
+        setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
         return false;
     }
 
@@ -387,10 +393,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                         prohibitEmptyOrderedStruct();
                         return;
                     }
-                    if (handleHeaderEnd()) { // TODO this isn't clean
-                        // The value is being skipped; continue to the next one.
-                        continue;
-                    }
                     // Either an IVM or NOP has been skipped, or an annotation wrapper has been consumed.
                     continue;
                 case BEFORE_ANNOTATED_TYPE_ID:
@@ -405,28 +407,21 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                     if (checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER) {
                         prohibitEmptyOrderedStruct();
                     }
-                    if (handleHeaderEnd()) {
-                        // The value is being skipped; continue to the next one.
-                        continue;
-                    }
                     // If already within an annotation wrapper, neither an IVM nor a NOP is possible, so the lexer
                     // must be positioned after the header for the wrapped value.
                     return;
                 case AFTER_SCALAR_HEADER:
                 case AFTER_CONTAINER_HEADER: // TODO can we unify these two states?
-                    // TODO redundant?
-                    if (!buffer.seekTo(valueMarker.endIndex)) {
+                    if (skipRemainingValueBytes()) {
                         return;
                     }
-                    peekIndex = valueMarker.endIndex;
-                    setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
                     // The previous value's bytes have now been skipped; continue.
             }
         }
 
     }
 
-    protected Event handleFill() throws Exception {
+    protected Event handleFill() {
         return Event.VALUE_READY;
     }
 
@@ -446,7 +441,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         event = Event.NEEDS_DATA;
 
         if (buffer.fillAt(peekIndex, valueMarker.endIndex - valueMarker.startIndex)) {
-            //event = Event.VALUE_READY;
             event = handleFill();
         }
     }

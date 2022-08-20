@@ -898,6 +898,11 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
             maxId = -1;
         }
 
+        private boolean valueUnavailable() {
+            Event event = raw.next(Instruction.LOAD_VALUE);
+            return event == Event.NEEDS_DATA || event == Event.NEEDS_INSTRUCTION;
+        }
+
         private void readSymbolTable() {
             Event event;
             while (true) {
@@ -962,7 +967,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                             newImports.add(getSystemSymbolTable());
                             state = State.READING_SYMBOL_TABLE_IMPORTS_LIST;
                         } else if (raw.getType() == IonType.SYMBOL) {
-                            if (Event.NEEDS_DATA == raw.next(Instruction.LOAD_VALUE)) {
+                            if (valueUnavailable()) {
                                 return;
                             }
                             if (raw.symbolValueId() == SystemSymbolIDs.ION_SYMBOL_TABLE_ID) {
@@ -992,7 +997,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                         }
                         break;
                     case READING_SYMBOL_TABLE_SYMBOL:
-                        if (Event.NEEDS_DATA == raw.next(Instruction.LOAD_VALUE)) {
+                        if (valueUnavailable()) {
                             return;
                         }
                         newSymbols.add(raw.stringValue());
@@ -1038,7 +1043,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                         }
                         break;
                     case READING_SYMBOL_TABLE_IMPORT_NAME:
-                        if (Event.NEEDS_DATA == raw.next(Instruction.LOAD_VALUE)) {
+                        if (valueUnavailable()) {
                             return;
                         }
                         if (raw.getType() == IonType.STRING) {
@@ -1047,7 +1052,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                         state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
                         break;
                     case READING_SYMBOL_TABLE_IMPORT_VERSION:
-                        if (Event.NEEDS_DATA == raw.next(Instruction.LOAD_VALUE)) {
+                        if (valueUnavailable()) {
                             return;
                         }
                         if (raw.getType() == IonType.INT) {
@@ -1056,7 +1061,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                         state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
                         break;
                     case READING_SYMBOL_TABLE_IMPORT_MAX_ID:
-                        if (Event.NEEDS_DATA == raw.next(Instruction.LOAD_VALUE)) {
+                        if (valueUnavailable()) {
                             return;
                         }
                         if (raw.getType() == IonType.INT) {
