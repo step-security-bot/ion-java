@@ -2380,6 +2380,14 @@ public class IonReaderBinaryIncrementalTest {
 
     // TODO audit all oversize/oversized tests to ensure their names and comments align with what is being tested
 
+    // TODO oversized scalar below top level
+    // TODO oversized container below top level on attempted load
+    // TODO try the above two where the oversized is detected in the header length, in an annotation wrapper, and in
+    //  the load
+    // TODO oversized symbol table detected in header before it is determined that the value is even a symbol table
+    //  (note: check to see if this one is already exercised)
+    // TODO value several levels deep causes buffered bytes to be shifted
+
     @Test
     public void oversizeValueDetectedDuringSingleByteRead() throws Exception {
         // Unlike the previous test, where excessive size is detected when trying to skip past the value portion,

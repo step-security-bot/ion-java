@@ -19,6 +19,8 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
 
     private boolean isSkippingCurrentValue = false;
 
+    private int individualBytesSkippedWithoutBuffering = 0;
+
     IonBinaryLexerRefillable(
         final IonBufferConfiguration configuration,
         final BufferConfiguration.OversizedValueHandler oversizedValueHandler,
@@ -61,11 +63,9 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
                 // The value was oversized.
                 try {
                     oversizedValueHandler.onOversizedValue();
-                    if (!buffer.isTerminated()) {
+                    if (!buffer.isTerminated()) { // TODO note: not required
                         // TODO reuse setCheckpoint
-                        if (!buffer.isTerminated()) { // TODO note: not required
-                            buffer.seekTo(valueMarker.endIndex);
-                        }
+                        buffer.seek(valueMarker.endIndex - buffer.getOffset() - individualBytesSkippedWithoutBuffering);
                         dataHandler.onData(valueMarker.endIndex - checkpoint);
                         checkpointLocation = CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID;
                         peekIndex = buffer.getOffset();
@@ -76,6 +76,7 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
                     throw new IonException(e); // TODO clean up
                 }
                 isSkippingCurrentValue = false;
+                individualBytesSkippedWithoutBuffering = 0;
                 if (instruction == Instruction.NEXT_VALUE) {
                     // The user has requested a value. Continue to the next one.
                     continue;
@@ -99,6 +100,9 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
             // If the value is being skipped, the byte will not have been buffered.
             //b = getInput().read();
             b = buffer.readByteWithoutBuffering();
+            if (b >= 0) {
+                individualBytesSkippedWithoutBuffering += 1;
+            }
         } else {
             if (!buffer.fillAt(peekIndex, 1)) {
                 return -1;
@@ -106,6 +110,9 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
             // TODO ugly
             if (isSkippingCurrentValue) {
                 b = buffer.readByteWithoutBuffering();
+                if (b >= 0) {
+                    individualBytesSkippedWithoutBuffering += 1;
+                }
             } else {
                 b = buffer.peek(peekIndex);
                 //pipe.extendBoundary(1);

@@ -62,24 +62,21 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
     /**
      * Holds the information that the binary reader must keep track of for containers at any depth.
      */
-    private static class ContainerInfo {
-
-        private IonType type;
+    protected static class ContainerInfo {
 
         /**
          * The container's type.
          */
-        private int startIndex;
+        private IonType type;
 
         /**
          * The byte position of the end of the container.
          */
-        private int endIndex;
+        int endIndex;
 
-        void set(IonType type, Marker marker) {
+        void set(IonType type, int endIndex) {
             this.type = type;
-            this.startIndex = marker.startIndex;
-            this.endIndex = marker.endIndex;
+            this.endIndex = endIndex;
         }
     }
 
@@ -100,7 +97,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
     /**
      * Stack to hold container info. Stepping into a container results in a push; stepping out results in a pop.
      */
-    private final _Private_RecyclingStack<ContainerInfo> containerStack;
+    protected final _Private_RecyclingStack<ContainerInfo> containerStack;
 
     protected final Buffer buffer;
 
@@ -455,7 +452,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         }
         // Push the remaining length onto the stack, seek past the container's header, and increase the depth.
         ContainerInfo containerInfo = containerStack.push();
-        containerInfo.set(valueTid.type, valueMarker);
+        containerInfo.set(valueTid.type, valueMarker.endIndex);
         setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
         // TODO seek past header (no need to hold onto it)
         // TODO reset other state

@@ -22,6 +22,11 @@ public final class _Private_RecyclingStack<T> {
         T newElement();
     }
 
+    public interface Consumer<T> {
+
+        void accept(T element);
+    }
+
     private final List<T> elements;
     private final ElementFactory<T> elementFactory;
     private int currentIndex;
@@ -77,6 +82,12 @@ public final class _Private_RecyclingStack<T> {
             currentIndex = -1;
         }
         return popped;
+    }
+
+    public void forEach(Consumer<T> consumer) {
+        for (int i = currentIndex; i >= 0; i--) {
+            consumer.accept(elements.get(i));
+        }
     }
 
     /**
