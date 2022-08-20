@@ -3010,7 +3010,7 @@ public class IonReaderBinaryIncrementalTest {
         IonReaderBuilder builder = IonReaderBuilder.standard().withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(8)
-                .withMaximumBufferSize(32)
+                .withMaximumBufferSize(25)
                 .onOversizedValue(handler)
                 .onOversizedSymbolTable(handler)
                 .onData(handler)

@@ -157,6 +157,17 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
 
      */
 
+    private int amountToShift = 0;
+
+    private final _Private_RecyclingStack.Consumer<ContainerInfo> shiftContainerIndex =
+        new _Private_RecyclingStack.Consumer<ContainerInfo>() {
+
+        @Override
+        public void accept(ContainerInfo element) {
+            element.endIndex -= amountToShift;
+        }
+    };
+
     /**
      * Shift all indices after 'afterIndex' left by the given amount. This is used when data is moved in the underlying
      * buffer either due to buffer growth or NOP padding being reclaimed to make room for a value that would otherwise
@@ -189,6 +200,10 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
             annotationSidsMarker.startIndex -= shiftAmount;
             annotationSidsMarker.endIndex -= shiftAmount;
         }
+
+        amountToShift = shiftAmount; // TODO ugly
+        containerStack.forEach(shiftContainerIndex);
+        amountToShift = 0;
         /*
         if (ivmSecondByteIndex > afterIndex) {
             ivmSecondByteIndex -= shiftAmount;
