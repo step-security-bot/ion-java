@@ -222,7 +222,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
             if (isAnnotated) {
                 throw new IonException("Invalid annotation header.");
             }
-            if (!buffer.fillAt(peekIndex, _Private_IonConstants.BINARY_VERSION_MARKER_SIZE)) {
+            if (!buffer.fillAt(peekIndex, IVM_REMAINING_LENGTH)) {
                 return null;
             }
             majorVersion = buffer.peek(peekIndex++);
@@ -620,8 +620,9 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
 
     boolean isAwaitingMoreData() {
         // TODO still probably not quite right, check
-        return peekIndex > checkpoint
-            || checkpointLocation.ordinal() > CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID.ordinal()
-            || buffer.isAwaitingMoreData(); //!buffer.isReady();
+        return !buffer.isTerminated()
+            && (peekIndex > checkpoint
+                || checkpointLocation.ordinal() > CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID.ordinal()
+                || buffer.isAwaitingMoreData());
     }
 }

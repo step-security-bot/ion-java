@@ -587,6 +587,20 @@ public class IonReaderBinaryIncrementalTest {
     }
 
     @Test
+    public void ivmOnly() throws Exception {
+        IonReader reader = readerFor();
+        assertNull(reader.next());
+        reader.close();
+    }
+
+    @Test
+    public void twoIvmsOnly() throws Exception {
+        IonReader reader = readerFor(0xE0, 0x01, 0x00, 0xEA);
+        assertNull(reader.next());
+        reader.close();
+    }
+
+    @Test
     public void multipleSymbolTablesBetweenValues() throws Exception {
         IonReader reader = readerFor(new WriterFunction() {
             @Override
