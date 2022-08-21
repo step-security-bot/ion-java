@@ -271,6 +271,9 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
             annotationSidsMarker.endIndex = annotationSidsMarker.startIndex + (int) annotationsLength;
             peekIndex = annotationSidsMarker.endIndex;
             valueLength -= peekIndex - valueMarker.startIndex; // TODO might not be necessary
+            if (valueLength <= 0) {
+                throw new IonException("Annotation wrapper must wrap a value.");
+            }
             setCheckpoint(CheckpointLocation.BEFORE_ANNOTATED_TYPE_ID);
         } else {
             if (valueTid.isNull || valueTid.type == IonType.BOOL) {
@@ -343,7 +346,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
     private void prohibitEmptyOrderedStruct() {
         if (valueTid.type == IonType.STRUCT &&
             valueTid.lowerNibble == IonTypeID.ORDERED_STRUCT_NIBBLE &&
-            event == Event.END_CONTAINER // TODO check
+            valueMarker.endIndex == peekIndex
         ) {
             throw new IonException("Ordered struct must not be empty.");
         }
@@ -617,6 +620,8 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
 
     boolean isAwaitingMoreData() {
         // TODO still probably not quite right, check
-        return peekIndex > checkpoint || buffer.isAwaitingMoreData(); //!buffer.isReady();
+        return peekIndex > checkpoint
+            || checkpointLocation.ordinal() > CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID.ordinal()
+            || buffer.isAwaitingMoreData(); //!buffer.isReady();
     }
 }
