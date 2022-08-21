@@ -73,9 +73,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
 
     private int peekIndex = -1;
 
-    private IonTypeID valueTid = null; // TODO remove
-
-    IonBinaryLexerRefillable.Marker scalarMarker = null;
+    IonBinaryLexerBase.Marker scalarMarker = null;
 
     // The number of bytes of a lob value that the user has consumed, allowing for piecewise reads.
     private int lobBytesRead = 0;
@@ -103,11 +101,8 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         if (instruction != Instruction.LOAD_VALUE) {
             // Keep the annotations if remaining positioned on the same scalar; otherwise, drop them.
             annotationSids.clear(); // TODO is there a better place for this?
-            valueTid = null;
         }
-        Event event = lexer.next(instruction);
-        valueTid = lexer.getValueTid();
-        return event;
+        return lexer.next(instruction);
     }
 
     @Override
@@ -146,17 +141,6 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         }
         return result;
     }
-
-    /**
-     * Reads a UInt starting at `valueStartPosition` and ending at `valueEndPosition`.
-     * @return the value.
-     */
-    /*
-    private long readUInt(IonReaderLookaheadBufferArbitraryDepth.Marker scalarMarker) {
-        return readUInt(scalarMarker.startIndex, scalarMarker.endIndex);
-    }
-
-     */
 
     /**
      * Reads a VarInt.
@@ -271,21 +255,22 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         return value;
     }
 
-    private void prepareScalar() {
+    private IonTypeID prepareScalar() {
         if (getCurrentEvent() != Event.VALUE_READY) {
             throw new IonException("No scalar has been loaded.");
         }
-        valueTid = lexer.getValueTid();
         scalarMarker = lexer.getValueMarker();
         peekIndex = scalarMarker.startIndex;
+        return lexer.getValueTid();
     }
 
     public boolean isNullValue() {
+        IonTypeID valueTid = lexer.getValueTid();
         return valueTid != null && valueTid.isNull;
     }
 
     public IntegerSize getIntegerSize() {
-        prepareScalar();
+        IonTypeID valueTid = prepareScalar();
         if (valueTid.type != IonType.INT || isNullValue()) {
             return null;
         }
@@ -328,17 +313,17 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
      * @param required the required type of current value.
      */
     private void requireType(IonType required) {
-        if (required != valueTid.type) {
+        if (required != getType()) {
             // Note: this is IllegalStateException to match the behavior of the other binary IonReader implementation.
             throw new IllegalStateException(
-                String.format("Invalid type. Required %s but found %s.", required, valueTid.type)
+                String.format("Invalid type. Required %s but found %s.", required, lexer.getType())
             );
         }
     }
 
     public int byteSize() {
         prepareScalar();
-        if (!IonType.isLob(valueTid.type) && !isNullValue()) {
+        if (!IonType.isLob(getType()) && !isNullValue()) {
             throw new IonException("Reader must be positioned on a blob or clob.");
         }
         return scalarMarker.endIndex - scalarMarker.startIndex;
@@ -444,7 +429,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
     }
 
     public long longValue() {
-        prepareScalar();
+        IonTypeID valueTid = prepareScalar();
         long value;
         if (valueTid.type == IonType.INT) {
             if (valueTid.length == 0) {
@@ -476,7 +461,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
     }
 
     public BigInteger bigIntegerValue() {
-        prepareScalar();
+        IonTypeID valueTid = prepareScalar();
         BigInteger value;
         if (valueTid.type == IonType.INT) {
             if (isNullValue()) {
@@ -522,7 +507,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
     }
 
     public double doubleValue() {
-        prepareScalar();
+        IonTypeID valueTid = prepareScalar();
         double value;
         if (valueTid.type == IonType.FLOAT) {
             int length = scalarMarker.endIndex - scalarMarker.startIndex;
@@ -621,7 +606,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
 
     public boolean booleanValue() {
         requireType(IonType.BOOL);
-        return valueTid.lowerNibble == 1;
+        return lexer.getValueTid().lowerNibble == 1;
     }
 
     /**
@@ -728,8 +713,11 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
     }
 
     public IonType getType() {
-        IonTypeID valueTid = lexer.getValueTid();
-        return valueTid == null ? null : valueTid.type;
+        return lexer.getType();
+    }
+
+    IonType peekType() {
+        return lexer.peekType();
     }
 
     public int getDepth() {

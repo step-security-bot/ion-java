@@ -764,112 +764,6 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         return token;
     }
 
-    /**
-     * Reads a local symbol table from the buffer.
-     * @param //marker marker for the start and end positions of the local symbol table in the buffer.
-     */
-    /*
-    private void readSymbolTable(IonReaderLookaheadBufferArbitraryDepth.Marker marker) {
-        peekIndex = marker.startIndex;
-        boolean isAppend = false;
-        boolean hasSeenImports = false;
-        boolean hasSeenSymbols = false;
-        int symbolsPosition = -1;
-        int symbolsEndPosition = -1;
-        List<SymbolTable> newImports;
-        while (peekIndex < marker.endIndex) {
-            fieldNameSid = readVarUInt();
-            IonTypeID typeID = readTypeId();
-            calculateEndPosition(typeID);
-            int currentValueEndPosition = valueEndPosition;
-            if (fieldNameSid == SystemSymbolIDs.IMPORTS_ID) {
-                if (hasSeenImports) {
-                    throw new IonException("Symbol table contained multiple imports fields.");
-                }
-                if (typeID.type == IonType.SYMBOL) {
-                    isAppend = readUInt(peekIndex, currentValueEndPosition) == SystemSymbolIDs.ION_SYMBOL_TABLE_ID;
-                    peekIndex = currentValueEndPosition;
-                } else if (typeID.type == IonType.LIST) {
-                    resetImports();
-                    newImports = new ArrayList<SymbolTable>(3);
-                    newImports.add(getSystemSymbolTable());
-                    stepIn();
-                    IonType type = next();
-                    while (type != null) {
-                        String name = null;
-                        int version = -1;
-                        int maxId = -1;
-                        if (type == IonType.STRUCT) {
-                            stepIn();
-                            type = next();
-                            while (type != null) {
-                                int fieldSid = getFieldId();
-                                if (fieldSid == SystemSymbolIDs.NAME_ID) {
-                                    if (type == IonType.STRING) {
-                                        name = stringValue();
-                                    }
-                                } else if (fieldSid == SystemSymbolIDs.VERSION_ID) {
-                                    if (type == IonType.INT) {
-                                        version = intValue();
-                                    }
-                                } else if (fieldSid == SystemSymbolIDs.MAX_ID_ID) {
-                                    if (type == IonType.INT) {
-                                        maxId = intValue();
-                                    }
-                                }
-                                type = next();
-                            }
-                            stepOut();
-                        }
-                        newImports.add(createImport(name, version, maxId));
-                        type = next();
-                    }
-                    stepOut();
-                    imports = new LocalSymbolTableImports(newImports);
-                }
-                if (!isAppend) {
-                    // Clear the existing symbols before adding the new imported symbols.
-                    resetSymbolTable();
-                }
-                hasSeenImports = true;
-            } else if (fieldNameSid == SystemSymbolIDs.SYMBOLS_ID) {
-                if (hasSeenSymbols) {
-                    throw new IonException("Symbol table contained multiple symbols fields.");
-                }
-                if (typeID.type == IonType.LIST) {
-                    // Just record this position and skip forward. Come back after the imports (if any) are parsed.
-                    symbolsPosition = peekIndex;
-                    symbolsEndPosition = currentValueEndPosition;
-                }
-                hasSeenSymbols = true;
-            }
-            peekIndex = currentValueEndPosition;
-        }
-        if (peekIndex > marker.endIndex) {
-            throw new IonException("Malformed symbol table. Child values exceeded the length declared in the header.");
-        }
-        if (!hasSeenImports) {
-            resetSymbolTable();
-            resetImports();
-        }
-        if (symbolsPosition > -1) {
-            peekIndex = symbolsPosition;
-            valueType = IonType.LIST;
-            valueEndPosition = symbolsEndPosition;
-            stepIn();
-            while (next() != null) {
-                if (getType() != IonType.STRING) {
-                    symbols.add(null);
-                } else {
-                    symbols.add(stringValue());
-                }
-            }
-            stepOut();
-            peekIndex = valueEndPosition;
-        }
-    }
-     */
-
     private class SymbolTableReader {
 
         private boolean hasSeenImports;
@@ -1097,8 +991,8 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
 
     private boolean isPositionedOnSymbolTable() {
         return getDepth() == 0 &&
-            raw.getType() == IonType.STRUCT &&
             raw.hasAnnotations() &&
+            raw.peekType() == IonType.STRUCT &&
             raw.iterateAnnotationSids().next() == SystemSymbolIDs.ION_SYMBOL_TABLE_ID;
     }
 

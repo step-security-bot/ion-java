@@ -215,15 +215,15 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
      * @param isAnnotated true if this type ID is on a value within an annotation wrapper; false if it is not.
      * @throws Exception if thrown by a handler method or if an IOException is thrown by the underlying InputStream.
      */
-    private boolean parseTypeID(final int typeIdByte, final boolean isAnnotated) throws Exception {
-        valueTid = IonTypeID.TYPE_IDS[typeIdByte];
+    private IonTypeID parseTypeID(final int typeIdByte, final boolean isAnnotated) throws Exception {
+        IonTypeID valueTid = IonTypeID.TYPE_IDS[typeIdByte];
         int valueLength = 0;
         if (typeIdByte == IVM_START_BYTE && containerStack.isEmpty()) {
             if (isAnnotated) {
                 throw new IonException("Invalid annotation header.");
             }
             if (!buffer.fillAt(peekIndex, _Private_IonConstants.BINARY_VERSION_MARKER_SIZE)) {
-                return false;
+                return null;
             }
             majorVersion = buffer.peek(peekIndex++);
             minorVersion = buffer.peek(peekIndex++);
@@ -247,7 +247,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                 //  4 bytes if that would provide a speedup.
                 valueLength = (int) readVarUInt(); // TODO unify typing
                 if (valueLength < 0) {
-                    return false;
+                    return null;
                 }
             } else {
                 // TODO small optimization: at this point the value must be at least 3 more bytes: 1 for the smallest-
@@ -260,10 +260,10 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
             valueMarker.startIndex = peekIndex;
             long annotationsLength = readVarUInt();
             if (annotationsLength < 0) {
-                return false;
+                return null;
             }
             if (!buffer.fillAt(peekIndex, (int) annotationsLength)) { // TODO skip if the value isalready oversized
-                return false;
+                return null;
             }
             annotationSidsMarker.startIndex = peekIndex;
             annotationSidsMarker.endIndex = annotationSidsMarker.startIndex + (int) annotationsLength;
@@ -281,7 +281,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                     //  the buffer for 2 bytes if that would provide a speedup.
                     valueLength = (int) readVarUInt(); // TODO unify typing
                     if (valueLength < 0) {
-                        return false;
+                        return null;
                     }
                 } else {
                     valueLength = valueTid.length;
@@ -302,7 +302,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                 }
                 if (!buffer.seekTo(peekIndex + valueLength)) {
                     event = Event.NEEDS_DATA;
-                    return false;
+                    return null;
                 }
                 peekIndex = buffer.getOffset();
                 valueLength = 0;
@@ -311,7 +311,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
             }
         }
         verifyValueLength(valueLength, isAnnotated); // TODO check
-        return true;
+        return valueTid;
     }
 
     /**
@@ -360,6 +360,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
     private void nextHeader() throws Exception {
         peekIndex = checkpoint;
         event = Event.NEEDS_DATA;
+        valueTid = null;
         while (true) {
             if (!makeBufferReady() || checkContainerEnd()) {
                 return;
@@ -380,7 +381,8 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                     if (b < 0) {
                         return;
                     }
-                    if (!parseTypeID(b, false)) {
+                    valueTid = parseTypeID(b, false);
+                    if (valueTid == null) {
                         return;
                     }
                     if (checkpointLocation == CheckpointLocation.AFTER_SCALAR_HEADER) {
@@ -398,7 +400,8 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                     if (b < 0) {
                         return;
                     }
-                    if (!parseTypeID(b, true)) {
+                    valueTid = parseTypeID(b, true);
+                    if (valueTid == null) {
                         return;
                     }
                     if (checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER) {
@@ -546,20 +549,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         // TODO
     }
 
-    /*
-    @Override
-    public boolean moreDataRequired() { // TODO not needed?
-        return false;
-    }
-
-    @Override
-    protected void fillInputHelper() throws Exception { // TODO not needed?
-
-    }
-
-     */
-
-
     int ionMajorVersion() {
         return majorVersion;
     }
@@ -569,42 +558,11 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
     }
 
     /**
-     * Clears the NOP pad index. Should be called between user values.
-     */
-    /*
-    void resetNopPadIndex() {
-        nopPadStartIndex = -1;
-    }
-
-     */
-
-    /**
-     * @return the index of the first byte of the value representation (past the type ID and the optional length field).
-     */
-    /*
-    int getValueStart() {
-        if (hasAnnotations()) {
-            return annotationSidsMarker.endIndex;
-        }
-        return valuePostHeaderIndex;
-    }
-
-     */
-
-    /**
      * @return the type ID of the current value.
      */
     IonTypeID getValueTid() {
         return valueTid;
     }
-
-    /**
-     * @return the index of the first byte after the end of the current value.
-     */
-    //int getValueEnd() {
-    //    return valueEndIndex;
-    //}
-
 
     /**
      * @return true if the current value has annotations; otherwise, false.
@@ -636,6 +594,22 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
 
     public int getDepth() {
         return containerStack.size();
+    }
+
+    public IonType getType() {
+        return valueTid == null ? null : valueTid.type;
+    }
+
+    IonType peekType() {
+        IonType type = getType();
+        // TODO verify this complexity is warranted
+        if (type == null && buffer.isReady() && buffer.available() > 0) {
+            IonTypeID valueTid = IonTypeID.TYPE_IDS[buffer.peek(checkpoint)];
+            if (valueTid.type != IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {
+                type = valueTid.type;
+            }
+        }
+        return type;
     }
 
     boolean isAwaitingMoreData() {
