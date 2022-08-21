@@ -258,7 +258,7 @@ public final class _Private_IonReaderFactory
 
     public static final IonReader makeIncrementalReader(IonReaderBuilder builder, InputStream is)
     {
-        return new IonReaderBinaryIncremental(builder, is);
+        return new IonReaderBinaryIncrementalTopLevel(builder, is);
     }
 
 

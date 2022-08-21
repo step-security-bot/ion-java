@@ -21,7 +21,7 @@ public class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_R
 
     private final IonReaderBinaryIncrementalArbitraryDepth reader;
     private IonReaderIncremental.Instruction nextInstruction = IonReaderIncremental.Instruction.NEXT_VALUE;
-    private IonType type = null;
+    private IonType type = null; // TODO see if it's possible to remove this
 
     IonReaderBinaryIncrementalTopLevel(IonReaderBuilder builder, InputStream inputStream) {
         reader = new IonReaderBinaryIncrementalArbitraryDepth(builder, inputStream);

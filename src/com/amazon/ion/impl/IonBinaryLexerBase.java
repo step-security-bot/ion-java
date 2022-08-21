@@ -119,7 +119,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
     private IonReaderIncremental.Event event = IonReaderIncremental.Event.NEEDS_DATA;
 
     // The major version of the Ion encoding currently being read.
-    private int majorVersion = 1;
+    private int majorVersion = -1;
 
     // The minor version of the Ion encoding currently being read.
     private int minorVersion = 0;
@@ -235,6 +235,8 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
             setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
         } else if (!valueTid.isValid) {
             throw new IonException("Invalid type ID.");
+        } else if (majorVersion < 1) {
+            throw new IonException("Invalid binary Ion.");
         } else if (valueTid.type == IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {
             // Annotation.
             if (isAnnotated) {
@@ -465,15 +467,15 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
     }
 
     public void stepOut() throws Exception {
+        if (containerStack.isEmpty()) {
+            // Note: this is IllegalStateException for consistency with the other binary IonReader implementation.
+            throw new IllegalStateException("Cannot step out at top level.");
+        }
         if (!makeBufferReady()) {
             return;
         }
         // Seek past the remaining bytes at this depth, pop from the stack, and subtract the number of bytes
         // consumed at the previous depth from the remaining bytes needed at the current depth.
-        if (containerStack.isEmpty()) {
-            // Note: this is IllegalStateException for consistency with the other binary IonReader implementation.
-            throw new IllegalStateException("Cannot step out at top level.");
-        }
         ContainerInfo containerInfo = containerStack.peek();
         event = Event.NEEDS_DATA;
         // Seek past any remaining bytes from the previous value.
@@ -589,7 +591,8 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
     }
 
     int getFieldId() {
-        return fieldSid;
+        // TODO see if it's possible to simplify this
+        return valueTid == null ? -1 : fieldSid;
     }
 
     public int getDepth() {
