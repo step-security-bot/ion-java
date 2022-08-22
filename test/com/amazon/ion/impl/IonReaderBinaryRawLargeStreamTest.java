@@ -1,5 +1,7 @@
 package com.amazon.ion.impl;
 
+import com.amazon.ion.BufferConfiguration;
+import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
@@ -38,6 +40,21 @@ public class IonReaderBinaryRawLargeStreamTest {
         byte[] data = new byte[dataWithIvm.length - BINARY_VERSION_MARKER_1_0.length];
         System.arraycopy(dataWithIvm, BINARY_VERSION_MARKER_1_0.length, data, 0, data.length);
         return data;
+    }
+
+    private static IonReaderBuilder newIncrementalReaderBuilderThatThrowsOnOversizedValues() {
+        return IonReaderBuilder.standard()
+            .withIncrementalReadingEnabled(true)
+            .withBufferConfiguration(
+                IonBufferConfiguration.Builder.standard()
+                    .onOversizedValue(new BufferConfiguration.OversizedValueHandler() {
+                        @Override
+                        public void onOversizedValue() {
+                            throw new IonException("oversized");
+                        }
+                    })
+                    .build()
+            );
     }
 
     public void readLargeScalarStream(IonReaderBuilder readerBuilder) throws Exception {
@@ -87,7 +104,7 @@ public class IonReaderBinaryRawLargeStreamTest {
 
     @Test
     public void readLargeScalarStreamIncremental() throws Exception {
-        readLargeScalarStream(IonReaderBuilder.standard().withIncrementalReadingEnabled(true));
+        readLargeScalarStream(newIncrementalReaderBuilderThatThrowsOnOversizedValues());
     }
 
     @Test
@@ -316,7 +333,7 @@ public class IonReaderBinaryRawLargeStreamTest {
 
     @Test
     public void cleanlyFailsOnLargeScalarIncremental() throws Exception {
-        cleanlyFailsOnLargeScalar(IonReaderBuilder.standard().withIncrementalReadingEnabled(true));
+        cleanlyFailsOnLargeScalar(newIncrementalReaderBuilderThatThrowsOnOversizedValues());
     }
 
     private void cleanlyFailsOnLargeAnnotatedScalar(IonReaderBuilder readerBuilder) throws Exception {
@@ -349,7 +366,7 @@ public class IonReaderBinaryRawLargeStreamTest {
 
     @Test
     public void cleanlyFailsOnLargeAnnotatedScalarIncremental() throws Exception {
-        cleanlyFailsOnLargeAnnotatedScalar(IonReaderBuilder.standard().withIncrementalReadingEnabled(true));
+        cleanlyFailsOnLargeAnnotatedScalar(newIncrementalReaderBuilderThatThrowsOnOversizedValues());
     }
 
     @Test
@@ -368,7 +385,7 @@ public class IonReaderBinaryRawLargeStreamTest {
             new RepeatInputStream(data, totalNumberOfBatches - 1) // This will provide the data 'totalNumberOfBatches' times
         );
 
-        IonReader reader = IonReaderBuilder.standard().withIncrementalReadingEnabled(true).build(inputStream);
+        IonReader reader = newIncrementalReaderBuilderThatThrowsOnOversizedValues().build(inputStream);
         thrown.expect(IonException.class);
         reader.next();
     }

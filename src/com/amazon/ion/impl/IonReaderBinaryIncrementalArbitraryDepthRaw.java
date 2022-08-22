@@ -71,7 +71,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
     // Reusable iterator over the annotation SIDs on the current value.
     private final AnnotationIterator annotationIterator;
 
-    private int peekIndex = -1;
+    private long peekIndex = -1;
 
     IonBinaryLexerBase.Marker scalarMarker = null;
 
@@ -134,9 +134,9 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
      * @param limit the position of the first byte after the end of the UInt value.
      * @return the value.
      */
-    private long readUInt(int startIndex, int limit) {
+    private long readUInt(long startIndex, long limit) {
         long result = 0;
-        for (int i = startIndex; i < limit; i++) {
+        for (long i = startIndex; i < limit; i++) {
             result = (result << VALUE_BITS_PER_UINT_BYTE) | lexer.buffer.peek(i);
         }
         return result;
@@ -189,7 +189,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
      * @param length the number of bytes to copy.
      * @return the scratch byte array.
      */
-    private byte[] copyBytesToScratch(int startIndex, int length) {
+    private byte[] copyBytesToScratch(long startIndex, int length) {
         // Note: using reusable scratch buffers makes reading ints and decimals 1-5% faster and causes much less
         // GC churn.
         byte[] bytes = null;
@@ -211,7 +211,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
      * @return the value.
      */
     private BigInteger readUIntAsBigInteger(boolean isNegative) {
-        int length = scalarMarker.endIndex - scalarMarker.startIndex;
+        int length = (int) (scalarMarker.endIndex - scalarMarker.startIndex);
         // NOTE: unfortunately, there is no BigInteger(int signum, byte[] bits, int offset, int length) constructor
         // until JDK 9, so copying to scratch space is always required. Migrating to the new constructor will
         // lead to a significant performance improvement.
@@ -239,9 +239,9 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
      * @param limit the position of the first byte after the end of the UInt value.
      * @return the value.
      */
-    private BigInteger readIntAsBigInteger(int limit) {
+    private BigInteger readIntAsBigInteger(long limit) {
         BigInteger value;
-        int length = limit - peekIndex;
+        int length = (int) (limit - peekIndex);
         if (length > 0) {
             // NOTE: unfortunately, there is no BigInteger(int signum, byte[] bits, int offset, int length) constructor
             // until JDK 9, so copying to scratch space is always required. Migrating to the new constructor will
@@ -292,7 +292,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
                 } else if (firstByte > MOST_SIGNIFICANT_BYTE_OF_MIN_LONG) {
                     return IntegerSize.BIG_INTEGER;
                 }
-                for (int i = scalarMarker.startIndex + 1; i < scalarMarker.endIndex; i++) {
+                for (long i = scalarMarker.startIndex + 1; i < scalarMarker.endIndex; i++) {
                     if (0x00 != lexer.buffer.peek(i)) {
                         return IntegerSize.BIG_INTEGER;
                     }
@@ -326,7 +326,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         if (!IonType.isLob(getType()) && !isNullValue()) {
             throw new IonException("Reader must be positioned on a blob or clob.");
         }
-        return scalarMarker.endIndex - scalarMarker.startIndex;
+        return (int) (scalarMarker.endIndex - scalarMarker.startIndex);
     }
 
     public byte[] newBytes() {
@@ -351,7 +351,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
      * @return the value.
      */
     private BigDecimal readBigDecimal() {
-        int length = scalarMarker.endIndex - peekIndex;
+        long length = (int) (scalarMarker.endIndex - peekIndex);
         if (length == 0) {
             return BigDecimal.ZERO;
         }
@@ -382,13 +382,13 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
      * @return the value.
      */
     private Decimal readDecimal() {
-        int length = scalarMarker.endIndex - peekIndex;
+        int length = (int) (scalarMarker.endIndex - peekIndex);
         if (length == 0) {
             return Decimal.ZERO;
         }
         int scale = -readVarInt();
         BigInteger coefficient;
-        length = scalarMarker.endIndex - peekIndex;
+        length = (int) (scalarMarker.endIndex - peekIndex);
         if (length > 0) {
             // NOTE: unfortunately, there is no BigInteger(int signum, byte[] bits, int offset, int length) constructor,
             // so copying to scratch space is always required.
@@ -510,7 +510,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         IonTypeID valueTid = prepareScalar();
         double value;
         if (valueTid.type == IonType.FLOAT) {
-            int length = scalarMarker.endIndex - scalarMarker.startIndex;
+            int length = (int) (scalarMarker.endIndex - scalarMarker.startIndex);
             if (length == 0) {
                 return 0.0d;
             }
@@ -615,9 +615,9 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
      * @param valueEnd the position in the buffer of the last byte in the string.
      * @return the value.
      */
-    private String readString(int valueStart, int valueEnd) {
+    private String readString(long valueStart, long valueEnd) {
         ByteBuffer utf8InputBuffer = lexer.buffer.getByteBuffer(valueStart, valueEnd);
-        int numberOfBytes = valueEnd - valueStart;
+        int numberOfBytes = (int) (valueEnd - valueStart);
         return utf8Decoder.decode(utf8InputBuffer, numberOfBytes);
     }
 
@@ -649,7 +649,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
      */
     IntList getAnnotationSids() {
         if (annotationSids.isEmpty()) {
-            int savedPeekIndex = peekIndex;
+            long savedPeekIndex = peekIndex;
             IonBinaryLexerRefillable.Marker annotationsMarker = lexer.getAnnotationSidsMarker();
             peekIndex = annotationsMarker.startIndex;
             while (peekIndex < annotationsMarker.endIndex) {
@@ -668,14 +668,14 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         private final IonBinaryLexerRefillable.Marker annotationsMarker = lexer.getAnnotationSidsMarker();
 
         // The byte position of the annotation to return from the next call to next().
-        private int nextAnnotationPeekIndex;
+        private long nextAnnotationPeekIndex;
 
         public boolean hasNext() {
             return nextAnnotationPeekIndex < annotationsMarker.endIndex;
         }
 
         public int next() {
-            int savedPeekIndex = peekIndex;
+            long savedPeekIndex = peekIndex;
             peekIndex = nextAnnotationPeekIndex;
             int sid = readVarUInt();
             nextAnnotationPeekIndex = peekIndex;

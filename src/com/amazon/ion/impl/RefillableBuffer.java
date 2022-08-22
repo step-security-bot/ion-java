@@ -60,7 +60,7 @@ abstract class RefillableBuffer extends AbstractBuffer {
         }
 
         buffer = new byte[initialBufferSize];
-        byteBuffer = ByteBuffer.wrap(buffer, 0, capacity);
+        byteBuffer = ByteBuffer.wrap(buffer, 0, initialBufferSize);
         this.initialBufferSize = initialBufferSize;
         this.maximumBufferSize = maximumBufferSize;
         this.capacity = initialBufferSize;
@@ -70,18 +70,18 @@ abstract class RefillableBuffer extends AbstractBuffer {
         this.notificationConsumer = notificationConsumer;
     }
 
-    abstract void refill(int numberOfBytesToFill) throws IOException;
+    abstract void refill(long numberOfBytesToFill) throws IOException;
 
     abstract int readByteWithoutBuffering() throws IOException;
 
     @Override
-    int peek(int index) {
-        return buffer[index] & SINGLE_BYTE_MASK;
+    int peek(long index) {
+        return buffer[(int) index] & SINGLE_BYTE_MASK;
     }
 
     @Override
-    void copyBytes(int position, byte[] destination, int destinationOffset, int length) {
-        System.arraycopy(buffer, position, destination, destinationOffset, length);
+    void copyBytes(long position, byte[] destination, int destinationOffset, int length) {
+        System.arraycopy(buffer, (int) position, destination, destinationOffset, length);
     }
 
     /*
@@ -122,7 +122,7 @@ abstract class RefillableBuffer extends AbstractBuffer {
      * @param minimumNumberOfBytesRequired the minimum number of additional bytes to buffer.
      * @return true if the buffer has sufficient capacity; otherwise, false.
      */
-    boolean ensureCapacity(int minimumNumberOfBytesRequired) throws Exception {
+    boolean ensureCapacity(long minimumNumberOfBytesRequired) throws Exception {
         if (freeSpaceAt(offset) >= minimumNumberOfBytesRequired) {
             // No need to shift any bytes or grow the buffer.
             return true;
@@ -131,16 +131,16 @@ abstract class RefillableBuffer extends AbstractBuffer {
             notificationConsumer.bufferOverflowDetected();
             return false;
         }
-        int shortfall = minimumNumberOfBytesRequired - capacity;
+        long shortfall = minimumNumberOfBytesRequired - capacity;
         if (shortfall > 0) {
             // TODO consider doubling the size rather than growing in increments of the initial buffer size.
             // TODO ensure alignment to a power of 2?
-            int newSize = Math.min(capacity + Math.max(initialBufferSize, shortfall), maximumBufferSize);
+            int newSize = (int) Math.min(capacity + Math.max(initialBufferSize, shortfall), maximumBufferSize);
             byte[] newBuffer = new byte[newSize];
             moveBytesToStartOfBuffer(newBuffer);
             capacity = newSize;
             buffer = newBuffer;
-            byteBuffer = ByteBuffer.wrap(buffer, offset, capacity);
+            byteBuffer = ByteBuffer.wrap(buffer, (int) offset, (int) capacity);
         } else {
             // The current capacity can accommodate the requested size; move the existing bytes to the beginning
             // to make room for the remaining requested bytes to be filled at the end.
@@ -150,8 +150,8 @@ abstract class RefillableBuffer extends AbstractBuffer {
     }
 
     @Override
-    boolean fillAt(int index, int numberOfBytes) throws Exception {
-        int shortfall = numberOfBytes - availableAt(index);
+    boolean fillAt(long index, long numberOfBytes) throws Exception {
+        long shortfall = numberOfBytes - availableAt(index);
         if (shortfall > 0) {
             bytesRequested = numberOfBytes + (index - offset);
             if (ensureCapacity(bytesRequested)) {
@@ -180,12 +180,12 @@ abstract class RefillableBuffer extends AbstractBuffer {
      * @param destinationBuffer the destination buffer, which may be 'buffer' itself or a new buffer.
      */
     private void moveBytesToStartOfBuffer(byte[] destinationBuffer) {
-        int size = available();
+        long size = available();
         if (size > 0) {
-            System.arraycopy(buffer, offset, destinationBuffer, 0, size);
+            System.arraycopy(buffer, (int) offset, destinationBuffer, 0, (int) size);
         }
         if (offset > 0) {
-            notificationConsumer.bytesConsolidatedToStartOfBuffer(offset);
+            notificationConsumer.bytesConsolidatedToStartOfBuffer((int) offset);
         }
         offset = 0;
         //boundary = available;
@@ -195,7 +195,7 @@ abstract class RefillableBuffer extends AbstractBuffer {
     /**
      * @return the number of bytes that can be written at the end of the buffer.
      */
-    private int freeSpaceAt(int index) {
+    private long freeSpaceAt(long index) {
         return capacity - index;
     }
 }

@@ -5,7 +5,6 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonReaderIncremental;
 import com.amazon.ion.IonType;
 
-import java.io.IOException;
 import java.io.InputStream;
 
 abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonReaderIncremental {
@@ -38,12 +37,12 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         /**
          * Index of the first byte in the slice.
          */
-        int startIndex;
+        long startIndex;
 
         /**
          * Index of the first byte after the end of the slice.
          */
-        int endIndex;
+        long endIndex;
 
         /**
          * @param startIndex index of the first byte in the slice.
@@ -72,9 +71,9 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         /**
          * The byte position of the end of the container.
          */
-        int endIndex;
+        long endIndex;
 
-        void set(IonType type, int endIndex) {
+        void set(IonType type, long endIndex) {
             this.type = type;
             this.endIndex = endIndex;
         }
@@ -133,9 +132,9 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
 
     private int fieldSid;
     
-    protected int checkpoint = 0;
+    protected long checkpoint = 0;
 
-    protected int peekIndex = 0;
+    protected long peekIndex = 0;
 
     IonBinaryLexerBase(
         final Buffer buffer,
@@ -162,8 +161,8 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         }
     }
 
-    protected void verifyValueLength(int valueLength, boolean isAnnotated) throws IOException {
-        int endIndex = checkpoint + valueLength; // TODO check;
+    protected void verifyValueLength(long valueLength, boolean isAnnotated) {
+        long endIndex = checkpoint + valueLength; // TODO check;
         if (!containerStack.isEmpty()) {
             if (endIndex > containerStack.peek().endIndex) {
                 throw new IonException("Value exceeds the length of its parent container.");
@@ -200,12 +199,20 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         fieldSid = -1;
     }
 
+    protected void reportConsumedData(long numberOfBytesToReport) throws Exception {
+        while (numberOfBytesToReport > 0) {
+            int numberOfBytesToReportThisIteration = (int) Math.min(Integer.MAX_VALUE, numberOfBytesToReport);
+            dataHandler.onData(numberOfBytesToReportThisIteration);
+            numberOfBytesToReport -= numberOfBytesToReportThisIteration;
+        }
+    }
+
     void setCheckpoint(CheckpointLocation location) throws Exception {
         if (location == CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID) {
             reset();
             buffer.seekTo(peekIndex);
         }
-        dataHandler.onData(peekIndex - checkpoint);
+        reportConsumedData(peekIndex - checkpoint);
         checkpointLocation = location;
         checkpoint = peekIndex;
     }
@@ -217,7 +224,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
      */
     private IonTypeID parseTypeID(final int typeIdByte, final boolean isAnnotated) throws Exception {
         IonTypeID valueTid = IonTypeID.TYPE_IDS[typeIdByte];
-        int valueLength = 0;
+        long valueLength = 0;
         if (typeIdByte == IVM_START_BYTE && containerStack.isEmpty()) {
             if (isAnnotated) {
                 throw new IonException("Invalid annotation header.");
@@ -247,7 +254,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                 //  possible wrapper length, 1 for the smallest-possible annotations length, one for the smallest-
                 //  possible annotation, and 1 for the smallest-possible value representation. Could ask the buffer for
                 //  4 bytes if that would provide a speedup.
-                valueLength = (int) readVarUInt(); // TODO unify typing
+                valueLength = readVarUInt();
                 if (valueLength < 0) {
                     return null;
                 }
@@ -264,7 +271,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
             if (annotationsLength < 0) {
                 return null;
             }
-            if (!buffer.fillAt(peekIndex, (int) annotationsLength)) { // TODO skip if the value isalready oversized
+            if (!buffer.fillAt(peekIndex, annotationsLength)) { // TODO skip if the value isalready oversized
                 return null;
             }
             annotationSidsMarker.startIndex = peekIndex;
@@ -284,7 +291,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
                     // TODO small optimization: at this point the value must be at least 2 more bytes: 1 for the
                     //  smallest-possible value length and 1 for the smallest-possible value representation. Could ask
                     //  the buffer for 2 bytes if that would provide a speedup.
-                    valueLength = (int) readVarUInt(); // TODO unify typing
+                    valueLength = readVarUInt();
                     if (valueLength < 0) {
                         return null;
                     }

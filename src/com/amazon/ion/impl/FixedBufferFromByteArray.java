@@ -15,17 +15,17 @@ class FixedBufferFromByteArray extends AbstractBuffer {
     }
 
     @Override
-    int peek(int index) {
-        return buffer[index] & SINGLE_BYTE_MASK;
+    int peek(long index) {
+        return buffer[(int) index] & SINGLE_BYTE_MASK;
     }
 
     @Override
-    void copyBytes(int position, byte[] destination, int destinationOffset, int length) {
-        System.arraycopy(buffer, position, destination, destinationOffset, length);
+    void copyBytes(long position, byte[] destination, int destinationOffset, int length) {
+        System.arraycopy(buffer, (int) position, destination, destinationOffset, length);
     }
 
     @Override
-    boolean fillAt(int index, int numberOfBytes) {
+    boolean fillAt(long index, long numberOfBytes) {
         if (numberOfBytes > availableAt(index)) {
             // TODO? throw or notify user?
             state = State.FILL;
@@ -36,7 +36,7 @@ class FixedBufferFromByteArray extends AbstractBuffer {
     }
 
     @Override
-    boolean seek(int numberOfBytes) {
+    boolean seek(long numberOfBytes) {
         if (numberOfBytes < available()) {
             offset = limit;
             state = State.SEEK;

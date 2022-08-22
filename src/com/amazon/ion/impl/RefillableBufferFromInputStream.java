@@ -18,8 +18,8 @@ public class RefillableBufferFromInputStream extends RefillableBuffer {
     }
 
     @Override
-    void refill(int numberOfBytesToFill) throws IOException {
-        int numberOfBytesFilled = inputStream.read(buffer, limit, numberOfBytesToFill);
+    void refill(long numberOfBytesToFill) throws IOException {
+        int numberOfBytesFilled = inputStream.read(buffer, (int) limit, (int) numberOfBytesToFill);
         if (numberOfBytesFilled < 0) {
             return;
         }
@@ -27,9 +27,9 @@ public class RefillableBufferFromInputStream extends RefillableBuffer {
     }
 
     @Override
-    boolean seek(int numberOfBytes) throws IOException {
-        int size = available();
-        int unbufferedBytesToSkip = numberOfBytes - size;
+    boolean seek(long numberOfBytes) throws IOException {
+        long size = available();
+        long unbufferedBytesToSkip = numberOfBytes - size;
         if (unbufferedBytesToSkip <= 0) {
             offset += numberOfBytes;
             bytesRequested = 0;
@@ -37,14 +37,14 @@ public class RefillableBufferFromInputStream extends RefillableBuffer {
             return true;
         }
         offset = limit;
-        int skipped = size;
+        long skipped = size;
         try {
-            skipped += (int) inputStream.skip(unbufferedBytesToSkip);
+            skipped += inputStream.skip(unbufferedBytesToSkip);
         } catch (EOFException e) {
             // Certain InputStream implementations (e.g. GZIPInputStream) throw EOFException if more bytes are requested
             // to skip than are currently available (e.g. if a header or trailer is incomplete).
         }
-        int shortfall = numberOfBytes - skipped;
+        long shortfall = numberOfBytes - skipped;
         if (shortfall <= 0) {
             bytesRequested = 0;
             state = State.READY;

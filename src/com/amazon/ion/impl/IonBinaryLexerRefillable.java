@@ -66,7 +66,7 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
                     if (!buffer.isTerminated()) { // TODO note: not required
                         // TODO reuse setCheckpoint
                         buffer.seek(valueMarker.endIndex - buffer.getOffset() - individualBytesSkippedWithoutBuffering);
-                        dataHandler.onData(valueMarker.endIndex - checkpoint);
+                        reportConsumedData(valueMarker.endIndex - checkpoint);
                         checkpointLocation = CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID;
                         peekIndex = buffer.getOffset();
                         checkpoint = peekIndex;
@@ -123,7 +123,7 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
     }
 
     @Override
-    protected void verifyValueLength(int valueLength, boolean isAnnotated) throws IOException {
+    protected void verifyValueLength(long valueLength, boolean isAnnotated) {
         if (isSkippingCurrentValue) {
             // If the value is being skipped, not all of its bytes will be buffered, so start/end indexes will not
             // align to the expected values. This is fine, because the value will not be accessed.
