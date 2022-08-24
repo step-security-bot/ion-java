@@ -46,11 +46,13 @@ abstract class IonReaderBinaryNonReentrantCore<T extends IonReaderReentrantCore>
     @Override
     public void stepIn() {
         reader.next(IonCursor.Instruction.STEP_IN);
+        type = null;
     }
 
     @Override
     public void stepOut() {
         reader.next(IonCursor.Instruction.STEP_OUT);
+        type = null;
     }
 
     @Override
