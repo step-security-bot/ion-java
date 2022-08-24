@@ -7,6 +7,7 @@ import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReaderReentrantSystem;
 import com.amazon.ion.IonType;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.bin.IntList;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoder;
@@ -717,6 +718,12 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderRee
     AnnotationIterator iterateAnnotationSids() {
         annotationIterator.ready();
         return annotationIterator;
+    }
+
+    @Override
+    public SymbolTable pop_passed_symbol_table() {
+        // Symbol tables are not treated specially at the raw level.
+        return null;
     }
 
     @Override

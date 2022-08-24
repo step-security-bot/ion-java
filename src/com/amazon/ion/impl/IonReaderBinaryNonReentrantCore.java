@@ -181,7 +181,7 @@ abstract class IonReaderBinaryNonReentrantCore<T extends IonReaderReentrantCore>
 
     @Override
     public SymbolTable pop_passed_symbol_table() {
-        return null; // TODO
+        return reader.pop_passed_symbol_table();
     }
 
     @Override

@@ -75,7 +75,8 @@ public class IonManagedBinaryWriterTestCase extends IonRawBinaryWriterTest {
     private void checkSymbolTokenAgainstImport(final SymbolToken token)
     {
         final Integer sid = SHARED_SYMBOL_LOCAL_SIDS.get(token.getText());
-        if (sid != null)
+        // When the text is known, the symbol token is not required to convey the symbol ID.
+        if (sid != null && token.getSid() > -1)
         {
             assertEquals(sid.intValue(), token.getSid());
         }

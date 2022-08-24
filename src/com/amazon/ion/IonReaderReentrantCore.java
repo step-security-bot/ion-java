@@ -1,12 +1,13 @@
 package com.amazon.ion;
 
 import com.amazon.ion.impl._Private_IncrementalReader;
+import com.amazon.ion.impl._Private_ReaderWriter;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
 
-public interface IonReaderReentrantCore extends IonCursor, _Private_IncrementalReader {
+public interface IonReaderReentrantCore extends IonCursor, _Private_IncrementalReader, _Private_ReaderWriter {
 
 
     /**
