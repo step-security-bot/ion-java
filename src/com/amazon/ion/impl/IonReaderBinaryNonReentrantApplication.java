@@ -37,8 +37,7 @@ public class IonReaderBinaryNonReentrantApplication
 
     @Override
     public int getFieldId() {
-        //throw new UnsupportedOperationException("Method requires an system-level reader.");
-        return -1; // TODO
+        return reader.getFieldId();
     }
 
     @Override

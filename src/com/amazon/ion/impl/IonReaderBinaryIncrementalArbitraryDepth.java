@@ -1179,6 +1179,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         return EMPTY_ITERATOR;
     }
 
+    @Override
     public int getFieldId() {
         return raw.getFieldId();
     }
