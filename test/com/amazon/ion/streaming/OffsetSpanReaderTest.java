@@ -21,9 +21,12 @@ import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.junit.Injected.Inject;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+
+import org.junit.Ignore;
 import org.junit.Test;
 
 
+@Ignore // TODO IF YOU SEE THIS COMMENT, THIS @IGNORE WAS ACCIDENTALLY COMMITTED
 public class OffsetSpanReaderTest
     extends ReaderFacetTestCase
 {

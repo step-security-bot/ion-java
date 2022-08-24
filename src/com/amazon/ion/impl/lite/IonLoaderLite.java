@@ -160,6 +160,7 @@ final class IonLoaderLite
         } finally {
             // If a value was incomplete, incremental readers will not yet have raised an error. Force an error
             // to be raised in this case.
+            // TODO attempt to remove the following
             if (_readerBuilder.isIncrementalReadingEnabled() && reader instanceof _Private_IncrementalReader) {
                 ((_Private_IncrementalReader) reader).requireCompleteValue();
             }

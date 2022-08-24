@@ -3,7 +3,7 @@ package com.amazon.ion.impl;
 import com.amazon.ion.BufferConfiguration;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonReaderIncremental;
+import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonType;
 
 import java.io.EOFException;
@@ -19,7 +19,7 @@ import java.io.InputStream;
  * top-level value. Any such invalid data will be detected as normal by the IonReader. In the few cases where this
  * wrapper does detect an error (e.g. upon finding the illegal type 0xF), it will raise {@link IonException}.
  */
-public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookaheadBufferBase implements IonReaderIncremental {
+public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookaheadBufferBase implements IonCursor {
 
     private static final int LOWER_SEVEN_BITS_BITMASK = 0x7F;
     private static final int HIGHEST_BIT_BITMASK = 0x80;
@@ -1409,4 +1409,8 @@ public final class IonReaderLookaheadBufferArbitraryDepth extends ReaderLookahea
         return additionalBytesNeeded > 0;
     }
 
+    @Override
+    public void close() throws IOException {
+        // Nothing to do.
+    }
 }

@@ -1,9 +1,10 @@
 package com.amazon.ion;
 
+import java.io.Closeable;
 import java.io.InputStream;
 
 // TODO consider a different one for raw
-public interface IonReaderIncremental {
+public interface IonCursor extends Closeable {
     enum Event {
         NEEDS_DATA,
         NEEDS_INSTRUCTION, // TODO consider adding START_ANNOTATION, allowing users to skip a value after reading an annotation

@@ -7,7 +7,8 @@ import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
-import com.amazon.ion.IonReaderIncremental;
+import com.amazon.ion.IonCursor;
+import com.amazon.ion.IonReaderReentrantApplication;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
@@ -62,7 +63,7 @@ import java.util.Map;
  * </p>
  */
 class IonReaderBinaryIncrementalArbitraryDepth implements
-    IonReaderIncremental, _Private_ReaderWriter, _Private_IncrementalReader {
+    IonReaderReentrantApplication, _Private_ReaderWriter, _Private_IncrementalReader {
 
     /*
      * Potential future enhancements:
@@ -1023,7 +1024,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
 
     @Override
     public Event getCurrentEvent() {
-        return raw.getCurrentEvent(); // TODO
+        return raw.getCurrentEvent();
     }
 
     @Override
@@ -1031,10 +1032,12 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         // todo
     }
 
+    @Override
     public int getDepth() {
         return raw.getDepth();
     }
 
+    @Override
     public SymbolTable getSymbolTable() {
         if (cachedReadOnlySymbolTable == null) {
             if (symbols.size() == 0 && imports == ION_1_0_IMPORTS) {
@@ -1058,14 +1061,17 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         return symbolTableLastTransferred;
     }
 
+    @Override
     public IonType getType() {
         return raw.getType();
     }
 
+    @Override
     public IntegerSize getIntegerSize() {
         return raw.getIntegerSize();
     }
 
+    @Override
     public String stringValue() {
         String value;
         IonType type = getType();
@@ -1087,6 +1093,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         return value;
     }
 
+    @Override
     public SymbolToken symbolValue() {
         int sid = raw.symbolValueId();
         if (sid < 0) {
@@ -1096,18 +1103,22 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         return getSymbolToken(sid);
     }
 
+    @Override
     public int byteSize() {
         return raw.byteSize();
     }
 
+    @Override
     public byte[] newBytes() {
         return raw.newBytes();
     }
 
+    @Override
     public int getBytes(byte[] buffer, int offset, int len) {
         return raw.getBytes(buffer, offset, len);
     }
 
+    @Override
     public String[] getTypeAnnotations() {
         if (raw.hasAnnotations()) {
             IntList annotationSids = raw.getAnnotationSids();
@@ -1124,6 +1135,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         return _Private_Utils.EMPTY_STRING_ARRAY;
     }
 
+    @Override
     public SymbolToken[] getTypeAnnotationSymbols() {
         if (raw.hasAnnotations()) {
             IntList annotationSids = raw.getAnnotationSids();
@@ -1154,6 +1166,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         }
     };
 
+    @Override
     public Iterator<String> iterateTypeAnnotations() {
         if (raw.hasAnnotations()) {
             if (isAnnotationIteratorReuseEnabled) {
@@ -1170,6 +1183,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         return raw.getFieldId();
     }
 
+    @Override
     public String getFieldName() {
         int fieldNameSid = getFieldId();
         if (fieldNameSid < 0) {
@@ -1182,6 +1196,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         return fieldName;
     }
 
+    @Override
     public SymbolToken getFieldNameSymbol() {
         int fieldNameSid = getFieldId();
         if (fieldNameSid < 0) {
@@ -1190,46 +1205,57 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         return getSymbolToken(fieldNameSid);
     }
 
+    @Override
     public boolean isNullValue() {
         return raw.isNullValue();
     }
 
+    @Override
     public boolean isInStruct() {
         return raw.isInStruct();
     }
 
+    @Override
     public boolean booleanValue() {
         return raw.booleanValue();
     }
 
+    @Override
     public int intValue() {
         return raw.intValue();
     }
 
+    @Override
     public long longValue() {
         return raw.longValue();
     }
 
+    @Override
     public BigInteger bigIntegerValue() {
         return raw.bigIntegerValue();
     }
 
+    @Override
     public double doubleValue() {
         return raw.doubleValue();
     }
 
+    @Override
     public BigDecimal bigDecimalValue() {
         return raw.bigDecimalValue();
     }
 
+    @Override
     public Decimal decimalValue() {
         return raw.decimalValue();
     }
 
+    @Override
     public Date dateValue() {
         return raw.dateValue();
     }
 
+    @Override
     public Timestamp timestampValue() {
         return raw.timestampValue();
     }
@@ -1240,15 +1266,10 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
 
     @Override
     public void requireCompleteValue() {
-        // NOTE: If we want to replace the other binary IonReader implementation with this one, the following
-        // validation could be performed in next() if incremental mode is not enabled. That would allow this
-        // implementation to behave in the same way as the other implementation when an incomplete value is
-        // encountered.
-        if (raw.getCurrentEvent() == Event.NEEDS_DATA && raw.isAwaitingMoreData()) { // TODO not correct. Figure out the right logic, and when/if it's needed
-            throw new IonException("Unexpected EOF.");
-        }
+        raw.requireCompleteValue();
     }
 
+    @Override
     public void close() throws IOException {
         //requireCompleteValue();
         inputStream.close();

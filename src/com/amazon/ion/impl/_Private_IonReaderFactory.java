@@ -93,6 +93,24 @@ public final class _Private_IonReaderFactory
         }
     }
 
+    public static final IonReader makeTextReader(IonCatalog catalog,
+                                             byte[] bytes,
+                                             int offset,
+                                             int length,
+                                             _Private_LocalSymbolTableFactory lstFactory)
+    {
+        UnifiedInputStreamX uis;
+        try
+        {
+            uis = makeUnifiedStream(bytes, offset, length);
+        }
+        catch (IOException e)
+        {
+            throw new IonException(e);
+        }
+        return new IonReaderTextUserX(catalog, lstFactory, uis, offset);
+    }
+
     public static IonReader makeSystemReader(byte[] bytes,
                                              int offset,
                                              int length)
@@ -198,6 +216,19 @@ public final class _Private_IonReaderFactory
         }
     }
 
+    public static final IonReader makeTextReader(IonCatalog catalog,
+                                                 InputStream is,
+                                                 _Private_LocalSymbolTableFactory lstFactory)
+    {
+        UnifiedInputStreamX uis;
+        try {
+            uis = makeUnifiedStream(is);
+        } catch (IOException e) {
+            throw new IonException(e);
+        }
+        return new IonReaderTextUserX(catalog, lstFactory, uis, 0);
+    }
+
     public static IonReader makeSystemReader(InputStream is)
     {
         try {
@@ -259,6 +290,11 @@ public final class _Private_IonReaderFactory
     public static final IonReader makeIncrementalReader(IonReaderBuilder builder, InputStream is)
     {
         return new IonReaderBinaryIncrementalTopLevel(builder, is);
+    }
+
+    public static final IonReader makeNonReentrantReader(IonReaderBuilder builder, InputStream is)
+    {
+        return new IonReaderBinaryNonReentrantApplication(builder, is);
     }
 
 

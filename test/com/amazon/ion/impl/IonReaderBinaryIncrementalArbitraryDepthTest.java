@@ -1,8 +1,7 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IntegerSize;
-import com.amazon.ion.IonReader;
-import com.amazon.ion.IonReaderIncremental;
+import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
@@ -27,16 +26,16 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-import static com.amazon.ion.IonReaderIncremental.Event.END_CONTAINER;
-import static com.amazon.ion.IonReaderIncremental.Event.NEEDS_DATA;
-import static com.amazon.ion.IonReaderIncremental.Event.NEEDS_INSTRUCTION;
-import static com.amazon.ion.IonReaderIncremental.Event.START_CONTAINER;
-import static com.amazon.ion.IonReaderIncremental.Event.START_SCALAR;
-import static com.amazon.ion.IonReaderIncremental.Event.VALUE_READY;
-import static com.amazon.ion.IonReaderIncremental.Instruction.LOAD_VALUE;
-import static com.amazon.ion.IonReaderIncremental.Instruction.NEXT_VALUE;
-import static com.amazon.ion.IonReaderIncremental.Instruction.STEP_IN;
-import static com.amazon.ion.IonReaderIncremental.Instruction.STEP_OUT;
+import static com.amazon.ion.IonCursor.Event.END_CONTAINER;
+import static com.amazon.ion.IonCursor.Event.NEEDS_DATA;
+import static com.amazon.ion.IonCursor.Event.NEEDS_INSTRUCTION;
+import static com.amazon.ion.IonCursor.Event.START_CONTAINER;
+import static com.amazon.ion.IonCursor.Event.START_SCALAR;
+import static com.amazon.ion.IonCursor.Event.VALUE_READY;
+import static com.amazon.ion.IonCursor.Instruction.LOAD_VALUE;
+import static com.amazon.ion.IonCursor.Instruction.NEXT_VALUE;
+import static com.amazon.ion.IonCursor.Instruction.STEP_IN;
+import static com.amazon.ion.IonCursor.Instruction.STEP_OUT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -340,7 +339,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthTest {
         ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
         IonReaderBinaryIncrementalArbitraryDepth reader = new IonReaderBinaryIncrementalArbitraryDepth(STANDARD_READER_BUILDER, pipe);
         byte[] bytes = toBinary("\"StringValueLong\"");
-        IonReaderIncremental.Instruction instruction = NEXT_VALUE;
+        IonCursor.Instruction instruction = NEXT_VALUE;
         for (int i = 0; i < bytes.length; i++) {
             if (i == _Private_IonConstants.BINARY_VERSION_MARKER_SIZE + 2) {
                 assertEquals(START_SCALAR, reader.next(instruction));

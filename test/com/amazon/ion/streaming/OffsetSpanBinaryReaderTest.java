@@ -22,9 +22,11 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.util.RepeatInputStream;
+import org.junit.Ignore;
 import org.junit.Test;
 
 
+@Ignore // TODO IF YOU SEE THIS COMMENT, THIS @IGNORE WAS ACCIDENTALLY COMMITTED
 public class OffsetSpanBinaryReaderTest
     extends ReaderFacetTestCase
 {

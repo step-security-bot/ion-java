@@ -7,16 +7,16 @@ import org.junit.Test;
 import java.io.ByteArrayInputStream;
 
 import static com.amazon.ion.BitUtils.bytes;
-import static com.amazon.ion.IonReaderIncremental.Event.END_CONTAINER;
-import static com.amazon.ion.IonReaderIncremental.Event.NEEDS_DATA;
-import static com.amazon.ion.IonReaderIncremental.Event.NEEDS_INSTRUCTION;
-import static com.amazon.ion.IonReaderIncremental.Event.START_CONTAINER;
-import static com.amazon.ion.IonReaderIncremental.Event.START_SCALAR;
-import static com.amazon.ion.IonReaderIncremental.Event.VALUE_READY;
-import static com.amazon.ion.IonReaderIncremental.Instruction.LOAD_VALUE;
-import static com.amazon.ion.IonReaderIncremental.Instruction.NEXT_VALUE;
-import static com.amazon.ion.IonReaderIncremental.Instruction.STEP_IN;
-import static com.amazon.ion.IonReaderIncremental.Instruction.STEP_OUT;
+import static com.amazon.ion.IonCursor.Event.END_CONTAINER;
+import static com.amazon.ion.IonCursor.Event.NEEDS_DATA;
+import static com.amazon.ion.IonCursor.Event.NEEDS_INSTRUCTION;
+import static com.amazon.ion.IonCursor.Event.START_CONTAINER;
+import static com.amazon.ion.IonCursor.Event.START_SCALAR;
+import static com.amazon.ion.IonCursor.Event.VALUE_READY;
+import static com.amazon.ion.IonCursor.Instruction.LOAD_VALUE;
+import static com.amazon.ion.IonCursor.Instruction.NEXT_VALUE;
+import static com.amazon.ion.IonCursor.Instruction.STEP_IN;
+import static com.amazon.ion.IonCursor.Instruction.STEP_OUT;
 import static org.junit.Assert.assertEquals;
 
 public class IonReaderBinaryIncrementalArbitraryDepthRawTest {

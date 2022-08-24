@@ -2,12 +2,12 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.BufferConfiguration;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonReaderIncremental;
+import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonType;
 
 import java.io.InputStream;
 
-abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonReaderIncremental {
+abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonCursor {
 
     private static final int LOWER_SEVEN_BITS_BITMASK = 0x7F;
     private static final int HIGHEST_BIT_BITMASK = 0x80;
@@ -115,7 +115,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
 
     private final IvmNotificationConsumer ivmConsumer;
 
-    private IonReaderIncremental.Event event = IonReaderIncremental.Event.NEEDS_DATA;
+    private IonCursor.Event event = IonCursor.Event.NEEDS_DATA;
 
     // The major version of the Ion encoding currently being read.
     private int majorVersion = -1;
@@ -457,7 +457,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         }
     }
 
-    public void stepIn() throws Exception {
+    private void stepIn() throws Exception {
         if (!makeBufferReady()) {
             return;
         }
@@ -476,7 +476,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
         event = Event.NEEDS_INSTRUCTION;
     }
 
-    public void stepOut() throws Exception {
+    private void stepOut() throws Exception {
         if (containerStack.isEmpty()) {
             // Note: this is IllegalStateException for consistency with the other binary IonReader implementation.
             throw new IllegalStateException("Cannot step out at top level.");
@@ -631,5 +631,10 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonR
             && (peekIndex > checkpoint
                 || checkpointLocation.ordinal() > CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID.ordinal()
                 || buffer.isAwaitingMoreData());
+    }
+
+    @Override
+    public void close() {
+        // Nothing to do.
     }
 }

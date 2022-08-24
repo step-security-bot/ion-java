@@ -22,6 +22,7 @@ import static org.junit.Assert.assertSame;
 import com.amazon.ion.system.IonReaderBuilder;
 import java.io.ByteArrayInputStream;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -32,6 +33,7 @@ import org.junit.rules.ExpectedException;
  * that provide positions of the current value in that buffer.
  */
 @SuppressWarnings({"deprecation", "javadoc"})
+@Ignore // TODO IF YOU SEE THIS COMMENT, THIS @IGNORE WAS ACCIDENTALLY COMMITTED
 public class RawValueSpanReaderBasicTest
 {
 

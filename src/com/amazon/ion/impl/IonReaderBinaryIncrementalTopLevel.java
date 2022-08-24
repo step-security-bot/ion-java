@@ -3,7 +3,7 @@ package com.amazon.ion.impl;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonReader;
-import com.amazon.ion.IonReaderIncremental;
+import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
@@ -20,7 +20,7 @@ import java.util.Iterator;
 public class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_ReaderWriter, _Private_IncrementalReader {
 
     private final IonReaderBinaryIncrementalArbitraryDepth reader;
-    private IonReaderIncremental.Instruction nextInstruction = IonReaderIncremental.Instruction.NEXT_VALUE;
+    private IonCursor.Instruction nextInstruction = IonCursor.Instruction.NEXT_VALUE;
     private IonType type = null; // TODO see if it's possible to remove this
 
     IonReaderBinaryIncrementalTopLevel(IonReaderBuilder builder, InputStream inputStream) {
@@ -35,8 +35,8 @@ public class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_R
     @Override
     public IonType next() {
         while (true) {
-            IonReaderIncremental.Event event = reader.next(nextInstruction);
-            if (event == IonReaderIncremental.Event.NEEDS_DATA) {
+            IonCursor.Event event = reader.next(nextInstruction);
+            if (event == IonCursor.Event.NEEDS_DATA) {
                 type = null;
                 //if (getDepth() == 0) {
                 return null;
@@ -44,22 +44,22 @@ public class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_R
                 //throw new IllegalStateException("The implementation failed to load the top-level value.");
             }
             // TODO can the following be moved to prepareValue()?
-            if (event == IonReaderIncremental.Event.START_SCALAR || (getDepth() == 0 && event == IonReaderIncremental.Event.START_CONTAINER)) {
-                nextInstruction = IonReaderIncremental.Instruction.LOAD_VALUE;
+            if (event == IonCursor.Event.START_SCALAR || (getDepth() == 0 && event == IonCursor.Event.START_CONTAINER)) {
+                nextInstruction = IonCursor.Instruction.LOAD_VALUE;
                 event = reader.next(nextInstruction);
-                if (event == IonReaderIncremental.Event.NEEDS_DATA) {
+                if (event == IonCursor.Event.NEEDS_DATA) {
                     type = null;
                     return null;
-                } else if (event == IonReaderIncremental.Event.NEEDS_INSTRUCTION) {
+                } else if (event == IonCursor.Event.NEEDS_INSTRUCTION) {
                     // The value was skipped for being too large. Get the next one.
-                    nextInstruction = IonReaderIncremental.Instruction.NEXT_VALUE;
+                    nextInstruction = IonCursor.Instruction.NEXT_VALUE;
                     continue;
                 }
             }
             break;
         }
-        if (nextInstruction == IonReaderIncremental.Instruction.LOAD_VALUE) {
-            nextInstruction = IonReaderIncremental.Instruction.NEXT_VALUE;
+        if (nextInstruction == IonCursor.Instruction.LOAD_VALUE) {
+            nextInstruction = IonCursor.Instruction.NEXT_VALUE;
         }
         type = reader.getType();
         return type;
@@ -68,13 +68,13 @@ public class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_R
 
     @Override
     public void stepIn() {
-        reader.next(IonReaderIncremental.Instruction.STEP_IN);
+        reader.next(IonCursor.Instruction.STEP_IN);
         type = null;
     }
 
     @Override
     public void stepOut() {
-        reader.next(IonReaderIncremental.Instruction.STEP_OUT);
+        reader.next(IonCursor.Instruction.STEP_OUT);
         type = null;
     }
 

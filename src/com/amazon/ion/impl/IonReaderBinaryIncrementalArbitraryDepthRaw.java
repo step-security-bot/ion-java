@@ -5,7 +5,7 @@ import com.amazon.ion.Decimal;
 import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonReaderIncremental;
+import com.amazon.ion.IonReaderReentrantSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.bin.IntList;
@@ -18,7 +18,7 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Date;
 
-public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderIncremental {
+public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantSystem {
 
     // Isolates the highest bit in a byte.
     private static final int HIGHEST_BIT_BITMASK = 0x80;
@@ -264,11 +264,13 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         return lexer.getValueTid();
     }
 
+    @Override
     public boolean isNullValue() {
         IonTypeID valueTid = lexer.getValueTid();
         return valueTid != null && valueTid.isNull;
     }
 
+    @Override
     public IntegerSize getIntegerSize() {
         IonTypeID valueTid = prepareScalar();
         if (valueTid.type != IonType.INT || isNullValue()) {
@@ -321,6 +323,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         }
     }
 
+    @Override
     public int byteSize() {
         prepareScalar();
         if (!IonType.isLob(getType()) && !isNullValue()) {
@@ -329,6 +332,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         return (int) (scalarMarker.endIndex - scalarMarker.startIndex);
     }
 
+    @Override
     public byte[] newBytes() {
         byte[] bytes = new byte[byteSize()];
         // The correct number of bytes will be requested from the buffer, so the limit is set at the capacity to
@@ -337,6 +341,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         return bytes;
     }
 
+    @Override
     public int getBytes(byte[] bytes, int offset, int len) {
         int length = Math.min(len, byteSize() - lobBytesRead);
         // The correct number of bytes will be requested from the buffer, so the limit is set at the capacity to
@@ -410,6 +415,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         return Decimal.valueOf(coefficient, scale);
     }
 
+    @Override
     public BigDecimal bigDecimalValue() {
         prepareScalar();
         requireType(IonType.DECIMAL);
@@ -419,6 +425,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         return readBigDecimal();
     }
 
+    @Override
     public Decimal decimalValue() {
         prepareScalar();
         requireType(IonType.DECIMAL);
@@ -428,6 +435,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         return readDecimal();
     }
 
+    @Override
     public long longValue() {
         IonTypeID valueTid = prepareScalar();
         long value;
@@ -460,6 +468,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         return value;
     }
 
+    @Override
     public BigInteger bigIntegerValue() {
         IonTypeID valueTid = prepareScalar();
         BigInteger value;
@@ -502,10 +511,12 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         return value;
     }
 
+    @Override
     public int intValue() {
         return (int) longValue();
     }
 
+    @Override
     public double doubleValue() {
         IonTypeID valueTid = prepareScalar();
         double value;
@@ -533,6 +544,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         return value;
     }
 
+    @Override
     public Timestamp timestampValue() {
         prepareScalar();
         requireType(IonType.TIMESTAMP);
@@ -596,6 +608,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         }
     }
 
+    @Override
     public Date dateValue() {
         Timestamp timestamp = timestampValue();
         if (timestamp == null) {
@@ -604,6 +617,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         return timestamp.dateValue();
     }
 
+    @Override
     public boolean booleanValue() {
         requireType(IonType.BOOL);
         return lexer.getValueTid().lowerNibble == 1;
@@ -621,6 +635,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         return utf8Decoder.decode(utf8InputBuffer, numberOfBytes);
     }
 
+    @Override
     public String stringValue() {
         prepareScalar();
         requireType(IonType.STRING);
@@ -704,14 +719,17 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         return annotationIterator;
     }
 
+    @Override
     public int getFieldId() {
         return lexer.getFieldId();
     }
 
+    @Override
     public boolean isInStruct() {
         return lexer.isInStruct();
     }
 
+    @Override
     public IonType getType() {
         return lexer.getType();
     }
@@ -720,9 +738,11 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         return lexer.peekType();
     }
 
+    @Override
     public int getDepth() {
         return lexer.getDepth();
     }
+
     int ionMajorVersion() {
         return lexer.ionMajorVersion();
     }
@@ -735,14 +755,18 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderInc
         return lexer.hasAnnotations();
     }
 
-    boolean isAwaitingMoreData() {
-        return lexer.isAwaitingMoreData();
+    @Override
+    public void requireCompleteValue() {
+        if (getCurrentEvent() == Event.NEEDS_DATA && lexer.isAwaitingMoreData()) {
+            throw new IonException("Unexpected EOF.");
+        }
     }
 
     void terminate() {
         lexer.buffer.terminate();
     }
 
+    @Override
     public void close() {
         utf8Decoder.close();
         // TODO where does InputStream get closed?

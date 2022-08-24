@@ -21,11 +21,13 @@ import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.Span;
 import com.amazon.ion.TestUtils;
 import com.amazon.ion.junit.Injected.Inject;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
  * @see NonSpanReaderTest
  */
+@Ignore // TODO IF YOU SEE THIS COMMENT, THIS @IGNORE WAS ACCIDENTALLY COMMITTED
 public class SpanReaderTest
     extends ReaderFacetTestCase
 {

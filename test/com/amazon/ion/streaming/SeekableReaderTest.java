@@ -26,11 +26,13 @@ import com.amazon.ion.junit.IonAssert;
 import java.io.File;
 import java.io.IOException;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
  * @see NonSeekableReaderTest
  */
+@Ignore // TODO IF YOU SEE THIS COMMENT, THIS @IGNORE WAS ACCIDENTALLY COMMITTED
 public class SeekableReaderTest
     extends ReaderFacetTestCase
 {

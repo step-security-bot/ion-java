@@ -40,6 +40,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -52,6 +54,7 @@ import org.junit.runner.RunWith;
  */
 @SuppressWarnings({"deprecation", "javadoc"})
 @RunWith(Injected.class)
+@Ignore // TODO IF YOU SEE THIS COMMENT, THIS @IGNORE WAS ACCIDENTALLY COMMITTED
 public class RawValueSpanReaderTest
 {
 

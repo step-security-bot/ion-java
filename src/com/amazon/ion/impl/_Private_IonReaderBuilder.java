@@ -12,10 +12,13 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
+import java.util.zip.GZIPInputStream;
 
 import static com.amazon.ion.impl.LocalSymbolTable.DEFAULT_LST_FACTORY;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeIncrementalReader;
+import static com.amazon.ion.impl._Private_IonReaderFactory.makeNonReentrantReader;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
+import static com.amazon.ion.impl._Private_IonReaderFactory.makeTextReader;
 
 /**
  * {@link IonReaderBuilder} extension for internal use only.
@@ -90,16 +93,24 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
     @Override
     public IonReader build(byte[] ionData, int offset, int length)
     {
-        if (isIncrementalReadingEnabled()) {
-            if (IonStreamUtils.isGzip(ionData, offset, length)) {
-                throw new IllegalArgumentException("Automatic GZIP detection is not supported with incremental" +
-                    "support enabled. Wrap the bytes with a GZIPInputStream and call build(InputStream).");
+        if (IonStreamUtils.isGzip(ionData, offset, length)) {
+            InputStream gzip;
+            try {
+                gzip = new GZIPInputStream(new ByteArrayInputStream(ionData, offset, length));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
-            if (IonStreamUtils.isIonBinary(ionData, offset, length)) {
+            return build(gzip);
+        }
+        if (IonStreamUtils.isIonBinary(ionData, offset, length)) {
+            // TODO provide the bytes directly, no InputStream wrapper
+            if (isIncrementalReadingEnabled()) {
                 return makeIncrementalReader(this, new ByteArrayInputStream(ionData, offset, length));
+            } else {
+                return makeNonReentrantReader(this, new ByteArrayInputStream(ionData, offset, length));
             }
         }
-        return makeReader(validateCatalog(), ionData, offset, length, lstFactory);
+        return makeTextReader(validateCatalog(), ionData, offset, length, lstFactory);
     }
 
     /**
@@ -121,37 +132,42 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
     public IonReader build(InputStream ionData)
     {
         InputStream wrapper = ionData;
-        if (isIncrementalReadingEnabled()) {
-            if (!ionData.markSupported()) {
-                wrapper = new BufferedInputStream(ionData);
-            }
-            wrapper.mark(_Private_IonConstants.BINARY_VERSION_MARKER_SIZE);
-            byte[] possibleIVM = new byte[_Private_IonConstants.BINARY_VERSION_MARKER_SIZE];
-            int bytesRead;
+        if (!ionData.markSupported()) {
+            wrapper = new BufferedInputStream(ionData);
+        }
+        wrapper.mark(_Private_IonConstants.BINARY_VERSION_MARKER_SIZE);
+        byte[] possibleIVM = new byte[_Private_IonConstants.BINARY_VERSION_MARKER_SIZE];
+        int bytesRead;
+        try {
+            bytesRead = wrapper.read(possibleIVM);
+            wrapper.reset();
+        } catch (IOException e) {
+            throw new IonException(e);
+        }
+        if (IonStreamUtils.isGzip(possibleIVM, 0, possibleIVM.length)) {
             try {
-                bytesRead = wrapper.read(possibleIVM);
-                wrapper.reset();
+                wrapper = new GZIPInputStream(wrapper);
             } catch (IOException e) {
-                throw new IonException(e);
-            }
-            if (IonStreamUtils.isGzip(possibleIVM, 0, possibleIVM.length)) {
-                throw new IllegalArgumentException("Automatic GZIP detection is not supported with incremental" +
-                    "support enabled. Wrap the bytes with a GZIPInputStream and call build(InputStream).");
-            }
-            // If the input stream is growing, it is possible that fewer than BINARY_VERSION_MARKER_SIZE bytes are
-            // available yet. Simply check whether the stream *could* contain binary Ion based on the available bytes.
-            // If it can't, fall back to text.
-            // NOTE: if incremental text reading is added, there will need to be logic that handles the case where
-            // the reader is created with 0 bytes available, as it is impossible to determine text vs. binary without
-            // reading at least one byte. Currently, in that case, just create a binary incremental reader. Either the
-            // stream will always be empty (in which case it doesn't matter whether a text or binary reader is used)
-            // or it's a binary stream (in which case the correct reader was created) or it's a growing text stream
-            // (which has always been unsupported).
-            if (startsWithIvm(possibleIVM, bytesRead)) {
-                return makeIncrementalReader(this, wrapper);
+                throw new RuntimeException(e);
             }
         }
-        return makeReader(validateCatalog(), wrapper, lstFactory);
+        // If the input stream is growing, it is possible that fewer than BINARY_VERSION_MARKER_SIZE bytes are
+        // available yet. Simply check whether the stream *could* contain binary Ion based on the available bytes.
+        // If it can't, fall back to text.
+        // NOTE: if incremental text reading is added, there will need to be logic that handles the case where
+        // the reader is created with 0 bytes available, as it is impossible to determine text vs. binary without
+        // reading at least one byte. Currently, in that case, just create a binary incremental reader. Either the
+        // stream will always be empty (in which case it doesn't matter whether a text or binary reader is used)
+        // or it's a binary stream (in which case the correct reader was created) or it's a growing text stream
+        // (which has always been unsupported).
+        if (startsWithIvm(possibleIVM, bytesRead)) {
+            if (isIncrementalReadingEnabled()) {
+                return makeIncrementalReader(this, wrapper);
+            } else {
+                return makeNonReentrantReader(this, wrapper);
+            }
+        }
+        return makeTextReader(validateCatalog(), wrapper, lstFactory);
     }
 
     @Override
