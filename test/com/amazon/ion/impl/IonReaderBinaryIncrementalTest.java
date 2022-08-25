@@ -3441,7 +3441,7 @@ public class IonReaderBinaryIncrementalTest {
     }
 
     @Test
-    public void failsOnMalformedSymbolTable() {
+    public void failsOnMalformedSymbolTable() throws Exception {
         byte[] data = bytes(
             0xE0, 0x01, 0x00, 0xEA, // Binary IVM
             0xE6, // 6-byte annotation wrapper
@@ -3454,7 +3454,9 @@ public class IonReaderBinaryIncrementalTest {
             0x20  // Next top-level value (int 0).
         );
         IonReader reader = newBoundedIncrementalReader(data, 1024);
+        assertNull(reader.next());
+        assertNull(reader.next());
         thrown.expect(IonException.class);
-        reader.next();
+        reader.close();
     }
 }

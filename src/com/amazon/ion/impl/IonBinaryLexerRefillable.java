@@ -88,6 +88,22 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
         }
     }
 
+    @Override
+    protected int peekByte() throws Exception {
+        int b;
+        if (isSkippingCurrentValue) {
+            b = buffer.readByteWithoutBuffering();
+            if (b >= 0) {
+                individualBytesSkippedWithoutBuffering += 1;
+            }
+        } else {
+            b = buffer.peek(peekIndex);
+            //pipe.extendBoundary(1);
+            peekIndex++;
+        }
+        return b;
+    }
+
     /**
      * Reads one byte, if possible.
      * @return the byte, or -1 if none was available.
@@ -108,16 +124,7 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
                 return -1;
             }
             // TODO ugly
-            if (isSkippingCurrentValue) {
-                b = buffer.readByteWithoutBuffering();
-                if (b >= 0) {
-                    individualBytesSkippedWithoutBuffering += 1;
-                }
-            } else {
-                b = buffer.peek(peekIndex);
-                //pipe.extendBoundary(1);
-                peekIndex++;
-            }
+            b = peekByte();
         }
         return b;
     }

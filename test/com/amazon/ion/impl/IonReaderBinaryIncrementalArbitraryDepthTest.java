@@ -341,7 +341,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthTest {
         byte[] bytes = toBinary("\"StringValueLong\"");
         IonCursor.Instruction instruction = NEXT_VALUE;
         for (int i = 0; i < bytes.length; i++) {
-            if (i == _Private_IonConstants.BINARY_VERSION_MARKER_SIZE + 2) {
+            if (i == _Private_IonConstants.BINARY_VERSION_MARKER_SIZE + 3) {
                 assertEquals(START_SCALAR, reader.next(instruction));
                 instruction = LOAD_VALUE;
             } else {
@@ -452,10 +452,11 @@ public class IonReaderBinaryIncrementalArbitraryDepthTest {
         pipe.receive(bytes[0]); // This is the struct type ID
         assertEquals(NEEDS_DATA, reader.next(NEXT_VALUE));
         pipe.receive(bytes[1]); // This is the length byte
+        pipe.receive(bytes[2]); // This is the first field SID
         assertEquals(START_CONTAINER, reader.next(NEXT_VALUE));
         assertEquals(NEEDS_INSTRUCTION, reader.next(STEP_IN));
         int finalStringLength = "fairlyLongString".length() + 2; // +2: 1 for the type ID, 1 for the length byte.
-        int i = 2;
+        int i = 3;
         for (; i < bytes.length - finalStringLength; i++) {
             assertEquals(NEEDS_DATA, reader.next(NEXT_VALUE));
             pipe.receive(bytes[i]);
@@ -464,6 +465,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthTest {
         pipe.receive(bytes[i]); // This is "fairlyLongString"'s type ID
         assertEquals(NEEDS_DATA, reader.next(NEXT_VALUE));
         pipe.receive(bytes[++i]); // This is "fairlyLongString"'s length byte
+        pipe.receive(bytes[++i]); // This is "fairlyLongString"'s first field SID
         assertEquals(START_SCALAR, reader.next(NEXT_VALUE));
         for (i += 1; i < bytes.length; i++) {
             assertEquals(NEEDS_DATA, reader.next(LOAD_VALUE));

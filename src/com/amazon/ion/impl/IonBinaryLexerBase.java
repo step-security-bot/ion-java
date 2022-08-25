@@ -241,12 +241,17 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
             if (isAnnotated) {
                 throw new IonException("Nested annotation wrappers are invalid.");
             }
+            int minimumAdditionalBytesNeeded;
             if (valueTid.variableLength) {
                 // TODO small optimization: at this point the value must be at least 4 more bytes: 1 for the smallest-
                 //  possible wrapper length, 1 for the smallest-possible annotations length, one for the smallest-
                 //  possible annotation, and 1 for the smallest-possible value representation. Could ask the buffer for
                 //  4 bytes if that would provide a speedup.
-                valueLength = readVarUInt();
+                minimumAdditionalBytesNeeded = 4;
+                if (!buffer.fillAt(peekIndex, minimumAdditionalBytesNeeded)) {
+                    return null;
+                }
+                valueLength = readVarUInt(minimumAdditionalBytesNeeded);
                 if (valueLength < 0) {
                     return null;
                 }
@@ -254,12 +259,16 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
                 // TODO small optimization: at this point the value must be at least 3 more bytes: 1 for the smallest-
                 //  possible annotations length, 1 for the smallest-possible annotation, and 1 for the smallest-possible
                 //  value representation. Could ask the buffer for 4 bytes if that would provide a speedup.
+                minimumAdditionalBytesNeeded = 3;
+                if (!buffer.fillAt(peekIndex, minimumAdditionalBytesNeeded)) {
+                    return null;
+                }
                 valueLength = valueTid.length;
             }
             //int postLengthIndex = peekIndex;
             // Record the post-length index in a value that will be shifted in the even the buffer needs to refill.
             valueMarker.startIndex = peekIndex;
-            long annotationsLength = readVarUInt();
+            long annotationsLength = readVarUInt(minimumAdditionalBytesNeeded);
             if (annotationsLength < 0) {
                 return null;
             }
@@ -283,7 +292,10 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
                     // TODO small optimization: at this point the value must be at least 2 more bytes: 1 for the
                     //  smallest-possible value length and 1 for the smallest-possible value representation. Could ask
                     //  the buffer for 2 bytes if that would provide a speedup.
-                    valueLength = readVarUInt();
+                    if (!buffer.fillAt(peekIndex, 2)) {
+                        return null;
+                    }
+                    valueLength = readVarUInt(2);
                     if (valueLength < 0) {
                         return null;
                     }
@@ -318,23 +330,35 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         return valueTid;
     }
 
+    protected int peekByte() throws Exception {
+        return buffer.peek(peekIndex++);
+    }
+
     /**
      * Reads a VarUInt. NOTE: the VarUInt must fit in a `long`. This is not a true limitation, as IonJava requires
      * VarUInts to fit in an `int`.
+     * @param knownAvailable the number of bytes starting at 'peekIndex' known to be available in the buffer.
      * @throws Exception if thrown by a handler method or if an IOException is thrown by the underlying InputStream.
      */
-    private long readVarUInt() throws Exception {
+    private long readVarUInt(int knownAvailable) throws Exception {
         int currentByte;
         int numberOfBytesRead = 0;
         long value = 0;
+        while (numberOfBytesRead < knownAvailable) {
+            currentByte = peekByte();
+            numberOfBytesRead++;
+            value = (value << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
+            if ((currentByte & HIGHEST_BIT_BITMASK) != 0) {
+                return value;
+            }
+        }
         while (numberOfBytesRead < MAXIMUM_SUPPORTED_VAR_UINT_BYTES) {
             currentByte = readByte();
             if (currentByte < 0) {
                 return -1;
             }
             numberOfBytesRead++;
-            value =
-                (value << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
+            value = (value << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
             if ((currentByte & HIGHEST_BIT_BITMASK) != 0) {
                 return value;
             }
@@ -381,7 +405,10 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
                         // TODO small optimization: the value must have at least 2 more bytes (unless dangling field
                         //  names are allowed -- check): 1 for the smallest-possible field SID and 1 for the smallest-
                         //  possible representation. Can ask for 2 more bytes if that would provide a speedup.
-                        fieldSid = (int) readVarUInt(); // TODO type alignment
+                        if (!buffer.fillAt(peekIndex, 2)) {
+                            return;
+                        }
+                        fieldSid = (int) readVarUInt(2); // TODO type alignment
                         if (fieldSid < 0) {
                             return;
                         }

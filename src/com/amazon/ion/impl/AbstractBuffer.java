@@ -94,7 +94,7 @@ abstract class AbstractBuffer {
 
     boolean isAwaitingMoreData() {
         // TODO doesn't feel quite right
-        return state == State.SEEK;
+        return state == State.SEEK || bytesRequested > 1;
     }
 
     void terminate() {
