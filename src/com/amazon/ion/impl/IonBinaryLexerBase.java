@@ -359,12 +359,18 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         }
     }
 
+    protected void handleSkip() {
+        // Nothing to do.
+    }
+
     protected boolean skipRemainingValueBytes() throws Exception {
         // TODO redundant?
         if (!buffer.seekTo(valueMarker.endIndex)) {
             return true;
         }
-        peekIndex = valueMarker.endIndex;
+        peekIndex = buffer.getOffset();
+
+        handleSkip();
         setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
         return false;
     }

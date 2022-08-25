@@ -42,9 +42,9 @@ public class IonReaderBinaryRawLargeStreamTest {
         return data;
     }
 
-    private static IonReaderBuilder newIncrementalReaderBuilderThatThrowsOnOversizedValues() {
+    private static IonReaderBuilder newReaderBuilderThatThrowsOnOversizedValues(boolean enableIncremental) {
         return IonReaderBuilder.standard()
-            .withIncrementalReadingEnabled(true)
+            .withIncrementalReadingEnabled(enableIncremental)
             .withBufferConfiguration(
                 IonBufferConfiguration.Builder.standard()
                     .onOversizedValue(new BufferConfiguration.OversizedValueHandler() {
@@ -52,7 +52,7 @@ public class IonReaderBinaryRawLargeStreamTest {
                         public void onOversizedValue() {
                             throw new IonException("oversized");
                         }
-                    })
+                    }) // TODO failing should be the default
                     .build()
             );
     }
@@ -60,19 +60,6 @@ public class IonReaderBinaryRawLargeStreamTest {
     public void readLargeScalarStream(IonReaderBuilder readerBuilder) throws Exception {
         final Timestamp timestamp = Timestamp.forDay(2000, 1, 1);
         byte[] data = testData(timestamp);
-        // The binary reader uses Integer.MIN_VALUE to mean NO_LIMIT for its _local_remaining value, which keeps track
-        // of the remaining number of bytes in the current value. Between values at the top level, this should always be
-        // NO_LIMIT. No arithmetic should ever be performed on the value when it is set to NO_LIMIT. If bugs exist that
-        // violate this, then between top level values _local_remaining will never again be NO_LIMIT, meaning that
-        // arithmetic will continue to be performed on it. Eventually, due to integer overflow, the value will roll over
-        // into a small enough positive value that the reader will erroneously determine that there are fewer bytes
-        // remaining than are needed to complete the current value. The reader will then finish early before reading the
-        // entire stream. The bug that prompted this test to be written involved an unconditional subtraction of the
-        // current value's length as declared in its header from the current value of _local_remaining within
-        // stringValue(), decimalValue(), and timestampValue(). This caused _local_remaining to overflow to a very
-        // large value immediately. For every top level value subsequently read, the length of that value would be
-        // subtracted from _local_remaining until eventually _local_remaining prematurely reached 0 around the time
-        // the stream reached Integer.MAX_VALUE in length.
         // Repeat the batch a sufficient number of times to exceed a total stream length of Integer.MAX_VALUE, plus
         // a few more to make sure batches continue to be read correctly.
         final int totalNumberOfBatches = (Integer.MAX_VALUE / data.length) + 7; // 7 makes the value exceed Integer.MAX_VALUE by an arbitrary amount.
@@ -99,12 +86,12 @@ public class IonReaderBinaryRawLargeStreamTest {
 
     @Test
     public void readLargeScalarStreamNonIncremental() throws Exception {
-        readLargeScalarStream(IonReaderBuilder.standard());
+        readLargeScalarStream(newReaderBuilderThatThrowsOnOversizedValues(false));
     }
 
     @Test
     public void readLargeScalarStreamIncremental() throws Exception {
-        readLargeScalarStream(newIncrementalReaderBuilderThatThrowsOnOversizedValues());
+        readLargeScalarStream(newReaderBuilderThatThrowsOnOversizedValues(true));
     }
 
     @Test
@@ -320,20 +307,26 @@ public class IonReaderBinaryRawLargeStreamTest {
             new RepeatInputStream(data, totalNumberOfBatches - 1) // This will provide the data 'totalNumberOfBatches' times
         );
         IonReader reader = readerBuilder.build(inputStream);
-        // If support for large scalars is added, the following line will be deleted and the rest of the test
+        // If support for large scalars is added, the following will be deleted and the rest of the test
         // completed to assert the correctness of the value.
-        thrown.expect(IonException.class);
-        reader.next();
+        if (readerBuilder.isIncrementalReadingEnabled()) {
+            thrown.expect(IonException.class);
+            reader.next();
+        } else {
+            assertEquals(IonType.STRING, reader.next());
+            thrown.expect(IonException.class);
+            reader.stringValue();
+        }
     }
 
     @Test
     public void cleanlyFailsOnLargeScalarNonIncremental() throws Exception {
-        cleanlyFailsOnLargeScalar(IonReaderBuilder.standard());
+        cleanlyFailsOnLargeScalar(newReaderBuilderThatThrowsOnOversizedValues(false));
     }
 
     @Test
     public void cleanlyFailsOnLargeScalarIncremental() throws Exception {
-        cleanlyFailsOnLargeScalar(newIncrementalReaderBuilderThatThrowsOnOversizedValues());
+        cleanlyFailsOnLargeScalar(newReaderBuilderThatThrowsOnOversizedValues(true));
     }
 
     private void cleanlyFailsOnLargeAnnotatedScalar(IonReaderBuilder readerBuilder) throws Exception {
@@ -353,20 +346,26 @@ public class IonReaderBinaryRawLargeStreamTest {
             new RepeatInputStream(data, totalNumberOfBatches - 1) // This will provide the data 'totalNumberOfBatches' times
         );
         IonReader reader = readerBuilder.build(inputStream);
-        // If support for large scalars is added, the following line will be deleted and the rest of the test
+        // If support for large scalars is added, the following will be deleted and the rest of the test
         // completed to assert the correctness of the value.
-        thrown.expect(IonException.class);
-        reader.next();
+        if (readerBuilder.isIncrementalReadingEnabled()) {
+            thrown.expect(IonException.class);
+            reader.next();
+        } else {
+            assertEquals(IonType.STRING, reader.next());
+            thrown.expect(IonException.class);
+            reader.stringValue();
+        }
     }
 
     @Test
     public void cleanlyFailsOnLargeAnnotatedScalarNonIncremental() throws Exception {
-        cleanlyFailsOnLargeAnnotatedScalar(IonReaderBuilder.standard());
+        cleanlyFailsOnLargeAnnotatedScalar(newReaderBuilderThatThrowsOnOversizedValues(false));
     }
 
     @Test
     public void cleanlyFailsOnLargeAnnotatedScalarIncremental() throws Exception {
-        cleanlyFailsOnLargeAnnotatedScalar(newIncrementalReaderBuilderThatThrowsOnOversizedValues());
+        cleanlyFailsOnLargeAnnotatedScalar(newReaderBuilderThatThrowsOnOversizedValues(true));
     }
 
     @Test
@@ -385,7 +384,7 @@ public class IonReaderBinaryRawLargeStreamTest {
             new RepeatInputStream(data, totalNumberOfBatches - 1) // This will provide the data 'totalNumberOfBatches' times
         );
 
-        IonReader reader = newIncrementalReaderBuilderThatThrowsOnOversizedValues().build(inputStream);
+        IonReader reader = newReaderBuilderThatThrowsOnOversizedValues(true).build(inputStream);
         thrown.expect(IonException.class);
         reader.next();
     }
