@@ -28,8 +28,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         AFTER_CONTAINER_HEADER
     }
 
-    // TODO all indexes should be longs.
-
     /**
      * Holds the start and end indices of a slice of the buffer.
      */
@@ -162,7 +160,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
     }
 
     protected void verifyValueLength(long valueLength, boolean isAnnotated) {
-        long endIndex = checkpoint + valueLength; // TODO check;
+        long endIndex = checkpoint + valueLength;
         if (!containerStack.isEmpty()) {
             if (endIndex > containerStack.peek().endIndex) {
                 throw new IonException("Value exceeds the length of its parent container.");
@@ -179,9 +177,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
     private boolean checkContainerEnd() {
         if (!containerStack.isEmpty()) {
             if (containerStack.peek().endIndex == peekIndex) {
-                // TODO set checkpoint?
                 event = Event.END_CONTAINER;
-                // TODO reset other state?
                 valueTid = null;
                 return true;
             } else if (containerStack.peek().endIndex < peekIndex) {
@@ -273,7 +269,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
             annotationSidsMarker.startIndex = peekIndex;
             annotationSidsMarker.endIndex = annotationSidsMarker.startIndex + (int) annotationsLength;
             peekIndex = annotationSidsMarker.endIndex;
-            valueLength -= peekIndex - valueMarker.startIndex; // TODO might not be necessary
+            valueLength -= peekIndex - valueMarker.startIndex;
             if (valueLength <= 0) {
                 throw new IonException("Annotation wrapper must wrap a value.");
             }
@@ -318,7 +314,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
                 checkContainerEnd();
             }
         }
-        verifyValueLength(valueLength, isAnnotated); // TODO check
+        verifyValueLength(valueLength, isAnnotated);
         return valueTid;
     }
 
@@ -360,7 +356,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
     }
 
     protected boolean skipRemainingValueBytes() throws Exception {
-        // TODO redundant?
         if (!buffer.seekTo(valueMarker.endIndex)) {
             return true;
         }
@@ -471,8 +466,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         ContainerInfo containerInfo = containerStack.push();
         containerInfo.set(valueTid.type, valueMarker.endIndex);
         setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
-        // TODO seek past header (no need to hold onto it)
-        // TODO reset other state
         valueTid = null;
         //fieldSid = -1;
         event = Event.NEEDS_INSTRUCTION;
@@ -509,7 +502,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
                 event = Event.NEEDS_DATA;
                 return false;
             }
-            // TODO now that the buffer's ready, what's the checkpoint location?
         } catch (Exception e) {
             throw new IonException(e);
         }
@@ -628,7 +620,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
     }
 
     boolean isAwaitingMoreData() {
-        // TODO still probably not quite right, check
         return !buffer.isTerminated()
             && (peekIndex > checkpoint
                 || checkpointLocation.ordinal() > CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID.ordinal()
