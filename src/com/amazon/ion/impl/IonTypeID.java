@@ -94,12 +94,17 @@ final class IonTypeID {
     private IonTypeID(byte id) {
         byte upperNibble = (byte) ((id >> BITS_PER_NIBBLE) & LOW_NIBBLE_BITMASK);
         this.lowerNibble = (byte) (id & LOW_NIBBLE_BITMASK);
-        this.type = ION_TYPES[upperNibble];
+        if (upperNibble == 0 && lowerNibble != NULL_VALUE_NIBBLE) {
+            this.isNopPad = true;
+            this.type = null;
+        } else {
+            this.isNopPad = false;
+            this.type = ION_TYPES[upperNibble];
+        }
         this.isValid = isValid(upperNibble, lowerNibble, type);
         this.isNull = lowerNibble == NULL_VALUE_NIBBLE;
-        this.isNopPad = type == IonType.NULL && !isNull;
         byte length = lowerNibble;
-        if ((type == IonType.NULL && !isNopPad) || type == IonType.BOOL || !isValid) {
+        if (type == IonType.NULL || type == IonType.BOOL || !isValid) {
             variableLength = false;
             length = 0;
         } else if (type == IonType.STRUCT && length == ORDERED_STRUCT_NIBBLE) {
