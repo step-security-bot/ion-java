@@ -200,11 +200,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
     }
 
     protected void reportConsumedData(long numberOfBytesToReport) throws Exception {
-        while (numberOfBytesToReport > 0) {
-            int numberOfBytesToReportThisIteration = (int) Math.min(Integer.MAX_VALUE, numberOfBytesToReport);
-            dataHandler.onData(numberOfBytesToReportThisIteration);
-            numberOfBytesToReport -= numberOfBytesToReportThisIteration;
-        }
+        dataHandler.onData(numberOfBytesToReport);
     }
 
     void setCheckpoint(CheckpointLocation location) throws Exception {

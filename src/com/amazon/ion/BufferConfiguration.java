@@ -36,7 +36,7 @@ public abstract class BufferConfiguration<Configuration extends BufferConfigurat
          * @param numberOfBytes the number of bytes processed.
          * @throws Exception if handler logic fails.
          */
-        void onData(int numberOfBytes) throws Exception;
+        void onData(long numberOfBytes) throws Exception;
     }
 
     /**

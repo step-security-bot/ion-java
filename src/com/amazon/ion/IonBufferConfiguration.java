@@ -51,7 +51,7 @@ public final class IonBufferConfiguration extends BufferConfiguration<IonBufferC
         private static final DataHandler NO_OP_DATA_HANDLER = new DataHandler() {
 
             @Override
-            public void onData(int bytes) {
+            public void onData(long bytes) {
                 // Do nothing.
             }
         };

@@ -43,6 +43,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static com.amazon.ion.BitUtils.bytes;
 import static org.junit.Assert.assertArrayEquals;
@@ -2290,7 +2291,7 @@ public class IonReaderBinaryIncrementalTest {
             "\"def\""
         );
         final AtomicInteger oversizedCounter = new AtomicInteger();
-        final AtomicInteger byteCounter = new AtomicInteger();
+        final AtomicLong byteCounter = new AtomicLong();
         UnifiedTestHandler handler = new UnifiedTestHandler() {
             @Override
             public void onOversizedSymbolTable() {
@@ -2303,7 +2304,7 @@ public class IonReaderBinaryIncrementalTest {
             }
 
             @Override
-            public void onData(int numberOfBytes) {
+            public void onData(long numberOfBytes) {
                 byteCounter.addAndGet(numberOfBytes);
             }
         };
@@ -2338,7 +2339,7 @@ public class IonReaderBinaryIncrementalTest {
             "\"def\""
         );
         final AtomicInteger oversizedCounter = new AtomicInteger();
-        final AtomicInteger byteCounter = new AtomicInteger();
+        final AtomicLong byteCounter = new AtomicLong();
         UnifiedTestHandler handler = new UnifiedTestHandler() {
             @Override
             public void onOversizedSymbolTable() {
@@ -2351,7 +2352,7 @@ public class IonReaderBinaryIncrementalTest {
             }
 
             @Override
-            public void onData(int numberOfBytes) {
+            public void onData(long numberOfBytes) {
                 byteCounter.addAndGet(numberOfBytes);
             }
         };
@@ -2409,7 +2410,7 @@ public class IonReaderBinaryIncrementalTest {
         // byte-by-byte.
         byte[] bytes = toBinary("\"abcdefghijklmnopqrstuvwxyz\""); // Requires a 2-byte header.
         final AtomicInteger oversizedCounter = new AtomicInteger();
-        final AtomicInteger byteCounter = new AtomicInteger();
+        final AtomicLong byteCounter = new AtomicLong();
         UnifiedTestHandler handler = new UnifiedTestHandler() {
             @Override
             public void onOversizedSymbolTable() {
@@ -2422,7 +2423,7 @@ public class IonReaderBinaryIncrementalTest {
             }
 
             @Override
-            public void onData(int numberOfBytes) {
+            public void onData(long numberOfBytes) {
                 byteCounter.addAndGet(numberOfBytes);
             }
         };
@@ -2449,7 +2450,7 @@ public class IonReaderBinaryIncrementalTest {
     public void oversizeValueDetectedDuringSingleByteReadIncremental() throws Exception {
         byte[] bytes = toBinary("\"abcdefghijklmnopqrstuvwxyz\""); // Requires a 2-byte header.
         final AtomicInteger oversizedCounter = new AtomicInteger();
-        final AtomicInteger byteCounter = new AtomicInteger();
+        final AtomicLong byteCounter = new AtomicLong();
         UnifiedTestHandler handler = new UnifiedTestHandler() {
             @Override
             public void onOversizedSymbolTable() {
@@ -2462,7 +2463,7 @@ public class IonReaderBinaryIncrementalTest {
             }
 
             @Override
-            public void onData(int numberOfBytes) {
+            public void onData(long numberOfBytes) {
                 byteCounter.addAndGet(numberOfBytes);
             }
         };
@@ -2501,7 +2502,7 @@ public class IonReaderBinaryIncrementalTest {
             0x81, 'a' // String "a"
         );
         final AtomicInteger oversizedCounter = new AtomicInteger();
-        final AtomicInteger byteCounter = new AtomicInteger();
+        final AtomicLong byteCounter = new AtomicLong();
         UnifiedTestHandler handler = new UnifiedTestHandler() {
             @Override
             public void onOversizedSymbolTable() {
@@ -2514,7 +2515,7 @@ public class IonReaderBinaryIncrementalTest {
             }
 
             @Override
-            public void onData(int numberOfBytes) {
+            public void onData(long numberOfBytes) {
                 byteCounter.addAndGet(numberOfBytes);
             }
         };
@@ -2552,7 +2553,7 @@ public class IonReaderBinaryIncrementalTest {
             0x81, 'a' // String "a"
         );
         final AtomicInteger oversizedCounter = new AtomicInteger();
-        final AtomicInteger byteCounter = new AtomicInteger();
+        final AtomicLong byteCounter = new AtomicLong();
         UnifiedTestHandler handler = new UnifiedTestHandler() {
             @Override
             public void onOversizedSymbolTable() {
@@ -2565,7 +2566,7 @@ public class IonReaderBinaryIncrementalTest {
             }
 
             @Override
-            public void onData(int numberOfBytes) {
+            public void onData(long numberOfBytes) {
                 byteCounter.addAndGet(numberOfBytes);
             }
         };
@@ -2616,7 +2617,7 @@ public class IonReaderBinaryIncrementalTest {
         // for symbol 10.
         // The string "12345678" requires 9 bytes, bringing the total to ~49, above the max of 48.
         final AtomicInteger oversizedCounter = new AtomicInteger();
-        final AtomicInteger byteCounter = new AtomicInteger();
+        final AtomicLong byteCounter = new AtomicLong();
         UnifiedTestHandler handler = new UnifiedTestHandler() {
             @Override
             public void onOversizedSymbolTable() {
@@ -2629,7 +2630,7 @@ public class IonReaderBinaryIncrementalTest {
             }
 
             @Override
-            public void onData(int numberOfBytes) {
+            public void onData(long numberOfBytes) {
                 byteCounter.addAndGet(numberOfBytes);
             }
         };
@@ -2671,7 +2672,7 @@ public class IonReaderBinaryIncrementalTest {
         // for symbol 10.
         // The string "12345678" requires 9 bytes, bringing the total to ~49, above the max of 48.
         final AtomicInteger oversizedCounter = new AtomicInteger();
-        final AtomicInteger byteCounter = new AtomicInteger();
+        final AtomicLong byteCounter = new AtomicLong();
         UnifiedTestHandler handler = new UnifiedTestHandler() {
             @Override
             public void onOversizedSymbolTable() {
@@ -2684,7 +2685,7 @@ public class IonReaderBinaryIncrementalTest {
             }
 
             @Override
-            public void onData(int numberOfBytes) {
+            public void onData(long numberOfBytes) {
                 byteCounter.addAndGet(numberOfBytes);
             }
         };
@@ -2773,7 +2774,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
 
         final AtomicInteger oversizedCounter = new AtomicInteger();
-        final AtomicInteger byteCounter = new AtomicInteger();
+        final AtomicLong byteCounter = new AtomicLong();
         UnifiedTestHandler handler = new UnifiedTestHandler() {
             @Override
             public void onOversizedSymbolTable() {
@@ -2786,7 +2787,7 @@ public class IonReaderBinaryIncrementalTest {
             }
 
             @Override
-            public void onData(int numberOfBytes) {
+            public void onData(long numberOfBytes) {
                 byteCounter.addAndGet(numberOfBytes);
             }
         };
@@ -2865,7 +2866,7 @@ public class IonReaderBinaryIncrementalTest {
             }
 
             @Override
-            public void onData(int numberOfBytes) {
+            public void onData(long numberOfBytes) {
 
             }
         };
@@ -2915,7 +2916,7 @@ public class IonReaderBinaryIncrementalTest {
             }
 
             @Override
-            public void onData(int numberOfBytes) {
+            public void onData(long numberOfBytes) {
 
             }
         };
@@ -2976,7 +2977,7 @@ public class IonReaderBinaryIncrementalTest {
             }
 
             @Override
-            public void onData(int numberOfBytes) {
+            public void onData(long numberOfBytes) {
 
             }
         };
@@ -3023,7 +3024,7 @@ public class IonReaderBinaryIncrementalTest {
             }
 
             @Override
-            public void onData(int numberOfBytes) {
+            public void onData(long numberOfBytes) {
 
             }
         };
@@ -3136,7 +3137,7 @@ public class IonReaderBinaryIncrementalTest {
             }
 
             @Override
-            public void onData(int numberOfBytes) {
+            public void onData(long numberOfBytes) {
                 // Do nothing.
             }
         };

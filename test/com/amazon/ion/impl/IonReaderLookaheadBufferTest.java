@@ -127,7 +127,7 @@ public class IonReaderLookaheadBufferTest
         createThrowingOversizedEventHandlers(builder);
         builder.onData(new BufferConfiguration.DataHandler() {
             @Override
-            public void onData(int numberOfBytes) {
+            public void onData(long numberOfBytes) {
                 byteCount.addAndGet(numberOfBytes);
             }
         });
@@ -566,7 +566,7 @@ public class IonReaderLookaheadBufferTest
         }
 
         @Override
-        public void onData(int numberOfBytes) {
+        public void onData(long numberOfBytes) {
             numberOfBytesProcessed += numberOfBytes;
         }
     }
