@@ -11,7 +11,9 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PushbackInputStream;
 import java.io.Reader;
+import java.io.SequenceInputStream;
 import java.util.zip.GZIPInputStream;
 
 import static com.amazon.ion.impl.LocalSymbolTable.DEFAULT_LST_FACTORY;
@@ -94,13 +96,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
     public IonReader build(byte[] ionData, int offset, int length)
     {
         if (IonStreamUtils.isGzip(ionData, offset, length)) {
-            InputStream gzip;
-            try {
-                gzip = new GZIPInputStream(new ByteArrayInputStream(ionData, offset, length));
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            return build(gzip);
+            return build(new ByteArrayInputStream(ionData, offset, length));
         }
         if (IonStreamUtils.isIonBinary(ionData, offset, length)) {
             // TODO provide the bytes directly, no InputStream wrapper
@@ -129,27 +125,37 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
     }
 
     @Override
-    public IonReader build(InputStream ionData)
+    public IonReader build(InputStream source)
     {
-        InputStream wrapper = ionData;
-        if (!ionData.markSupported()) {
-            wrapper = new BufferedInputStream(ionData);
+        if (source == null) {
+            throw new NullPointerException("Cannot build a reader from a null InputStream.");
         }
-        wrapper.mark(_Private_IonConstants.BINARY_VERSION_MARKER_SIZE);
+        // Note: this can create a lot of layers of InputStream wrappers. For example, if this method is called
+        // from build(byte[]) and the bytes contain GZIP, the chain will be SequenceInputStream(ByteArrayInputStream,
+        // GZIPInputStream -> PushbackInputStream -> ByteArrayInputStream). If this creates a drag on efficiency,
+        // alternatives should be evaluated.
         byte[] possibleIVM = new byte[_Private_IonConstants.BINARY_VERSION_MARKER_SIZE];
-        int bytesRead;
+        InputStream ionData;
         try {
-            bytesRead = wrapper.read(possibleIVM);
-            wrapper.reset();
+            ionData = IonStreamUtils.unGzip(source);
         } catch (IOException e) {
             throw new IonException(e);
         }
-        if (IonStreamUtils.isGzip(possibleIVM, 0, possibleIVM.length)) {
-            try {
-                wrapper = new GZIPInputStream(wrapper);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+        int bytesRead;
+        try {
+            bytesRead = ionData.read(possibleIVM);
+        } catch (IOException e) {
+            throw new IonException(e);
+        }
+        InputStream wrapper;
+        if (bytesRead > 0) {
+            // TODO consider alternatives. PushbackInputStream caused weird behavior here.
+            wrapper = new SequenceInputStream(
+                new ByteArrayInputStream(possibleIVM, 0, bytesRead),
+                ionData
+            );
+        } else {
+            wrapper = ionData;
         }
         // If the input stream is growing, it is possible that fewer than BINARY_VERSION_MARKER_SIZE bytes are
         // available yet. Simply check whether the stream *could* contain binary Ion based on the available bytes.
