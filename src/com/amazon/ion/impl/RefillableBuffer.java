@@ -150,7 +150,7 @@ abstract class RefillableBuffer extends AbstractBuffer {
     }
 
     @Override
-    boolean fillAt(long index, long numberOfBytes) throws Exception {
+    protected boolean carefulFillAt(long index, long numberOfBytes) throws Exception {
         long shortfall = numberOfBytes - availableAt(index);
         if (shortfall > 0) {
             bytesRequested = numberOfBytes + (index - offset);

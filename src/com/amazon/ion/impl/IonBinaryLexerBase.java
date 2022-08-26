@@ -380,13 +380,20 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
     }
 
     protected boolean skipRemainingValueBytes() throws Exception {
-        if (!buffer.seekTo(valueMarker.endIndex)) {
+        boolean alreadyQuick = false;
+        if (buffer.limit >= valueMarker.endIndex) {
+            alreadyQuick = buffer.quick();
+            buffer.seekTo(valueMarker.endIndex);
+        } else if (!buffer.seekTo(valueMarker.endIndex)) {
             return true;
         }
         peekIndex = buffer.getOffset();
 
         handleSkip();
         setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
+        if (!alreadyQuick) {
+            buffer.careful();
+        }
         return false;
     }
 
@@ -457,7 +464,16 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
 
     }
 
+
+    private int fillDepth = 0;
+
     protected Event handleFill() {
+        if (checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER) {
+            // This container is buffered in its entirety. There is no need to fill the buffer again until stepping
+            // out of the fill depth.
+            fillDepth = getDepth() + 1;
+            // TODO could go into quick mode now, but it would need to be reset if this container is skipped
+        }
         return Event.VALUE_READY;
     }
 
@@ -491,6 +507,9 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         }
         // Push the remaining length onto the stack, seek past the container's header, and increase the depth.
         ContainerInfo containerInfo = containerStack.push();
+        if (getDepth() == fillDepth) {
+            buffer.quick();
+        }
         containerInfo.set(valueTid.type, valueMarker.endIndex);
         setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
         valueTid = null;
@@ -517,6 +536,10 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         peekIndex = containerInfo.endIndex;
         setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
         containerStack.pop();
+        if (getDepth() < fillDepth) {
+            fillDepth = 0;
+            buffer.careful();
+        }
         event = Event.NEEDS_INSTRUCTION;
         // tODO reset other state (e.g. annotations?)
         valueTid = null;

@@ -25,7 +25,7 @@ class FixedBufferFromByteArray extends AbstractBuffer {
     }
 
     @Override
-    boolean fillAt(long index, long numberOfBytes) {
+    protected boolean carefulFillAt(long index, long numberOfBytes) {
         if (numberOfBytes > availableAt(index)) {
             // TODO? throw or notify user?
             state = State.FILL;
@@ -36,7 +36,7 @@ class FixedBufferFromByteArray extends AbstractBuffer {
     }
 
     @Override
-    boolean seek(long numberOfBytes) {
+    protected boolean carefulSeek(long numberOfBytes) {
         if (numberOfBytes < available()) {
             offset = limit;
             state = State.SEEK;

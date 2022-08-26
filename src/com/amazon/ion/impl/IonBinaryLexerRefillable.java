@@ -141,7 +141,10 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
 
     @Override
     protected Event handleFill() {
-        return isSkippingCurrentValue ? Event.NEEDS_INSTRUCTION : Event.VALUE_READY;
+        if (isSkippingCurrentValue) {
+            return Event.NEEDS_INSTRUCTION;
+        }
+        return super.handleFill();
     }
 
     /**
