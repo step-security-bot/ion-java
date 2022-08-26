@@ -36,7 +36,7 @@ class FixedBufferFromByteArray extends AbstractBuffer {
     }
 
     @Override
-    protected boolean carefulSeek(long numberOfBytes) {
+    protected boolean seek(long numberOfBytes) {
         if (numberOfBytes < available()) {
             offset = limit;
             state = State.SEEK;

@@ -202,7 +202,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
     void setCheckpoint(CheckpointLocation location) throws Exception {
         if (location == CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID) {
             reset();
-            buffer.seekTo(peekIndex);
+            buffer.quickSeekTo(peekIndex);
         }
         reportConsumedData(peekIndex - checkpoint);
         checkpointLocation = location;
@@ -380,10 +380,8 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
     }
 
     protected boolean skipRemainingValueBytes() throws Exception {
-        boolean alreadyQuick = false;
         if (buffer.limit >= valueMarker.endIndex) {
-            alreadyQuick = buffer.quick();
-            buffer.seekTo(valueMarker.endIndex);
+            buffer.quickSeekTo(valueMarker.endIndex);
         } else if (!buffer.seekTo(valueMarker.endIndex)) {
             return true;
         }
@@ -391,9 +389,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
 
         handleSkip();
         setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
-        if (!alreadyQuick) {
-            buffer.careful();
-        }
         return false;
     }
 
@@ -497,6 +492,16 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         }
     }
 
+    protected void enterQuickMode() {
+        buffer.quick();
+        currentMakeBufferReadyFunction = QUICK_MAKE_BUFFER_READY_FUNCTION;
+    }
+
+    protected void exitQuickMode() {
+        buffer.careful();
+        currentMakeBufferReadyFunction = carefulMakeBufferReadyFunction;
+    }
+
     private void stepIn() throws Exception {
         if (!makeBufferReady()) {
             return;
@@ -508,7 +513,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         // Push the remaining length onto the stack, seek past the container's header, and increase the depth.
         ContainerInfo containerInfo = containerStack.push();
         if (getDepth() == fillDepth) {
-            buffer.quick();
+            enterQuickMode();
         }
         containerInfo.set(valueTid.type, valueMarker.endIndex);
         setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
@@ -538,7 +543,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         containerStack.pop();
         if (getDepth() < fillDepth) {
             fillDepth = 0;
-            buffer.careful();
+            exitQuickMode();
         }
         event = Event.NEEDS_INSTRUCTION;
         // tODO reset other state (e.g. annotations?)
@@ -546,16 +551,36 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         //fieldSid = -1;
     }
 
-    private boolean makeBufferReady() {
-        try {
-            if (!buffer.makeReady()) {
-                event = Event.NEEDS_DATA;
-                return false;
+    private interface MakeBufferReadyFunction {
+        boolean makeBufferReady();
+    }
+
+    private final MakeBufferReadyFunction carefulMakeBufferReadyFunction = new MakeBufferReadyFunction() {
+        @Override
+        public boolean makeBufferReady() {
+            try {
+                if (!buffer.makeReady()) {
+                    event = Event.NEEDS_DATA;
+                    return false;
+                }
+            } catch (Exception e) {
+                throw new IonException(e);
             }
-        } catch (Exception e) {
-            throw new IonException(e);
+            return true;
         }
-        return true;
+    };
+
+    private static final MakeBufferReadyFunction QUICK_MAKE_BUFFER_READY_FUNCTION = new MakeBufferReadyFunction() {
+        @Override
+        public boolean makeBufferReady() {
+            return true;
+        }
+    };
+
+    private MakeBufferReadyFunction currentMakeBufferReadyFunction = carefulMakeBufferReadyFunction;
+
+    private boolean makeBufferReady() {
+        return currentMakeBufferReadyFunction.makeBufferReady();
     }
 
     @Override

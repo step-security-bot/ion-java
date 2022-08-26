@@ -27,7 +27,7 @@ public class RefillableBufferFromInputStream extends RefillableBuffer {
     }
 
     @Override
-    protected boolean carefulSeek(long numberOfBytes) throws IOException {
+    protected boolean seek(long numberOfBytes) throws IOException {
         long size = available();
         long unbufferedBytesToSkip = numberOfBytes - size;
         if (unbufferedBytesToSkip <= 0) {

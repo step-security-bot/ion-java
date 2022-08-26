@@ -12,32 +12,33 @@ abstract class AbstractBuffer {
         TERMINATED
     }
 
-    private interface SeekFunction {
-        boolean seek(long numberOfBytes) throws IOException;
+    private interface SeekToFunction {
+        boolean seekTo(long index) throws IOException;
     }
 
     private interface FillAtFunction {
         boolean fillAt(long index, long numberOfBytes) throws Exception;
     }
 
-    private final SeekFunction quickSeekFunction = new SeekFunction() {
+    private final SeekToFunction quickSeekToFunction = new SeekToFunction() {
         @Override
-        public boolean seek(long numberOfBytes) {
-            return quickSeek(numberOfBytes);
+        public boolean seekTo(long index) {
+            quickSeekTo(index);
+            return true;
         }
     };
 
-    private final SeekFunction carefulSeekFunction = new SeekFunction() {
+    private final SeekToFunction carefulSeekToFunction = new SeekToFunction() {
         @Override
-        public boolean seek(long numberOfBytes) throws IOException {
-            return carefulSeek(numberOfBytes);
+        public boolean seekTo(long index) throws IOException {
+            return seek(index - offset);
         }
     };
 
-    private final FillAtFunction quickFillAtFunction = new FillAtFunction() {
+    private static final FillAtFunction QUICK_FILL_AT_FUNCTION = new FillAtFunction() {
         @Override
         public boolean fillAt(long index, long numberOfBytes) {
-            return quickFillAt(index, numberOfBytes);
+            return true;
         }
     };
 
@@ -48,11 +49,9 @@ abstract class AbstractBuffer {
         }
     };
 
-    private SeekFunction currentSeekFunction = carefulSeekFunction;
+    private SeekToFunction currentSeekToFunction = carefulSeekToFunction;
 
     private FillAtFunction currentFillAtFunction = carefulFillAtFunction;
-
-    private boolean isQuick = false;
 
     /**
      * Mask to isolate a single byte.
@@ -99,21 +98,14 @@ abstract class AbstractBuffer {
 
     abstract void copyBytes(long position, byte[] destination, int destinationOffset, int length);
 
-    // true if already quick
-    final boolean quick() {
-        if (isQuick) {
-            return true;
-        }
-        currentSeekFunction = quickSeekFunction;
-        currentFillAtFunction = quickFillAtFunction;
-        isQuick = true;
-        return false;
+    final void quick() {
+        currentSeekToFunction = quickSeekToFunction;
+        currentFillAtFunction = QUICK_FILL_AT_FUNCTION;
     }
 
     final void careful() {
-        currentSeekFunction = carefulSeekFunction;
+        currentSeekToFunction = carefulSeekToFunction;
         currentFillAtFunction = carefulFillAtFunction;
-        isQuick = false;
     }
 
     final boolean fill(long numberOfBytes) throws Exception {
@@ -122,29 +114,18 @@ abstract class AbstractBuffer {
 
     protected abstract boolean carefulFillAt(long index, long numberOfBytes) throws Exception;
 
-    protected abstract boolean carefulSeek(long numberOfBytes) throws IOException;
-
     final boolean fillAt(long index, long numberOfBytes) throws Exception {
         return currentFillAtFunction.fillAt(index, numberOfBytes);
     }
 
-    final boolean seek(long numberOfBytes) throws IOException {
-        return currentSeekFunction.seek(numberOfBytes);
+    abstract boolean seek(long numberOfBytes) throws IOException;
+
+    final void quickSeekTo(long index) {
+        offset = index;
     }
 
     final boolean seekTo(long index) throws IOException {
-        return seek(index - offset);
-    }
-
-    private boolean quickFillAt(long index, long numberOfBytes) {
-        state = State.READY;
-        return true;
-    }
-
-    private boolean quickSeek(long numberOfBytes) {
-        offset += numberOfBytes;
-        state = State.READY;
-        return true;
+        return currentSeekToFunction.seekTo(index);
     }
 
     boolean makeReady() throws Exception {

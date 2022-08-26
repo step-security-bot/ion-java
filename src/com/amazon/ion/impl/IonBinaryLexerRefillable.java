@@ -88,6 +88,26 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
         }
     }
 
+    private interface ReadByteFunction {
+        int readByte() throws Exception;
+    }
+
+    private final ReadByteFunction carefulReadByteFunction = new ReadByteFunction() {
+        @Override
+        public int readByte() throws Exception {
+            return carefulReadByte();
+        }
+    };
+
+    private final ReadByteFunction quickReadByteFunction = new ReadByteFunction() {
+        @Override
+        public int readByte() throws Exception {
+            return peekByte();
+        }
+    };
+
+    private ReadByteFunction currentReadByteFunction = carefulReadByteFunction;
+
     @Override
     protected int peekByte() throws Exception {
         int b;
@@ -104,13 +124,8 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
         return b;
     }
 
-    /**
-     * Reads one byte, if possible.
-     * @return the byte, or -1 if none was available.
-     * @throws IOException if an IOException is thrown by the underlying InputStream.
-     */
-    @Override
-    protected int readByte() throws Exception {
+
+    protected int carefulReadByte() throws Exception {
         int b;
         if (isSkippingCurrentValue) {
             // If the value is being skipped, the byte will not have been buffered.
@@ -129,6 +144,16 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
         return b;
     }
 
+    /**
+     * Reads one byte, if possible.
+     * @return the byte, or -1 if none was available.
+     * @throws IOException if an IOException is thrown by the underlying InputStream.
+     */
+    @Override
+    protected int readByte() throws Exception {
+        return currentReadByteFunction.readByte();
+    }
+
     @Override
     protected void verifyValueLength(long valueLength, boolean isAnnotated) {
         if (isSkippingCurrentValue) {
@@ -145,6 +170,16 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
             return Event.NEEDS_INSTRUCTION;
         }
         return super.handleFill();
+    }
+
+    protected void enterQuickMode() {
+        super.enterQuickMode();
+        currentReadByteFunction = quickReadByteFunction;
+    }
+
+    protected void exitQuickMode() {
+        super.exitQuickMode();
+        currentReadByteFunction = carefulReadByteFunction;
     }
 
     /**
