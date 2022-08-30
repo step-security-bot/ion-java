@@ -215,7 +215,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
             new IonBinaryLexerRefillable(
                 new BufferConfiguration.OversizedValueHandler() {
                     @Override
-                    public void onOversizedValue() throws Exception {
+                    public void onOversizedValue() {
                         if (isReadingSymbolTable() || isPositionedOnSymbolTable()) {
                             configuration.getOversizedSymbolTableHandler().onOversizedSymbolTable();
                             terminate();
@@ -761,12 +761,12 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
             maxId = -1;
         }
 
-        private boolean valueUnavailable() {
+        private boolean valueUnavailable() throws IOException {
             Event event = raw.next(Instruction.LOAD_VALUE);
             return event == Event.NEEDS_DATA || event == Event.NEEDS_INSTRUCTION;
         }
 
-        private void readSymbolTable() {
+        private void readSymbolTable() throws IOException {
             Event event;
             while (true) {
                 switch (state) {
@@ -966,7 +966,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
     }
 
     @Override
-    public Event next(Instruction instruction) {
+    public Event next(Instruction instruction) throws IOException {
         Event event;
         while (true) {
             if (isReadingSymbolTable()) {

@@ -6,6 +6,7 @@ import com.amazon.ion.SymbolToken;
 
 import java.util.Iterator;
 
+// TODO integrate with IonSystem.newSystemReader and tests
 public class IonReaderBinaryNonReentrantSystem extends IonReaderBinaryNonReentrantCore<IonReaderReentrantSystem> {
 
     IonReaderBinaryNonReentrantSystem(IonReaderReentrantSystem reader) {

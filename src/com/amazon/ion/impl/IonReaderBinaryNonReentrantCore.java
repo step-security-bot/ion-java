@@ -16,6 +16,7 @@ import java.math.BigInteger;
 import java.util.Date;
 
 import static com.amazon.ion.IonCursor.Event.NEEDS_DATA;
+import static com.amazon.ion.util.IonStreamUtils.throwAsIonException;
 
 abstract class IonReaderBinaryNonReentrantCore<T extends IonReaderReentrantCore>
     implements IonReader, _Private_ReaderWriter {
@@ -32,9 +33,19 @@ abstract class IonReaderBinaryNonReentrantCore<T extends IonReaderReentrantCore>
         throw new UnsupportedOperationException("Not implemented");
     }
 
+    private IonCursor.Event next(IonCursor.Instruction instruction) {
+        IonCursor.Event event = null;
+        try {
+            event = reader.next(instruction);
+        } catch (IOException e) {
+            throwAsIonException(e);
+        }
+        return event;
+    }
+
     @Override
     public IonType next() {
-        if (NEEDS_DATA == reader.next(IonCursor.Instruction.NEXT_VALUE)) {
+        if (NEEDS_DATA == next(IonCursor.Instruction.NEXT_VALUE)) {
             reader.requireCompleteValue();
             type = null;
         } else {
@@ -45,13 +56,13 @@ abstract class IonReaderBinaryNonReentrantCore<T extends IonReaderReentrantCore>
 
     @Override
     public void stepIn() {
-        reader.next(IonCursor.Instruction.STEP_IN);
+        next(IonCursor.Instruction.STEP_IN);
         type = null;
     }
 
     @Override
     public void stepOut() {
-        reader.next(IonCursor.Instruction.STEP_OUT);
+        next(IonCursor.Instruction.STEP_OUT);
         type = null;
     }
 
@@ -73,7 +84,7 @@ abstract class IonReaderBinaryNonReentrantCore<T extends IonReaderReentrantCore>
             // Note: existing tests expect IllegalStateException in this case.
             throw new IllegalStateException("Reader is not positioned on a scalar value.");
         }
-        if (reader.next(IonCursor.Instruction.LOAD_VALUE) != IonCursor.Event.VALUE_READY) {
+        if (next(IonCursor.Instruction.LOAD_VALUE) != IonCursor.Event.VALUE_READY) {
             throw new IonException("Unexpected EOF.");
         }
     }

@@ -18,7 +18,7 @@ public final class IonBufferConfiguration extends BufferConfiguration<IonBufferC
          * {@link IonReaderLookaheadBuffer#fillInput()} has no effect.
          * @throws Exception if handler logic fails.
          */
-        void onOversizedSymbolTable() throws Exception;
+        void onOversizedSymbolTable();
     }
 
     /**

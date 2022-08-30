@@ -21,9 +21,8 @@ public abstract class BufferConfiguration<Configuration extends BufferConfigurat
          * next value. If the implementation wishes to abort processing immediately, it may throw an exception from this
          * method. Such an exception will propagate upward and will be thrown from
          * {@link ReaderLookaheadBuffer#fillInput()}.
-         * @throws Exception if handler logic fails.
          */
-        void onOversizedValue() throws Exception;
+        void onOversizedValue();
     }
 
     /**
@@ -34,9 +33,8 @@ public abstract class BufferConfiguration<Configuration extends BufferConfigurat
          * Invoked whenever the bytes from a value are processed, regardless of whether the bytes are buffered or
          * skipped due to the value being oversized.
          * @param numberOfBytes the number of bytes processed.
-         * @throws Exception if handler logic fails.
          */
-        void onData(long numberOfBytes) throws Exception;
+        void onData(long numberOfBytes);
     }
 
     /**

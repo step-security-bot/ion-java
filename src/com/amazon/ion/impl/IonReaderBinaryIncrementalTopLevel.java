@@ -17,6 +17,8 @@ import java.math.BigInteger;
 import java.util.Date;
 import java.util.Iterator;
 
+import static com.amazon.ion.util.IonStreamUtils.throwAsIonException;
+
 public class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_ReaderWriter, _Private_IncrementalReader {
 
     private final IonReaderBinaryIncrementalArbitraryDepth reader;
@@ -42,10 +44,20 @@ public class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_R
         throw new UnsupportedOperationException("Not implemented");
     }
 
+    private IonCursor.Event next(IonCursor.Instruction instruction) {
+        IonCursor.Event event = null;
+        try {
+            event = reader.next(instruction);
+        } catch (IOException e) {
+            throwAsIonException(e);
+        }
+        return event;
+    }
+
     @Override
     public IonType next() {
         while (true) {
-            IonCursor.Event event = reader.next(nextInstruction);
+            IonCursor.Event event = next(nextInstruction);
             if (event == IonCursor.Event.NEEDS_DATA) {
                 type = null;
                 //if (getDepth() == 0) {
@@ -56,7 +68,7 @@ public class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_R
             // TODO can the following be moved to prepareValue()?
             if (event == IonCursor.Event.START_SCALAR || (getDepth() == 0 && event == IonCursor.Event.START_CONTAINER)) {
                 nextInstruction = IonCursor.Instruction.LOAD_VALUE;
-                event = reader.next(nextInstruction);
+                event = next(nextInstruction);
                 if (event == IonCursor.Event.NEEDS_DATA) {
                     type = null;
                     return null;
@@ -78,13 +90,13 @@ public class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_R
 
     @Override
     public void stepIn() {
-        reader.next(IonCursor.Instruction.STEP_IN);
+        next(IonCursor.Instruction.STEP_IN);
         type = null;
     }
 
     @Override
     public void stepOut() {
-        reader.next(IonCursor.Instruction.STEP_OUT);
+        next(IonCursor.Instruction.STEP_OUT);
         type = null;
     }
 

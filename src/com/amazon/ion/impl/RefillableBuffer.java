@@ -19,7 +19,7 @@ abstract class RefillableBuffer extends AbstractBuffer {
          */
         void bytesConsolidatedToStartOfBuffer(int leftShiftAmount);
 
-        void bufferOverflowDetected() throws Exception; // TODO see about removing 'throws Exception'
+        void bufferOverflowDetected();
     }
 
     /**
@@ -126,7 +126,7 @@ abstract class RefillableBuffer extends AbstractBuffer {
      * @param minimumNumberOfBytesRequired the minimum number of additional bytes to buffer.
      * @return true if the buffer has sufficient capacity; otherwise, false.
      */
-    boolean ensureCapacity(long minimumNumberOfBytesRequired) throws Exception {
+    boolean ensureCapacity(long minimumNumberOfBytesRequired) {
         if (freeSpaceAt(offset) >= minimumNumberOfBytesRequired) {
             // No need to shift any bytes or grow the buffer.
             return true;
@@ -154,7 +154,7 @@ abstract class RefillableBuffer extends AbstractBuffer {
     }
 
     @Override
-    protected boolean carefulFillAt(long index, long numberOfBytes) throws Exception {
+    protected boolean carefulFillAt(long index, long numberOfBytes) throws IOException {
         long shortfall = numberOfBytes - availableAt(index);
         if (shortfall > 0) {
             bytesRequested = numberOfBytes + (index - offset);

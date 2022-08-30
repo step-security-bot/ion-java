@@ -158,7 +158,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         checkpoint = peekIndex;
     }
 
-    protected abstract int readByte() throws Exception; // TODO remove throws Exception
+    protected abstract int readByte() throws IOException;
 
     /**
      * Throw if the reader is attempting to process an Ion version that it does not support.
@@ -205,11 +205,11 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         fieldSid = -1;
     }
 
-    protected void reportConsumedData(long numberOfBytesToReport) throws Exception {
+    protected void reportConsumedData(long numberOfBytesToReport) {
         dataHandler.onData(numberOfBytesToReport);
     }
 
-    void setCheckpoint(CheckpointLocation location) throws Exception {
+    void setCheckpoint(CheckpointLocation location) {
         if (location == CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID) {
             reset();
             buffer.quickSeekTo(peekIndex);
@@ -222,9 +222,9 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
     /**
      * Reads the type ID byte.
      * @param isAnnotated true if this type ID is on a value within an annotation wrapper; false if it is not.
-     * @throws Exception if thrown by a handler method or if an IOException is thrown by the underlying InputStream.
+     * @throws IOException if thrown by the underlying InputStream.
      */
-    private IonTypeID parseTypeID(final int typeIdByte, final boolean isAnnotated) throws Exception {
+    private IonTypeID parseTypeID(final int typeIdByte, final boolean isAnnotated) throws IOException {
         IonTypeID valueTid = IonTypeID.TYPE_IDS[typeIdByte];
         long valueLength = 0;
         if (typeIdByte == IVM_START_BYTE && containerStack.isEmpty()) {
@@ -339,7 +339,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         return valueTid;
     }
 
-    protected int peekByte() throws Exception {
+    protected int peekByte() throws IOException {
         return buffer.peek(peekIndex++);
     }
 
@@ -347,9 +347,8 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
      * Reads a VarUInt. NOTE: the VarUInt must fit in a `long`. This is not a true limitation, as IonJava requires
      * VarUInts to fit in an `int`.
      * @param knownAvailable the number of bytes starting at 'peekIndex' known to be available in the buffer.
-     * @throws Exception if thrown by a handler method or if an IOException is thrown by the underlying InputStream.
      */
-    private long readVarUInt(int knownAvailable) throws Exception {
+    private long readVarUInt(int knownAvailable) throws IOException {
         int currentByte;
         int numberOfBytesRead = 0;
         long value = 0;
@@ -388,7 +387,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         // Nothing to do.
     }
 
-    protected boolean skipRemainingValueBytes() throws Exception {
+    protected boolean skipRemainingValueBytes() throws IOException {
         if (buffer.limit >= valueMarker.endIndex) {
             buffer.quickSeekTo(valueMarker.endIndex);
         } else if (!buffer.seekTo(valueMarker.endIndex)) {
@@ -401,7 +400,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         return false;
     }
 
-    private void nextHeader() throws Exception {
+    private void nextHeader() throws IOException {
         peekIndex = checkpoint;
         event = Event.NEEDS_DATA;
         valueTid = null;
@@ -486,7 +485,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
      * @return a marker for the buffered value, or null if the value is not yet completely buffered.
      * @throws Exception
      */
-    private void fillValue() throws Exception {
+    private void fillValue() throws IOException {
         if (!makeBufferReady()) {
             return;
         }
@@ -511,7 +510,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         currentMakeBufferReadyFunction = carefulMakeBufferReadyFunction;
     }
 
-    private void stepIn() throws Exception {
+    private void stepIn() throws IOException {
         if (!makeBufferReady()) {
             return;
         }
@@ -531,7 +530,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         event = Event.NEEDS_INSTRUCTION;
     }
 
-    private void stepOut() throws Exception {
+    private void stepOut() throws IOException {
         if (containerStack.isEmpty()) {
             // Note: this is IllegalStateException for consistency with the other binary IonReader implementation.
             throw new IllegalStateException("Cannot step out at top level.");
@@ -561,19 +560,15 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
     }
 
     private interface MakeBufferReadyFunction {
-        boolean makeBufferReady();
+        boolean makeBufferReady() throws IOException;
     }
 
     private final MakeBufferReadyFunction carefulMakeBufferReadyFunction = new MakeBufferReadyFunction() {
         @Override
-        public boolean makeBufferReady() {
-            try {
-                if (!buffer.makeReady()) {
-                    event = Event.NEEDS_DATA;
-                    return false;
-                }
-            } catch (Exception e) {
-                throw new IonException(e);
+        public boolean makeBufferReady() throws IOException {
+            if (!buffer.makeReady()) {
+                event = Event.NEEDS_DATA;
+                return false;
             }
             return true;
         }
@@ -588,42 +583,24 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
 
     private MakeBufferReadyFunction currentMakeBufferReadyFunction = carefulMakeBufferReadyFunction;
 
-    private boolean makeBufferReady() {
+    private boolean makeBufferReady() throws IOException {
         return currentMakeBufferReadyFunction.makeBufferReady();
     }
 
     @Override
-    public Event next(Instruction instruction) {
+    public Event next(Instruction instruction) throws IOException {
         switch (instruction) {
             case STEP_IN:
-                try {
-                    stepIn();
-                } catch (Exception e) {
-                    throw new IonException(e);
-                }
+                stepIn();
                 break;
             case NEXT_VALUE:
-                try {
-                    nextHeader();
-                } catch (Exception e) {
-                    throw new IonException(e);
-                }
+                nextHeader();
                 break;
             case LOAD_VALUE:
-                try {
-                    fillValue();
-                } catch (Exception e) {
-                    throw new IonException(e);
-                }
+                fillValue();
                 break;
             case STEP_OUT:
-                try {
-                    stepOut();
-                } catch (RuntimeException e) {
-                    throw e;
-                } catch (Exception e) {
-                    throw new IonException(e);
-                }
+                stepOut();
                 break;
         }
         return event;

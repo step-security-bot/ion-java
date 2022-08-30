@@ -93,7 +93,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderRee
     }
 
     @Override
-    public Event next(Instruction instruction) {
+    public Event next(Instruction instruction) throws IOException {
         lobBytesRead = 0;
         if (instruction != Instruction.LOAD_VALUE) {
             // Keep the annotations if remaining positioned on the same scalar; otherwise, drop them.

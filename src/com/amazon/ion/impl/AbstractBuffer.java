@@ -18,7 +18,7 @@ abstract class AbstractBuffer implements Closeable {
     }
 
     private interface FillAtFunction {
-        boolean fillAt(long index, long numberOfBytes) throws Exception;
+        boolean fillAt(long index, long numberOfBytes) throws IOException;
     }
 
     private final SeekToFunction quickSeekToFunction = new SeekToFunction() {
@@ -45,7 +45,7 @@ abstract class AbstractBuffer implements Closeable {
 
     private final FillAtFunction carefulFillAtFunction = new FillAtFunction() {
         @Override
-        public boolean fillAt(long index, long numberOfBytes) throws Exception {
+        public boolean fillAt(long index, long numberOfBytes) throws IOException {
             return carefulFillAt(index, numberOfBytes);
         }
     };
@@ -109,13 +109,13 @@ abstract class AbstractBuffer implements Closeable {
         currentFillAtFunction = carefulFillAtFunction;
     }
 
-    final boolean fill(long numberOfBytes) throws Exception {
+    final boolean fill(long numberOfBytes) throws IOException {
         return fillAt(offset, numberOfBytes);
     }
 
-    protected abstract boolean carefulFillAt(long index, long numberOfBytes) throws Exception;
+    protected abstract boolean carefulFillAt(long index, long numberOfBytes) throws IOException;
 
-    final boolean fillAt(long index, long numberOfBytes) throws Exception {
+    final boolean fillAt(long index, long numberOfBytes) throws IOException {
         return currentFillAtFunction.fillAt(index, numberOfBytes);
     }
 
@@ -129,7 +129,7 @@ abstract class AbstractBuffer implements Closeable {
         return currentSeekToFunction.seekTo(index);
     }
 
-    boolean makeReady() throws Exception {
+    boolean makeReady() throws IOException {
         switch (state) {
             case READY:
                 return true;

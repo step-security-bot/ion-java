@@ -6,6 +6,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 
 import static com.amazon.ion.BitUtils.bytes;
 import static com.amazon.ion.IonCursor.Event.END_CONTAINER;
@@ -25,7 +26,7 @@ public class IonReaderLookaheadBufferArbitraryDepthTest {
 
     private static final IonBufferConfiguration STANDARD_BUFFER_CONFIGURATION = IonBufferConfiguration.Builder.standard().build();
 
-    private static IonBinaryLexerBase.Marker loadScalar(IonBinaryLexerRefillable buffer) {
+    private static IonBinaryLexerBase.Marker loadScalar(IonBinaryLexerRefillable buffer) throws IOException {
         IonCursor.Event event = buffer.next(LOAD_VALUE);
         assertEquals(VALUE_READY, event);
         IonBinaryLexerBase.Marker marker = buffer.getValueMarker();

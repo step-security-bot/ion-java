@@ -1,6 +1,7 @@
 package com.amazon.ion;
 
 import java.io.Closeable;
+import java.io.IOException;
 import java.io.InputStream;
 
 // TODO consider a different one for raw
@@ -21,7 +22,7 @@ public interface IonCursor extends Closeable {
         STEP_OUT
     }
 
-    Event next(Instruction instruction);
+    Event next(Instruction instruction) throws IOException;
 
     Event getCurrentEvent();
 

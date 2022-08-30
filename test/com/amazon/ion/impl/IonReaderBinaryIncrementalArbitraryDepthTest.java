@@ -168,14 +168,14 @@ public class IonReaderBinaryIncrementalArbitraryDepthTest {
         }
     }
 
-    private static void assertInt(int expected, IonReaderBinaryIncrementalArbitraryDepth reader) {
+    private static void assertInt(int expected, IonReaderBinaryIncrementalArbitraryDepth reader) throws IOException {
         assertEquals(VALUE_READY, reader.next(LOAD_VALUE));
         assertEquals(IonType.INT, reader.getType());
         assertTrue(reader.getIntegerSize().ordinal() >= IntegerSize.INT.ordinal());
         assertEquals(expected, reader.intValue());
     }
 
-    private static void assertStreamEnd(IonReaderBinaryIncrementalArbitraryDepth reader) {
+    private static void assertStreamEnd(IonReaderBinaryIncrementalArbitraryDepth reader) throws IOException {
         assertEquals(NEEDS_DATA, reader.next(NEXT_VALUE));
         assertNull(null, reader.getType());
     }
@@ -297,17 +297,17 @@ public class IonReaderBinaryIncrementalArbitraryDepthTest {
         reader.close();
     }
 
-    private static void assertText(IonType type, String value, IonReaderBinaryIncrementalArbitraryDepth reader) {
+    private static void assertText(IonType type, String value, IonReaderBinaryIncrementalArbitraryDepth reader) throws IOException {
         assertEquals(VALUE_READY, reader.next(LOAD_VALUE));
         assertEquals(type, reader.getType());
         assertEquals(value, reader.stringValue());
     }
 
-    private static void assertSymbol(String value, IonReaderBinaryIncrementalArbitraryDepth reader) {
+    private static void assertSymbol(String value, IonReaderBinaryIncrementalArbitraryDepth reader) throws IOException {
         assertText(IonType.SYMBOL, value, reader);
     }
 
-    private static void assertString(String value, IonReaderBinaryIncrementalArbitraryDepth reader) {
+    private static void assertString(String value, IonReaderBinaryIncrementalArbitraryDepth reader) throws IOException {
         assertText(IonType.STRING, value, reader);
     }
 

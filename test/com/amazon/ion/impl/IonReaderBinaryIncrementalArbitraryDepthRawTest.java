@@ -52,7 +52,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRawTest {
     }
 
     @Test
-    public void basicContainer() {
+    public void basicContainer() throws Exception {
         initializeBuffer(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD3, 0x84, 0x21, 0x01));
         assertEquals(START_CONTAINER, reader.next(NEXT_VALUE));
         assertEquals(NEEDS_INSTRUCTION, reader.next(STEP_IN));

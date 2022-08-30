@@ -46,7 +46,7 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
     }
 
     @Override
-    public Event next(Instruction instruction) {
+    public Event next(Instruction instruction) throws IOException {
         while (true) {
             Event event = super.next(instruction);
             if (isSkippingCurrentValue) {
@@ -79,19 +79,19 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
     }
 
     private interface ReadByteFunction {
-        int readByte() throws Exception;
+        int readByte() throws IOException;
     }
 
     private final ReadByteFunction carefulReadByteFunction = new ReadByteFunction() {
         @Override
-        public int readByte() throws Exception {
+        public int readByte() throws IOException {
             return carefulReadByte();
         }
     };
 
     private final ReadByteFunction quickReadByteFunction = new ReadByteFunction() {
         @Override
-        public int readByte() throws Exception {
+        public int readByte() throws IOException {
             return peekByte();
         }
     };
@@ -99,7 +99,7 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
     private ReadByteFunction currentReadByteFunction = carefulReadByteFunction;
 
     @Override
-    protected int peekByte() throws Exception {
+    protected int peekByte() throws IOException {
         int b;
         if (isSkippingCurrentValue) {
             b = buffer.readByteWithoutBuffering();
@@ -115,7 +115,7 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
     }
 
 
-    protected int carefulReadByte() throws Exception {
+    protected int carefulReadByte() throws IOException {
         int b;
         if (isSkippingCurrentValue) {
             // If the value is being skipped, the byte will not have been buffered.
@@ -140,7 +140,7 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
      * @throws IOException if an IOException is thrown by the underlying InputStream.
      */
     @Override
-    protected int readByte() throws Exception {
+    protected int readByte() throws IOException {
         return currentReadByteFunction.readByte();
     }
 
