@@ -87,13 +87,6 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
      *   for the user thread, and one for the pre-fetching thread. They are swapped every time the user calls next().
      */
 
-    /**
-     * The standard {@link IonBufferConfiguration}. This will be used unless the user chooses custom settings.
-     */
-    private static final IonBufferConfiguration STANDARD_BUFFER_CONFIGURATION =
-        IonBufferConfiguration.Builder.standard().build();
-
-
     // Symbol IDs for symbols contained in the system symbol table.
     private static class SystemSymbolIDs {
 
@@ -116,36 +109,6 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         private static final int MAX_ID_ID = 8;
     }
 
-    /**
-     * @param value a non-negative number.
-     * @return the exponent of the next power of two greater than the given number.
-     */
-    private static int logBase2(int value) {
-        return 32 - Integer.numberOfLeadingZeros(value == 0 ? 0 : value - 1);
-    }
-
-    /**
-     * Cache of configurations for fixed-sized streams. FIXED_SIZE_CONFIGURATIONS[i] returns a configuration with
-     * buffer size max(8, 2^i). Retrieve a configuration large enough for a given size using
-     * FIXED_SIZE_CONFIGURATIONS(logBase2(size)). Only supports sizes less than or equal to
-     * STANDARD_BUFFER_CONFIGURATION.getInitialBufferSize().
-     */
-    private static final IonBufferConfiguration[] FIXED_SIZE_CONFIGURATIONS;
-
-    static {
-        int maxBufferSizeExponent = logBase2(STANDARD_BUFFER_CONFIGURATION.getInitialBufferSize());
-        FIXED_SIZE_CONFIGURATIONS = new IonBufferConfiguration[maxBufferSizeExponent + 1];
-        for (int i = 0; i <= maxBufferSizeExponent; i++) {
-            // Create a buffer configuration for buffers of size 2^i. The minimum size is 8: the smallest power of two
-            // larger than the minimum buffer size allowed.
-            int size = Math.max(8, (int) Math.pow(2, i));
-            FIXED_SIZE_CONFIGURATIONS[i] = IonBufferConfiguration.Builder.from(STANDARD_BUFFER_CONFIGURATION)
-                .withInitialBufferSize(size)
-                .withMaximumBufferSize(size)
-                .build();
-        }
-    }
-
     // An IonCatalog containing zero shared symbol tables.
     private static final IonCatalog EMPTY_CATALOG = new SimpleCatalog();
 
@@ -155,9 +118,6 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
     // The imports for Ion 1.0 data with no shared user imports.
     private static final LocalSymbolTableImports ION_1_0_IMPORTS
         = new LocalSymbolTableImports(SharedSymbolTable.getSystemSymbolTable(1));
-
-    // The InputStream that provides the binary Ion data.
-    private final InputStream inputStream;
 
     // The raw reader responsible for parsing Ion structure and values.
     private final IonReaderBinaryIncrementalArbitraryDepthRaw raw;
@@ -191,15 +151,24 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
     // The SymbolTable that was transferred via the last call to pop_passed_symbol_table.
     private SymbolTable symbolTableLastTransferred = null;
 
+    private final IonBinaryLexerBase.IvmNotificationConsumer ivmNotificationConsumer = new IonBinaryLexerRefillable.IvmNotificationConsumer() {
+        @Override
+        public void ivmEncountered(int majorVersion, int minorVersion) {
+            // TODO use the versions to set the proper system symbol table and local symbol table processing
+            //  logic.
+            resetSymbolTable();
+            resetImports();
+        }
+    };
+
     // ------
 
     /**
      * Constructor.
      * @param builder the builder containing the configuration for the new reader.
-     * @param inputStream the InputStream that provides binary Ion data.
+     * @param buffer the buffer that provides binary Ion data.
      */
-    IonReaderBinaryIncrementalArbitraryDepth(IonReaderBuilder builder, InputStream inputStream) {
-        this.inputStream = inputStream;
+    IonReaderBinaryIncrementalArbitraryDepth(IonReaderBuilder builder, FixedBufferFromByteArray buffer) {
         this.catalog = builder.getCatalog() == null ? EMPTY_CATALOG : builder.getCatalog();
         if (builder.isAnnotationIteratorReuseEnabled()) {
             isAnnotationIteratorReuseEnabled = true;
@@ -208,58 +177,57 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
             isAnnotationIteratorReuseEnabled = false;
             annotationIterator = null;
         }
-        final IonBufferConfiguration configuration;
-        if (builder.getBufferConfiguration() == null) {
-            if (inputStream instanceof ByteArrayInputStream) {
-                // ByteArrayInputStreams are fixed-size streams. Clamp the reader's internal buffer size at the size of
-                // the stream to avoid wastefully allocating extra space that will never be needed. It is still
-                // preferable for the user to manually specify the buffer size if it's less than the default, as doing
-                // so allows this branch to be skipped.
-                int fixedBufferSize;
-                try {
-                    fixedBufferSize = inputStream.available();
-                } catch (IOException e) {
-                    // ByteArrayInputStream.available() does not throw.
-                    throw new IllegalStateException(e);
-                }
-                if (STANDARD_BUFFER_CONFIGURATION.getInitialBufferSize() > fixedBufferSize) {
-                    configuration = FIXED_SIZE_CONFIGURATIONS[logBase2(fixedBufferSize)];
-                } else {
-                    configuration = STANDARD_BUFFER_CONFIGURATION;
-                }
-            } else {
-                configuration = STANDARD_BUFFER_CONFIGURATION;
-            }
-        } else {
-            configuration = builder.getBufferConfiguration();
-        }
-        raw = new IonReaderBinaryIncrementalArbitraryDepthRaw(
-            configuration,
-            new BufferConfiguration.OversizedValueHandler() {
-                @Override
-                public void onOversizedValue() throws Exception {
-                    if (isReadingSymbolTable() || isPositionedOnSymbolTable()) {
-                        configuration.getOversizedSymbolTableHandler().onOversizedSymbolTable();
-                        terminate();
-                    } else {
-                        configuration.getOversizedValueHandler().onOversizedValue();
-                    }
-                }
-            },
-            new IonBinaryLexerRefillable.IvmNotificationConsumer() {
-                @Override
-                public void ivmEncountered(int majorVersion, int minorVersion) {
-                    // TODO use the versions to set the proper system symbol table and local symbol table processing
-                    //  logic.
-                    resetSymbolTable();
-                    resetImports();
-                }
-            },
-            inputStream
-        );
         symbols = new ArrayList<String>(SYMBOLS_LIST_INITIAL_CAPACITY);
         symbolTableReader = new SymbolTableReader();
         resetImports();
+        BufferConfiguration.DataHandler dataHandler = null;
+        if (builder.getBufferConfiguration() != null) {
+            dataHandler = builder.getBufferConfiguration().getDataHandler();
+        }
+        raw = new IonReaderBinaryIncrementalArbitraryDepthRaw(
+            new IonBinaryLexerFixed(
+                dataHandler,
+                ivmNotificationConsumer,
+                buffer
+            )
+        );
+    }
+
+    /**
+     * Constructor.
+     * @param builder the builder containing the configuration for the new reader.
+     * @param buffer the buffer that provides binary Ion data.
+     */
+    IonReaderBinaryIncrementalArbitraryDepth(IonReaderBuilder builder, RefillableBuffer buffer) {
+        this.catalog = builder.getCatalog() == null ? EMPTY_CATALOG : builder.getCatalog();
+        if (builder.isAnnotationIteratorReuseEnabled()) {
+            isAnnotationIteratorReuseEnabled = true;
+            annotationIterator = new AnnotationIterator();
+        } else {
+            isAnnotationIteratorReuseEnabled = false;
+            annotationIterator = null;
+        }
+        symbols = new ArrayList<String>(SYMBOLS_LIST_INITIAL_CAPACITY);
+        symbolTableReader = new SymbolTableReader();
+        resetImports();
+        final IonBufferConfiguration configuration = (IonBufferConfiguration) buffer.getConfiguration();
+        raw = new IonReaderBinaryIncrementalArbitraryDepthRaw(
+            new IonBinaryLexerRefillable(
+                new BufferConfiguration.OversizedValueHandler() {
+                    @Override
+                    public void onOversizedValue() throws Exception {
+                        if (isReadingSymbolTable() || isPositionedOnSymbolTable()) {
+                            configuration.getOversizedSymbolTableHandler().onOversizedSymbolTable();
+                            terminate();
+                        } else {
+                            configuration.getOversizedValueHandler().onOversizedValue();
+                        }
+                    }
+                },
+                ivmNotificationConsumer,
+                buffer
+            )
+        );
     }
 
     private void terminate() {
@@ -1272,8 +1240,7 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
 
     @Override
     public void close() throws IOException {
-        //requireCompleteValue();
-        inputStream.close();
+        raw.close();
     }
 
 }

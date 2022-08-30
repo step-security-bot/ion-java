@@ -24,7 +24,17 @@ public class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_R
     private IonType type = null; // TODO see if it's possible to remove this
 
     IonReaderBinaryIncrementalTopLevel(IonReaderBuilder builder, InputStream inputStream) {
-        reader = new IonReaderBinaryIncrementalArbitraryDepth(builder, inputStream);
+        reader = new IonReaderBinaryIncrementalArbitraryDepth(
+            builder,
+            new RefillableBufferFromInputStream(inputStream, builder.getBufferConfiguration())
+        );
+    }
+
+    IonReaderBinaryIncrementalTopLevel(IonReaderBuilder builder, byte[] data, int offset, int length) {
+        reader = new IonReaderBinaryIncrementalArbitraryDepth(
+            builder,
+            new FixedBufferFromByteArray(data, offset, length)
+        );
     }
 
     @Override

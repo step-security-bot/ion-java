@@ -30,6 +30,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -54,6 +56,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+@RunWith(Parameterized.class)
 public class IonReaderBinaryIncrementalTest {
 
     private static final IonSystem SYSTEM = IonSystemBuilder.standard().build();
@@ -63,6 +66,14 @@ public class IonReaderBinaryIncrementalTest {
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
+
+    @Parameterized.Parameters(name = "constructWithBytes={0}")
+    public static Object[] parameters() {
+        return new Object[]{true, false};
+    }
+
+    @Parameterized.Parameter
+    public boolean constructFromBytes;
 
     // Builds the incremental reader. May be overwritten by individual tests.
     private IonReaderBuilder readerBuilder;
@@ -100,13 +111,27 @@ public class IonReaderBinaryIncrementalTest {
     }
 
     /**
+     * Creates an incremental reader over the given binary Ion, constructing a reader either from byte array or
+     * from InputStream depending on the value of the parameter 'constructFromBytes'.
+     * @param builder the reader builder.
+     * @param bytes the binary Ion data.
+     * @return a new reader.
+     */
+    private IonReader readerFor(IonReaderBuilder builder, byte[] bytes) {
+        if (constructFromBytes) {
+            return new IonReaderBinaryIncrementalTopLevel(builder, bytes, 0, bytes.length);
+        }
+        return new IonReaderBinaryIncrementalTopLevel(builder, new ByteArrayInputStream(bytes));
+    }
+
+    /**
      * Creates an incremental reader over the binary equivalent of the given text Ion.
      * @param ion text Ion data.
      * @return a new reader.
      * @throws Exception if an exception is raised while converting the Ion data.
      */
     private IonReader readerFor(String ion) throws Exception {
-        return new IonReaderBinaryIncrementalTopLevel(readerBuilder, new ByteArrayInputStream(toBinary(ion)));
+        return readerFor(readerBuilder, toBinary(ion));
     }
 
     /**
@@ -123,7 +148,7 @@ public class IonReaderBinaryIncrementalTest {
         out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
         writerFunction.write(writer, out);
         writer.close();
-        return new IonReaderBinaryIncrementalTopLevel(readerBuilder, new ByteArrayInputStream(out.toByteArray()));
+        return readerFor(readerBuilder, out.toByteArray());
     }
 
     /**
@@ -137,7 +162,7 @@ public class IonReaderBinaryIncrementalTest {
         IonWriter writer = writerBuilder.build(out);
         writerFunction.write(writer);
         writer.close();
-        return new IonReaderBinaryIncrementalTopLevel(readerBuilder, new ByteArrayInputStream(out.toByteArray()));
+        return readerFor(readerBuilder, out.toByteArray());
     }
 
     /**
@@ -146,12 +171,18 @@ public class IonReaderBinaryIncrementalTest {
      * @return a new reader.
      */
     private IonReader readerFor(int... ion) throws Exception {
-        return new IonReaderBinaryIncrementalTopLevel(
-            readerBuilder,
-            new ByteArrayInputStream(new TestUtils.BinaryIonAppender().append(ion).toByteArray())
-        );
+        return readerFor(readerBuilder, new TestUtils.BinaryIonAppender().append(ion).toByteArray());
     }
 
+    /**
+     * Creates an incremental reader over the given binary Ion. This should only be used in cases where tests exercise
+     * behavior that does not exist when constructing a reader over a fixed buffer via byte array. In all other cases,
+     * use one of the other `readerFor` variants, which construct readers according to the 'constructFromBytes'
+     * parameter.
+     * @param builder the reader builder.
+     * @param input the binary Ion data.
+     * @return a new reader.
+     */
     private static IonReader readerFor(IonReaderBuilder builder, InputStream input) {
         return new IonReaderBinaryIncrementalTopLevel(builder, input);
     }
@@ -693,8 +724,7 @@ public class IonReaderBinaryIncrementalTest {
     public void invalidVersion() throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.write(bytes(0xE0, 0x01, 0x74, 0xEA, 0x20));
-        InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReader reader = readerFor(STANDARD_READER_BUILDER, input);
+        IonReader reader = readerFor(STANDARD_READER_BUILDER, out.toByteArray());
         thrown.expect(IonException.class);
         reader.next();
     }
@@ -703,8 +733,7 @@ public class IonReaderBinaryIncrementalTest {
     public void invalidVersionMarker() throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.write(bytes(0xE0, 0x01, 0x00, 0xEB, 0x20));
-        InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReader reader = readerFor(STANDARD_READER_BUILDER, input);
+        IonReader reader = readerFor(STANDARD_READER_BUILDER, out.toByteArray());
         thrown.expect(IonException.class);
         reader.next();
     }
@@ -3150,7 +3179,7 @@ public class IonReaderBinaryIncrementalTest {
                 .onData(handler)
                 .build()
         );
-        return readerFor(builder, new ByteArrayInputStream(bytes));
+        return readerFor(builder, bytes);
     }
 
     @Test

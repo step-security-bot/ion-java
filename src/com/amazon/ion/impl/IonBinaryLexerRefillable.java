@@ -5,7 +5,6 @@ import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonException;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffer> {
 
@@ -22,20 +21,11 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
     private int individualBytesSkippedWithoutBuffering = 0;
 
     IonBinaryLexerRefillable(
-        final IonBufferConfiguration configuration,
         final BufferConfiguration.OversizedValueHandler oversizedValueHandler,
         final IvmNotificationConsumer ivmConsumer,
-        final InputStream inputStream
+        final RefillableBuffer buffer
     ) {
-        super(
-            new RefillableBufferFromInputStream(
-                inputStream,
-                configuration.getInitialBufferSize(),
-                configuration.getMaximumBufferSize()
-            ),
-            configuration.getDataHandler(),
-            ivmConsumer
-        );
+        super(buffer, buffer.getConfiguration().getDataHandler(), ivmConsumer);
         buffer.registerNotificationConsumer(
             new RefillableBuffer.NotificationConsumer() {
                 @Override
@@ -52,7 +42,7 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
             }
         );
         this.oversizedValueHandler = oversizedValueHandler;
-        pageSize = configuration.getInitialBufferSize();
+        pageSize = buffer.getConfiguration().getInitialBufferSize();
     }
 
     @Override
@@ -275,5 +265,8 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
          */
     }
 
-
+    @Override
+    public void close() throws IOException {
+        buffer.close();
+    }
 }

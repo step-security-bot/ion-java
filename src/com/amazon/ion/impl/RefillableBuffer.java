@@ -1,5 +1,7 @@
 package com.amazon.ion.impl;
 
+import com.amazon.ion.BufferConfiguration;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -35,6 +37,8 @@ abstract class RefillableBuffer extends AbstractBuffer {
         }
     };
 
+    private final BufferConfiguration<?> configuration;
+
     /**
      * The initial size of the buffer and the number of bytes by which the size of the buffer will increase
      * each time it grows, unless it must grow by a smaller amount to fit within 'maximumBufferSize'.
@@ -51,19 +55,19 @@ abstract class RefillableBuffer extends AbstractBuffer {
 
     protected byte[] buffer;
 
-    RefillableBuffer(final int initialBufferSize, final int maximumBufferSize) {
-        if (initialBufferSize < 1) {
+    RefillableBuffer(final BufferConfiguration<?> configuration) {
+        if (configuration.getInitialBufferSize() < 1) {
             throw new IllegalArgumentException("Initial buffer size must be at least 1.");
         }
-        if (maximumBufferSize < initialBufferSize) {
+        if (configuration.getMaximumBufferSize() < configuration.getInitialBufferSize()) {
             throw new IllegalArgumentException("Maximum buffer size cannot be less than the initial buffer size.");
         }
-
+        this.configuration = configuration;
+        this.initialBufferSize = configuration.getInitialBufferSize();
+        this.maximumBufferSize = configuration.getMaximumBufferSize();
+        this.capacity = initialBufferSize;
         buffer = new byte[initialBufferSize];
         byteBuffer = ByteBuffer.wrap(buffer, 0, initialBufferSize);
-        this.initialBufferSize = initialBufferSize;
-        this.maximumBufferSize = maximumBufferSize;
-        this.capacity = initialBufferSize;
     }
 
     void registerNotificationConsumer(NotificationConsumer notificationConsumer) {
@@ -197,5 +201,9 @@ abstract class RefillableBuffer extends AbstractBuffer {
      */
     private long freeSpaceAt(long index) {
         return capacity - index;
+    }
+
+    final BufferConfiguration<?> getConfiguration() {
+        return configuration;
     }
 }

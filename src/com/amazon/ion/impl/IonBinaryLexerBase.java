@@ -5,6 +5,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonType;
 
+import java.io.IOException;
 import java.io.InputStream;
 
 abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonCursor {
@@ -20,6 +21,13 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
     private static final int ION_SYMBOL_TABLE_SID = 3;
     // The following is a limitation imposed by this implementation, not the Ion specification.
     private static final long MAXIMUM_VALUE_SIZE = Integer.MAX_VALUE;
+
+    private static final BufferConfiguration.DataHandler NO_OP_DATA_HANDLER = new BufferConfiguration.DataHandler() {
+        @Override
+        public void onData(long numberOfBytes) {
+            // Do nothing.
+        }
+    };
 
     protected enum CheckpointLocation {
         BEFORE_UNANNOTATED_TYPE_ID,
@@ -130,9 +138,9 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
 
     private int fieldSid;
     
-    protected long checkpoint = 0;
+    protected long checkpoint;
 
-    protected long peekIndex = 0;
+    protected long peekIndex;
 
     IonBinaryLexerBase(
         final Buffer buffer,
@@ -140,12 +148,14 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         final IvmNotificationConsumer ivmConsumer
     ) {
         this.buffer = buffer;
-        this.dataHandler = dataHandler;
+        this.dataHandler = dataHandler == null ? NO_OP_DATA_HANDLER : dataHandler;
         this.ivmConsumer = ivmConsumer;
         containerStack = new _Private_RecyclingStack<ContainerInfo>(
             CONTAINER_STACK_INITIAL_CAPACITY,
             CONTAINER_INFO_FACTORY
         );
+        peekIndex = buffer.getOffset();
+        checkpoint = peekIndex;
     }
 
     protected abstract int readByte() throws Exception; // TODO remove throws Exception
@@ -306,11 +316,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
             if (IonType.isContainer(valueTid.type)) {
                 setCheckpoint(CheckpointLocation.AFTER_CONTAINER_HEADER);
                 event = Event.START_CONTAINER;
-            } else {
-                setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER);
-                event = Event.START_SCALAR;
-            }
-            if (valueTid.isNopPad) {
+            } else if (valueTid.isNopPad) {
                 if (isAnnotated) {
                     throw new IonException(
                         "Invalid annotation wrapper: NOP pad may not occur inside an annotation wrapper."
@@ -324,6 +330,9 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
                 valueLength = 0;
                 setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
                 checkContainerEnd();
+            } else {
+                setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER);
+                event = Event.START_SCALAR;
             }
         }
         verifyValueLength(valueLength, isAnnotated);
@@ -702,7 +711,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
     }
 
     @Override
-    public void close() {
+    public void close() throws IOException {
         // Nothing to do.
     }
 }

@@ -99,11 +99,10 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
             return build(new ByteArrayInputStream(ionData, offset, length));
         }
         if (IonStreamUtils.isIonBinary(ionData, offset, length)) {
-            // TODO provide the bytes directly, no InputStream wrapper
             if (isIncrementalReadingEnabled()) {
-                return makeIncrementalReader(this, new ByteArrayInputStream(ionData, offset, length));
+                return makeIncrementalReader(this, ionData, offset, length);
             } else {
-                return makeNonReentrantReader(this, new ByteArrayInputStream(ionData, offset, length));
+                return makeNonReentrantReader(this, ionData, offset, length);
             }
         }
         return makeTextReader(validateCatalog(), ionData, offset, length, lstFactory);

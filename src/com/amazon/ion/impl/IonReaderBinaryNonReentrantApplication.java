@@ -12,7 +12,21 @@ public class IonReaderBinaryNonReentrantApplication
     extends IonReaderBinaryNonReentrantCore<IonReaderReentrantApplication> {
 
     IonReaderBinaryNonReentrantApplication(IonReaderBuilder builder, InputStream inputStream) {
-        super(new IonReaderBinaryIncrementalArbitraryDepth(builder, inputStream));
+        super(
+            new IonReaderBinaryIncrementalArbitraryDepth(
+                builder,
+                new RefillableBufferFromInputStream(inputStream, builder.getBufferConfiguration())
+            )
+        );
+    }
+
+    IonReaderBinaryNonReentrantApplication(IonReaderBuilder builder, byte[] data, int offset, int length) {
+        super(
+            new IonReaderBinaryIncrementalArbitraryDepth(
+                builder,
+                new FixedBufferFromByteArray(data, offset, length)
+            )
+        );
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.amazon.ion.impl;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 class FixedBufferFromByteArray extends AbstractBuffer {
@@ -37,7 +38,7 @@ class FixedBufferFromByteArray extends AbstractBuffer {
 
     @Override
     protected boolean seek(long numberOfBytes) {
-        if (numberOfBytes < available()) {
+        if (numberOfBytes > available()) {
             offset = limit;
             state = State.SEEK;
             return false;
@@ -45,5 +46,10 @@ class FixedBufferFromByteArray extends AbstractBuffer {
         offset += numberOfBytes;
         state = State.READY;
         return true;
+    }
+
+    @Override
+    public void close() throws IOException {
+        // Nothing to do.
     }
 }

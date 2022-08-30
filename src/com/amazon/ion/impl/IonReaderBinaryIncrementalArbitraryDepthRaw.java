@@ -13,6 +13,7 @@ import com.amazon.ion.impl.bin.IntList;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoder;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoderPool;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -65,7 +66,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderRee
     // Java `long` via `IonReader.longValue()`.
     private final _Private_ScalarConversions.ValueVariant scalarConverter;
 
-    private final IonBinaryLexerRefillable lexer;
+    private final IonBinaryLexerBase<?> lexer;
 
     private final Utf8StringDecoder utf8Decoder = Utf8StringDecoderPool.getInstance().getOrCreate();
 
@@ -82,16 +83,11 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderRee
     // The symbol IDs for the annotations on the current value.
     private final IntList annotationSids;
 
-    IonReaderBinaryIncrementalArbitraryDepthRaw(
-        IonBufferConfiguration bufferConfiguration,
-        BufferConfiguration.OversizedValueHandler oversizedValueHandler,
-        IonBinaryLexerRefillable.IvmNotificationConsumer ivmConsumer,
-        InputStream inputStream
-    ) {
+    IonReaderBinaryIncrementalArbitraryDepthRaw(IonBinaryLexerBase<?> lexer) {
         scalarConverter = new _Private_ScalarConversions.ValueVariant();
         // Note: implementing Ion 1.1 support may require handling of Ion version changes in this class, rather
         // than simple upward delegation.
-        lexer = new IonBinaryLexerRefillable(bufferConfiguration, oversizedValueHandler, ivmConsumer, inputStream);
+        this.lexer = lexer;
         annotationSids = new IntList(ANNOTATIONS_LIST_INITIAL_CAPACITY);
         annotationIterator = new AnnotationIterator(); // TODO only if reusable is enabled?
     }
@@ -774,8 +770,8 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderRee
     }
 
     @Override
-    public void close() {
+    public void close() throws IOException {
         utf8Decoder.close();
-        // TODO where does InputStream get closed?
+        lexer.close();
     }
 }
