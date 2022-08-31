@@ -528,7 +528,8 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
     }
 
     private void stepOut() throws IOException {
-        if (containerStack.isEmpty()) {
+        ContainerInfo containerInfo = containerStack.peek();
+        if (containerInfo == null) {
             // Note: this is IllegalStateException for consistency with the other binary IonReader implementation.
             throw new IllegalStateException("Cannot step out at top level.");
         }
@@ -537,7 +538,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         }
         // Seek past the remaining bytes at this depth, pop from the stack, and subtract the number of bytes
         // consumed at the previous depth from the remaining bytes needed at the current depth.
-        ContainerInfo containerInfo = containerStack.peek();
         event = Event.NEEDS_DATA;
         // Seek past any remaining bytes from the previous value.
         if (!buffer.seekTo(containerInfo.endIndex)) {
