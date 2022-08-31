@@ -1,7 +1,6 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.BufferConfiguration;
-import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonException;
 
 import java.io.IOException;
@@ -145,13 +144,13 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
     }
 
     @Override
-    protected void verifyValueLength(long valueLength, boolean isAnnotated) {
+    protected void setValueMarker(long valueLength, boolean isAnnotated) {
         if (isSkippingCurrentValue) {
             // If the value is being skipped, not all of its bytes will be buffered, so start/end indexes will not
             // align to the expected values. This is fine, because the value will not be accessed.
             return;
         }
-        super.verifyValueLength(valueLength, isAnnotated);
+        super.setValueMarker(valueLength, isAnnotated);
     }
 
     @Override

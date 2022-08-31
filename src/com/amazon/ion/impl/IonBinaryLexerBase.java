@@ -157,7 +157,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
 
     protected abstract int readByte() throws IOException;
 
-    protected void verifyValueLength(long valueLength, boolean isAnnotated) {
+    protected void setValueMarker(long valueLength, boolean isAnnotated) {
         long endIndex = checkpoint + valueLength;
         if (!containerStack.isEmpty()) {
             if (endIndex > containerStack.peek().endIndex) {
@@ -173,16 +173,16 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
     }
 
     private boolean checkContainerEnd() {
-        if (!containerStack.isEmpty()) {
-            if (containerStack.peek().endIndex == peekIndex) {
-                event = Event.END_CONTAINER;
-                valueTid = null;
-                return true;
-            } else if (containerStack.peek().endIndex < peekIndex) {
-                throw new IonException("Contained values overflowed the parent container length.");
-            }
+        ContainerInfo parent = containerStack.peek();
+        if (parent == null || parent.endIndex > peekIndex) {
+            return false;
         }
-        return false;
+        if (parent.endIndex == peekIndex) {
+            event = Event.END_CONTAINER;
+            valueTid = null;
+            return true;
+        }
+        throw new IonException("Contained values overflowed the parent container length.");
     }
 
     protected void reset() {
@@ -261,7 +261,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
             throw new IonException("Annotation wrapper must wrap a value.");
         }
         setCheckpoint(CheckpointLocation.BEFORE_ANNOTATED_TYPE_ID);
-        verifyValueLength(valueLength, false);
+        setValueMarker(valueLength, false);
         return false;
     }
 
@@ -306,7 +306,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
             setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER);
             event = Event.START_SCALAR;
         }
-        verifyValueLength(valueLength, isAnnotated);
+        setValueMarker(valueLength, isAnnotated);
         return false;
     }
 
@@ -492,7 +492,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         }
         event = Event.NEEDS_DATA;
 
-        if (buffer.fillAt(peekIndex, valueMarker.endIndex - valueMarker.startIndex)) {
+        if (buffer.limit >= valueMarker.endIndex || buffer.fillAt(peekIndex, valueMarker.endIndex - valueMarker.startIndex)) {
             event = handleFill();
         }
     }
