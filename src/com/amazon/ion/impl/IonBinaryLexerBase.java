@@ -315,34 +315,32 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
      * @param isAnnotated true if this type ID is on a value within an annotation wrapper; false if it is not.
      * @throws IOException if thrown by the underlying InputStream.
      */
-    private IonTypeID parseTypeID(final int typeIdByte, final boolean isAnnotated) throws IOException {
+    private boolean parseTypeID(final int typeIdByte, final boolean isAnnotated) throws IOException {
         IonTypeID valueTid = IonTypeID.TYPE_IDS[typeIdByte];
-        if (typeIdByte == IVM_START_BYTE && containerStack.isEmpty()) {
-            if (isAnnotated) {
-                throw new IonException("Invalid annotation header.");
-            }
-            if (!buffer.fillAt(peekIndex, IVM_REMAINING_LENGTH)) {
-                return null;
-            }
-            parseIvm();
-        } else if (!valueTid.isValid) {
+        if (!valueTid.isValid) {
             throw new IonException("Invalid type ID.");
-        } else if (majorVersion < 1) {
-            throw new IonException("Invalid binary Ion.");
         } else if (valueTid.type == IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {
             // Annotation.
             if (isAnnotated) {
                 throw new IonException("Nested annotation wrappers are invalid.");
             }
             if (parseAnnotationWrapperHeader(valueTid)) {
-                return null;
+                return true;
             }
         } else {
             if (parseValueHeader(valueTid, isAnnotated)) {
-                return null;
+                return true;
             }
         }
-        return valueTid;
+        this.valueTid = valueTid;
+        if (checkpointLocation == CheckpointLocation.AFTER_SCALAR_HEADER) {
+            return true;
+        }
+        if (checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER) {
+            prohibitEmptyOrderedStruct();
+            return true;
+        }
+        return false;
     }
 
     protected int peekByte() throws IOException {
@@ -406,25 +404,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         return false;
     }
 
-    private boolean nextCheckpoint(boolean isAnnotated) throws IOException {
-        int b = readByte();
-        if (b < 0) {
-            return true;
-        }
-        valueTid = parseTypeID(b, isAnnotated);
-        if (valueTid == null) {
-            return true;
-        }
-        if (checkpointLocation == CheckpointLocation.AFTER_SCALAR_HEADER) {
-            return true;
-        }
-        if (checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER) {
-            prohibitEmptyOrderedStruct();
-            return true;
-        }
-        return false;
-    }
-
     private boolean readFieldSid() throws IOException {
         // The value must have at least 2 more bytes: 1 for the smallest-possible field SID and 1 for
         // the smallest-possible representation.
@@ -449,13 +428,28 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
                     if (isInStruct() && readFieldSid()) {
                         return;
                     }
-                    if (nextCheckpoint(false)) {
+                    int b = readByte();
+                    if (b < 0) {
                         return;
                     }
-                    // Either an IVM or NOP has been skipped, or an annotation wrapper has been consumed.
+                    if (b == IVM_START_BYTE && containerStack.isEmpty()) {
+                        if (!buffer.fillAt(peekIndex, IVM_REMAINING_LENGTH)) {
+                            return;
+                        }
+                        parseIvm();
+                        continue;
+                    }
+                    if (parseTypeID(b, false)) {
+                        return;
+                    }
+                    // Either a NOP has been skipped, or an annotation wrapper has been consumed.
                     continue;
                 case BEFORE_ANNOTATED_TYPE_ID:
-                    nextCheckpoint(true);
+                    b = readByte();
+                    if (b < 0) {
+                        return;
+                    }
+                    parseTypeID(b, true);
                     // If already within an annotation wrapper, neither an IVM nor a NOP is possible, so the lexer
                     // must be positioned after the header for the wrapped value.
                     return;

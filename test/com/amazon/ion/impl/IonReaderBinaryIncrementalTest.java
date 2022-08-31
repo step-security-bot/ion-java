@@ -27,6 +27,7 @@ import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.SimpleCatalog;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -933,6 +934,8 @@ public class IonReaderBinaryIncrementalTest {
         incrementalMultipleValuesIterate(iterator, pipe);
     }
 
+    @Ignore // Note: this is fairly expensive to enforce, without much benefit. If a reader is incrementally fed
+            // data that does not start with an IVM, it will fail quickly unless the data is otherwise valid Ion.
     @Test
     public void incrementalReadInitiallyEmptyStreamThatTurnsOutToBeText() {
         // Note: if incremental text read support is added, this test will start failing, which is expected. For now,
