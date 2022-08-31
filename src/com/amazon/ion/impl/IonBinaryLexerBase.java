@@ -18,9 +18,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
     private static final int IVM_START_BYTE = 0xE0;
     private static final int IVM_FINAL_BYTE = 0xEA;
     private static final int IVM_REMAINING_LENGTH = 3; // Length of the IVM after the first byte.
-    private static final int ION_SYMBOL_TABLE_SID = 3;
-    // The following is a limitation imposed by this implementation, not the Ion specification.
-    private static final long MAXIMUM_VALUE_SIZE = Integer.MAX_VALUE;
 
     private static final BufferConfiguration.DataHandler NO_OP_DATA_HANDLER = new BufferConfiguration.DataHandler() {
         @Override
@@ -160,15 +157,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
 
     protected abstract int readByte() throws IOException;
 
-    /**
-     * Throw if the reader is attempting to process an Ion version that it does not support.
-     */
-    private void requireSupportedIonVersion() {
-        if (majorVersion != 1 || minorVersion != 0) {
-            throw new IonException(String.format("Unsupported Ion version: %d.%d", majorVersion, minorVersion));
-        }
-    }
-
     protected void verifyValueLength(long valueLength, boolean isAnnotated) {
         long endIndex = checkpoint + valueLength;
         if (!containerStack.isEmpty()) {
@@ -219,6 +207,109 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         checkpoint = peekIndex;
     }
 
+    private void parseIvm() {
+        majorVersion = buffer.peek(peekIndex++);
+        minorVersion = buffer.peek(peekIndex++);
+        if (buffer.peek(peekIndex++) != IVM_FINAL_BYTE) {
+            throw new IonException("Invalid Ion version marker.");
+        }
+        if (majorVersion != 1 || minorVersion != 0) {
+            throw new IonException(String.format("Unsupported Ion version: %d.%d", majorVersion, minorVersion));
+        }
+        ivmConsumer.ivmEncountered(majorVersion, minorVersion);
+        setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
+    }
+
+    private boolean parseAnnotationWrapperHeader(IonTypeID valueTid) throws IOException {
+        long valueLength;
+        int minimumAdditionalBytesNeeded;
+        if (valueTid.variableLength) {
+            // At this point the value must be at least 4 more bytes: 1 for the smallest-possible wrapper length, 1
+            // for the smallest-possible annotations length, one for the smallest-possible annotation, and 1 for the
+            // smallest-possible value representation.
+            minimumAdditionalBytesNeeded = 4;
+            if (!buffer.fillAt(peekIndex, minimumAdditionalBytesNeeded)) {
+                return true;
+            }
+            valueLength = readVarUInt(minimumAdditionalBytesNeeded);
+            if (valueLength < 0) {
+                return true;
+            }
+        } else {
+            // At this point the value must be at least 3 more bytes: 1 for the smallest-possible annotations
+            // length, 1 for the smallest-possible annotation, and 1 for the smallest-possible value representation.
+            minimumAdditionalBytesNeeded = 3;
+            if (!buffer.fillAt(peekIndex, minimumAdditionalBytesNeeded)) {
+                return true;
+            }
+            valueLength = valueTid.length;
+        }
+        // Record the post-length index in a value that will be shifted in the even the buffer needs to refill.
+        valueMarker.startIndex = peekIndex;
+        long annotationsLength = readVarUInt(minimumAdditionalBytesNeeded);
+        if (annotationsLength < 0) {
+            return true;
+        }
+        if (!buffer.fillAt(peekIndex, annotationsLength)) {
+            return true;
+        }
+        annotationSidsMarker.startIndex = peekIndex;
+        annotationSidsMarker.endIndex = annotationSidsMarker.startIndex + (int) annotationsLength;
+        peekIndex = annotationSidsMarker.endIndex;
+        valueLength -= peekIndex - valueMarker.startIndex;
+        if (valueLength <= 0) {
+            throw new IonException("Annotation wrapper must wrap a value.");
+        }
+        setCheckpoint(CheckpointLocation.BEFORE_ANNOTATED_TYPE_ID);
+        verifyValueLength(valueLength, false);
+        return false;
+    }
+
+    private boolean parseValueHeader(IonTypeID valueTid, boolean isAnnotated) throws IOException {
+        long valueLength;
+        if (valueTid.isNull || valueTid.type == IonType.BOOL) {
+            // null values are always a single byte.
+            valueLength = 0;
+        } else {
+            if (valueTid.variableLength) {
+                // At this point the value must be at least 2 more bytes: 1 for the smallest-possible value length
+                // and 1 for the smallest-possible value representation.
+                if (!buffer.fillAt(peekIndex, 2)) {
+                    return true;
+                }
+                valueLength = readVarUInt(2);
+                if (valueLength < 0) {
+                    return true;
+                }
+            } else {
+                valueLength = valueTid.length;
+            }
+        }
+        if (IonType.isContainer(valueTid.type)) {
+            setCheckpoint(CheckpointLocation.AFTER_CONTAINER_HEADER);
+            event = Event.START_CONTAINER;
+        } else if (valueTid.isNopPad) {
+            if (isAnnotated) {
+                throw new IonException(
+                    "Invalid annotation wrapper: NOP pad may not occur inside an annotation wrapper."
+                );
+            }
+            if (!buffer.seekTo(peekIndex + valueLength)) {
+                event = Event.NEEDS_DATA;
+                return true;
+            }
+            peekIndex = buffer.getOffset();
+            valueLength = 0;
+            setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
+            checkContainerEnd();
+        } else {
+            setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER);
+            event = Event.START_SCALAR;
+        }
+        verifyValueLength(valueLength, isAnnotated);
+        return false;
+    }
+
     /**
      * Reads the type ID byte.
      * @param isAnnotated true if this type ID is on a value within an annotation wrapper; false if it is not.
@@ -226,7 +317,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
      */
     private IonTypeID parseTypeID(final int typeIdByte, final boolean isAnnotated) throws IOException {
         IonTypeID valueTid = IonTypeID.TYPE_IDS[typeIdByte];
-        long valueLength = 0;
         if (typeIdByte == IVM_START_BYTE && containerStack.isEmpty()) {
             if (isAnnotated) {
                 throw new IonException("Invalid annotation header.");
@@ -234,14 +324,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
             if (!buffer.fillAt(peekIndex, IVM_REMAINING_LENGTH)) {
                 return null;
             }
-            majorVersion = buffer.peek(peekIndex++);
-            minorVersion = buffer.peek(peekIndex++);
-            if (buffer.peek(peekIndex++) != IVM_FINAL_BYTE) {
-                throw new IonException("Invalid Ion version marker.");
-            }
-            requireSupportedIonVersion();
-            ivmConsumer.ivmEncountered(majorVersion, minorVersion);
-            setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
+            parseIvm();
         } else if (!valueTid.isValid) {
             throw new IonException("Invalid type ID.");
         } else if (majorVersion < 1) {
@@ -251,91 +334,14 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
             if (isAnnotated) {
                 throw new IonException("Nested annotation wrappers are invalid.");
             }
-            int minimumAdditionalBytesNeeded;
-            if (valueTid.variableLength) {
-                // TODO small optimization: at this point the value must be at least 4 more bytes: 1 for the smallest-
-                //  possible wrapper length, 1 for the smallest-possible annotations length, one for the smallest-
-                //  possible annotation, and 1 for the smallest-possible value representation. Could ask the buffer for
-                //  4 bytes if that would provide a speedup.
-                minimumAdditionalBytesNeeded = 4;
-                if (!buffer.fillAt(peekIndex, minimumAdditionalBytesNeeded)) {
-                    return null;
-                }
-                valueLength = readVarUInt(minimumAdditionalBytesNeeded);
-                if (valueLength < 0) {
-                    return null;
-                }
-            } else {
-                // TODO small optimization: at this point the value must be at least 3 more bytes: 1 for the smallest-
-                //  possible annotations length, 1 for the smallest-possible annotation, and 1 for the smallest-possible
-                //  value representation. Could ask the buffer for 4 bytes if that would provide a speedup.
-                minimumAdditionalBytesNeeded = 3;
-                if (!buffer.fillAt(peekIndex, minimumAdditionalBytesNeeded)) {
-                    return null;
-                }
-                valueLength = valueTid.length;
-            }
-            //int postLengthIndex = peekIndex;
-            // Record the post-length index in a value that will be shifted in the even the buffer needs to refill.
-            valueMarker.startIndex = peekIndex;
-            long annotationsLength = readVarUInt(minimumAdditionalBytesNeeded);
-            if (annotationsLength < 0) {
+            if (parseAnnotationWrapperHeader(valueTid)) {
                 return null;
             }
-            if (!buffer.fillAt(peekIndex, annotationsLength)) { // TODO skip if the value isalready oversized
-                return null;
-            }
-            annotationSidsMarker.startIndex = peekIndex;
-            annotationSidsMarker.endIndex = annotationSidsMarker.startIndex + (int) annotationsLength;
-            peekIndex = annotationSidsMarker.endIndex;
-            valueLength -= peekIndex - valueMarker.startIndex;
-            if (valueLength <= 0) {
-                throw new IonException("Annotation wrapper must wrap a value.");
-            }
-            setCheckpoint(CheckpointLocation.BEFORE_ANNOTATED_TYPE_ID);
         } else {
-            if (valueTid.isNull || valueTid.type == IonType.BOOL) {
-                // null values are always a single byte.
-            } else {
-                // Not null
-                if (valueTid.variableLength) {
-                    // TODO small optimization: at this point the value must be at least 2 more bytes: 1 for the
-                    //  smallest-possible value length and 1 for the smallest-possible value representation. Could ask
-                    //  the buffer for 2 bytes if that would provide a speedup.
-                    if (!buffer.fillAt(peekIndex, 2)) {
-                        return null;
-                    }
-                    valueLength = readVarUInt(2);
-                    if (valueLength < 0) {
-                        return null;
-                    }
-                } else {
-                    valueLength = valueTid.length;
-                }
-            }
-            if (IonType.isContainer(valueTid.type)) {
-                setCheckpoint(CheckpointLocation.AFTER_CONTAINER_HEADER);
-                event = Event.START_CONTAINER;
-            } else if (valueTid.isNopPad) {
-                if (isAnnotated) {
-                    throw new IonException(
-                        "Invalid annotation wrapper: NOP pad may not occur inside an annotation wrapper."
-                    );
-                }
-                if (!buffer.seekTo(peekIndex + valueLength)) {
-                    event = Event.NEEDS_DATA;
-                    return null;
-                }
-                peekIndex = buffer.getOffset();
-                valueLength = 0;
-                setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
-                checkContainerEnd();
-            } else {
-                setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER);
-                event = Event.START_SCALAR;
+            if (parseValueHeader(valueTid, isAnnotated)) {
+                return null;
             }
         }
-        verifyValueLength(valueLength, isAnnotated);
         return valueTid;
     }
 
@@ -400,6 +406,35 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         return false;
     }
 
+    private boolean nextCheckpoint(boolean isAnnotated) throws IOException {
+        int b = readByte();
+        if (b < 0) {
+            return true;
+        }
+        valueTid = parseTypeID(b, isAnnotated);
+        if (valueTid == null) {
+            return true;
+        }
+        if (checkpointLocation == CheckpointLocation.AFTER_SCALAR_HEADER) {
+            return true;
+        }
+        if (checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER) {
+            prohibitEmptyOrderedStruct();
+            return true;
+        }
+        return false;
+    }
+
+    private boolean readFieldSid() throws IOException {
+        // The value must have at least 2 more bytes: 1 for the smallest-possible field SID and 1 for
+        // the smallest-possible representation.
+        if (!buffer.fillAt(peekIndex, 2)) {
+            return true;
+        }
+        fieldSid = (int) readVarUInt(2); // TODO type alignment
+        return fieldSid < 0;
+    }
+
     private void nextHeader() throws IOException {
         peekIndex = checkpoint;
         event = Event.NEEDS_DATA;
@@ -411,48 +446,16 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
             switch (checkpointLocation) {
                 case BEFORE_UNANNOTATED_TYPE_ID:
                     fieldSid = -1;
-                    if (isInStruct()) {
-                        // TODO small optimization: the value must have at least 2 more bytes (unless dangling field
-                        //  names are allowed -- check): 1 for the smallest-possible field SID and 1 for the smallest-
-                        //  possible representation. Can ask for 2 more bytes if that would provide a speedup.
-                        if (!buffer.fillAt(peekIndex, 2)) {
-                            return;
-                        }
-                        fieldSid = (int) readVarUInt(2); // TODO type alignment
-                        if (fieldSid < 0) {
-                            return;
-                        }
-                    }
-                    int b = readByte();
-                    if (b < 0) {
+                    if (isInStruct() && readFieldSid()) {
                         return;
                     }
-                    valueTid = parseTypeID(b, false);
-                    if (valueTid == null) {
-                        return;
-                    }
-                    if (checkpointLocation == CheckpointLocation.AFTER_SCALAR_HEADER) {
-                        return;
-                    }
-                    if (checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER) {
-                        prohibitEmptyOrderedStruct();
+                    if (nextCheckpoint(false)) {
                         return;
                     }
                     // Either an IVM or NOP has been skipped, or an annotation wrapper has been consumed.
                     continue;
                 case BEFORE_ANNOTATED_TYPE_ID:
-                    checkpoint = peekIndex; // TODO not necessary?
-                    b = readByte();
-                    if (b < 0) {
-                        return;
-                    }
-                    valueTid = parseTypeID(b, true);
-                    if (valueTid == null) {
-                        return;
-                    }
-                    if (checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER) {
-                        prohibitEmptyOrderedStruct();
-                    }
+                    nextCheckpoint(true);
                     // If already within an annotation wrapper, neither an IVM nor a NOP is possible, so the lexer
                     // must be positioned after the header for the wrapped value.
                     return;

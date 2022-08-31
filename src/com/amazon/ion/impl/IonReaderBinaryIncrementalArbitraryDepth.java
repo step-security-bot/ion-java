@@ -7,7 +7,6 @@ import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
-import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonReaderReentrantApplication;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
@@ -22,7 +21,6 @@ import com.amazon.ion.impl.bin.IntList;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.SimpleCatalog;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -64,28 +62,6 @@ import java.util.Map;
  */
 class IonReaderBinaryIncrementalArbitraryDepth implements
     IonReaderReentrantApplication, _Private_ReaderWriter, _Private_IncrementalReader {
-
-    /*
-     * Potential future enhancements:
-     * - Split this implementation into a user-level reader and a system-level reader, like the existing implementation.
-     *   This allows this implementation to be used when the user requests a system reader.
-     * - Do not require buffering an entire top-level value. This would be a pretty major overhaul. It may be possible
-     *   to implement using different buffers for each depth. Doing this may also make it possible to avoid buffering
-     *   a value (at any depth) until stepIn() or *Value() is called on it, enabling faster skip-scanning.
-     * - Allow for this implementation to produce the same non-incremental behavior as the old implementation; namely,
-     *   that running out of data during next() would raise an IonException. See the note in the implementation of
-     *   close() below. Implementing this bullet and the previous two bullets would allow us to remove the old binary
-     *   IonReader implementation.
-     * - Add a builder/constructor option that uses a user-provided byte[] directly. This would allow data to be read
-     *   in-place without the need to copy to a separate buffer. Non-incremental behavior (as described in the previous
-     *   bullet) is likely a requirement of this feature.
-     * - System symbol table configuration needs to be generalized to support future Ion versions. See the constructor,
-     *   resetSymbolTable(), and resetImports().
-     * - When accessed via an iterator, annotations can be parsed incrementally instead of parsing the entire sequence
-     *   up-front.
-     * - Provide users the option to spawn a thread that pre-buffers the next value. There would be two buffers: one
-     *   for the user thread, and one for the pre-fetching thread. They are swapped every time the user calls next().
-     */
 
     // Symbol IDs for symbols contained in the system symbol table.
     private static class SystemSymbolIDs {
@@ -766,7 +742,128 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
             return event == Event.NEEDS_DATA || event == Event.NEEDS_INSTRUCTION;
         }
 
-        private void readSymbolTable() throws IOException {
+        private void finishReadingSymbolTableStruct() throws IOException {
+            raw.next(Instruction.STEP_OUT);
+            if (!hasSeenImports) {
+                resetSymbolTable();
+                resetImports();
+            }
+            if (newSymbols != null) {
+                symbols.addAll(newSymbols);
+            }
+            state = State.READING_VALUE;
+        }
+
+        private void readSymbolTableStructField() {
+            int fieldId = raw.getFieldId();
+            if (fieldId == SystemSymbolIDs.SYMBOLS_ID) {
+                state = State.ON_SYMBOL_TABLE_SYMBOLS;
+                if (hasSeenSymbols) {
+                    throw new IonException("Symbol table contained multiple symbols fields.");
+                }
+                hasSeenSymbols = true;
+            } else if (fieldId == SystemSymbolIDs.IMPORTS_ID) {
+                state = State.ON_SYMBOL_TABLE_IMPORTS;
+                if (hasSeenImports) {
+                    throw new IonException("Symbol table contained multiple imports fields.");
+                }
+                hasSeenImports = true;
+            }
+        }
+
+        private void startReadingImportsList() {
+            resetImports();
+            resetSymbolTable();
+            newImports = new ArrayList<SymbolTable>(3);
+            newImports.add(getSystemSymbolTable());
+            state = State.READING_SYMBOL_TABLE_IMPORTS_LIST;
+        }
+
+        private void preparePossibleAppend() {
+            if (raw.symbolValueId() == SystemSymbolIDs.ION_SYMBOL_TABLE_ID) {
+                isAppend = true;
+            } else {
+                resetSymbolTable();
+            }
+            state = State.ON_SYMBOL_TABLE_FIELD;
+        }
+
+        private void finishReadingImportsList() throws IOException {
+            raw.next(Instruction.STEP_OUT);
+            imports = new LocalSymbolTableImports(newImports);
+            state = State.ON_SYMBOL_TABLE_FIELD;
+        }
+
+        private void startReadingSymbolsList() {
+            newSymbols = new ArrayList<String>(8);
+            state = State.READING_SYMBOL_TABLE_SYMBOLS_LIST;
+        }
+
+        private void startReadingSymbol() {
+            if (raw.getType() == IonType.STRING) {
+                state = State.READING_SYMBOL_TABLE_SYMBOL;
+            } else {
+                newSymbols.add(null);
+            }
+        }
+
+        private void finishReadingSymbol() {
+            newSymbols.add(raw.stringValue());
+            state = State.READING_SYMBOL_TABLE_SYMBOLS_LIST;
+        }
+
+        private void finishReadingSymbolsList() throws IOException {
+            raw.next(Instruction.STEP_OUT);
+            state = State.ON_SYMBOL_TABLE_FIELD;
+        }
+
+        private void startReadingImportStruct() throws IOException {
+            resetImportInfo();
+            if (raw.getType() == IonType.STRUCT) {
+                raw.next(Instruction.STEP_IN);
+                state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
+            }
+        }
+
+        private void finishReadingImportStruct() throws IOException {
+            raw.next(Instruction.STEP_OUT);
+            newImports.add(createImport(name, version, maxId));
+            state = State.READING_SYMBOL_TABLE_IMPORTS_LIST;
+        }
+
+        private void startReadingImportStructField() {
+            int fieldId = raw.getFieldId();
+            if (fieldId == SystemSymbolIDs.NAME_ID) {
+                state = State.READING_SYMBOL_TABLE_IMPORT_NAME;
+            } else if (fieldId == SystemSymbolIDs.VERSION_ID) {
+                state = State.READING_SYMBOL_TABLE_IMPORT_VERSION;
+            } else if (fieldId == SystemSymbolIDs.MAX_ID_ID) {
+                state = State.READING_SYMBOL_TABLE_IMPORT_MAX_ID;
+            }
+        }
+
+        private void readImportName() {
+            if (raw.getType() == IonType.STRING) {
+                name = raw.stringValue();
+            }
+            state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
+        }
+
+        private void readImportVersion() {
+            if (raw.getType() == IonType.INT) {
+                version = raw.intValue();
+            }
+            state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
+        }
+
+        private void readImportMaxId() {
+            if (raw.getType() == IonType.INT) {
+                maxId = raw.intValue();
+            }
+            state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
+        }
+
+        void readSymbolTable() throws IOException {
             Event event;
             while (true) {
                 switch (state) {
@@ -782,39 +879,17 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                             return;
                         }
                         if (event == Event.END_CONTAINER) {
-                            raw.next(Instruction.STEP_OUT);
-                            if (!hasSeenImports) {
-                                resetSymbolTable();
-                                resetImports();
-                            }
-                            if (newSymbols != null) {
-                                symbols.addAll(newSymbols);
-                            }
-                            state = State.READING_VALUE;
+                            finishReadingSymbolTableStruct();
                             return;
                         }
-                        int fieldId = raw.getFieldId();
-                        if (fieldId == SystemSymbolIDs.SYMBOLS_ID) {
-                            state = State.ON_SYMBOL_TABLE_SYMBOLS;
-                            if (hasSeenSymbols) {
-                                throw new IonException("Symbol table contained multiple symbols fields.");
-                            }
-                            hasSeenSymbols = true;
-                        } else if (fieldId == SystemSymbolIDs.IMPORTS_ID) {
-                            state = State.ON_SYMBOL_TABLE_IMPORTS;
-                            if (hasSeenImports) {
-                                throw new IonException("Symbol table contained multiple imports fields.");
-                            }
-                            hasSeenImports = true;
-                        }
+                        readSymbolTableStructField();
                         break;
                     case ON_SYMBOL_TABLE_SYMBOLS:
                         if (raw.getType() == IonType.LIST) {
                             if (Event.NEEDS_DATA == raw.next(Instruction.STEP_IN)) {
                                 return;
                             }
-                            newSymbols = new ArrayList<String>(8);
-                            state = State.READING_SYMBOL_TABLE_SYMBOLS_LIST;
+                            startReadingSymbolsList();
                         } else {
                             state = State.ON_SYMBOL_TABLE_FIELD;
                         }
@@ -824,21 +899,12 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                             if (Event.NEEDS_DATA == raw.next(Instruction.STEP_IN)) {
                                 return;
                             }
-                            resetImports();
-                            resetSymbolTable();
-                            newImports = new ArrayList<SymbolTable>(3);
-                            newImports.add(getSystemSymbolTable());
-                            state = State.READING_SYMBOL_TABLE_IMPORTS_LIST;
+                            startReadingImportsList();
                         } else if (raw.getType() == IonType.SYMBOL) {
                             if (valueUnavailable()) {
                                 return;
                             }
-                            if (raw.symbolValueId() == SystemSymbolIDs.ION_SYMBOL_TABLE_ID) {
-                                isAppend = true;
-                            } else {
-                                resetSymbolTable();
-                            }
-                            state = State.ON_SYMBOL_TABLE_FIELD;
+                            preparePossibleAppend();
                         } else {
                             state = State.ON_SYMBOL_TABLE_FIELD;
                         }
@@ -849,22 +915,16 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                             return;
                         }
                         if (event == Event.END_CONTAINER) {
-                            raw.next(Instruction.STEP_OUT);
-                            state = State.ON_SYMBOL_TABLE_FIELD;
+                            finishReadingSymbolsList();
                             break;
                         }
-                        if (raw.getType() == IonType.STRING) {
-                            state = State.READING_SYMBOL_TABLE_SYMBOL;
-                        } else {
-                            newSymbols.add(null);
-                        }
+                        startReadingSymbol();
                         break;
                     case READING_SYMBOL_TABLE_SYMBOL:
                         if (valueUnavailable()) {
                             return;
                         }
-                        newSymbols.add(raw.stringValue());
-                        state = State.READING_SYMBOL_TABLE_SYMBOLS_LIST;
+                        finishReadingSymbol();
                         break;
                     case READING_SYMBOL_TABLE_IMPORTS_LIST:
                         event = raw.next(Instruction.NEXT_VALUE);
@@ -872,16 +932,10 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                             return;
                         }
                         if (event == Event.END_CONTAINER) {
-                            raw.next(Instruction.STEP_OUT);
-                            imports = new LocalSymbolTableImports(newImports);
-                            state = State.ON_SYMBOL_TABLE_FIELD;
+                            finishReadingImportsList();
                             break;
                         }
-                        resetImportInfo();
-                        if (raw.getType() == IonType.STRUCT) {
-                            raw.next(Instruction.STEP_IN);
-                            state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
-                        }
+                        startReadingImportStruct();
                         break;
                     case READING_SYMBOL_TABLE_IMPORT_STRUCT:
                         event = raw.next(Instruction.NEXT_VALUE);
@@ -889,48 +943,30 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
                             return;
                         }
                         if (event == Event.END_CONTAINER) {
-                            raw.next(Instruction.STEP_OUT);
-                            newImports.add(createImport(name, version, maxId));
-                            state = State.READING_SYMBOL_TABLE_IMPORTS_LIST;
+                            finishReadingImportStruct();
                             break;
                         } else if (event != Event.START_SCALAR) {
                             break;
                         }
-                        fieldId = raw.getFieldId();
-                        if (fieldId == SystemSymbolIDs.NAME_ID) {
-                            state = State.READING_SYMBOL_TABLE_IMPORT_NAME;
-                        } else if (fieldId == SystemSymbolIDs.VERSION_ID) {
-                            state = State.READING_SYMBOL_TABLE_IMPORT_VERSION;
-                        } else if (fieldId == SystemSymbolIDs.MAX_ID_ID) {
-                            state = State.READING_SYMBOL_TABLE_IMPORT_MAX_ID;
-                        }
+                        startReadingImportStructField();
                         break;
                     case READING_SYMBOL_TABLE_IMPORT_NAME:
                         if (valueUnavailable()) {
                             return;
                         }
-                        if (raw.getType() == IonType.STRING) {
-                            name = raw.stringValue();
-                        }
-                        state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
+                        readImportName();
                         break;
                     case READING_SYMBOL_TABLE_IMPORT_VERSION:
                         if (valueUnavailable()) {
                             return;
                         }
-                        if (raw.getType() == IonType.INT) {
-                            version = raw.intValue();
-                        }
-                        state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
+                        readImportVersion();
                         break;
                     case READING_SYMBOL_TABLE_IMPORT_MAX_ID:
                         if (valueUnavailable()) {
                             return;
                         }
-                        if (raw.getType() == IonType.INT) {
-                            maxId = raw.intValue();
-                        }
-                        state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
+                        readImportMaxId();
                         break;
                 }
             }
