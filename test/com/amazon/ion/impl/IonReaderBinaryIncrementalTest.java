@@ -1803,22 +1803,22 @@ public class IonReaderBinaryIncrementalTest {
     // TODO listWithContainerValueLengthTooShortFails
     // TODO and try with variable length
 
-    @Test
+    @Test(expected = IonException.class)
     public void noOpPadTooShort1() throws Exception {
         IonReader reader = readerFor(0x37, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01);
         assertEquals(IonType.INT, reader.next());
         assertNull(reader.next());
-        thrown.expect(IonException.class);
+        //thrown.expect(IonException.class);
         reader.close();
     }
 
-    @Test
+    @Test(expected = IonException.class)
     public void noOpPadTooShort2() throws Exception {
         IonReader reader = readerFor(
             0x0e, 0x90, 0x00, 0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
         );
         assertNull(reader.next());
-        thrown.expect(IonException.class);
+        //thrown.expect(IonException.class);
         reader.close();
     }
 
@@ -3472,7 +3472,7 @@ public class IonReaderBinaryIncrementalTest {
         annotationIteratorReuse(false);
     }
 
-    @Test
+    @Test(expected = IonException.class)
     public void failsOnMalformedSymbolTable() throws Exception {
         byte[] data = bytes(
             0xE0, 0x01, 0x00, 0xEA, // Binary IVM
@@ -3488,7 +3488,6 @@ public class IonReaderBinaryIncrementalTest {
         IonReader reader = newBoundedIncrementalReader(data, 1024);
         assertNull(reader.next());
         assertNull(reader.next());
-        thrown.expect(IonException.class);
         reader.close();
     }
 }

@@ -995,8 +995,9 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
     }
 
     private boolean isPositionedOnSymbolTable() {
-        return getDepth() == 0 &&
+        return
             raw.hasAnnotations() &&
+            getDepth() == 0 &&
             raw.peekType() == IonType.STRUCT &&
             raw.iterateAnnotationSids().next() == SystemSymbolIDs.ION_SYMBOL_TABLE_ID;
     }
