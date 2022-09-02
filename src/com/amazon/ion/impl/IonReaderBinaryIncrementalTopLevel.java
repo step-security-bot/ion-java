@@ -63,7 +63,6 @@ public class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_R
                     type = null;
                     return null;
                 }
-                // TODO can the following be moved to prepareValue()?
                 nextInstruction = IonCursor.Instruction.LOAD_VALUE;
                 event = next(nextInstruction);
                 if (event == IonCursor.Event.NEEDS_DATA) {
@@ -80,7 +79,7 @@ public class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_R
                 nextInstruction = IonCursor.Instruction.NEXT_VALUE;
             }
         } else {
-            IonCursor.Event event = next(nextInstruction);
+            IonCursor.Event event = next(IonCursor.Instruction.NEXT_VALUE);
             if (event == IonCursor.Event.NEEDS_DATA) {
                 type = null;
                 return null;

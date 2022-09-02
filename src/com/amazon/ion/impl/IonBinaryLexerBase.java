@@ -204,16 +204,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         dataHandler.onData(numberOfBytesToReport);
     }
 
-    void setCheckpoint(CheckpointLocation location) {
-        if (location == CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID) {
-            reset();
-            buffer.quickSeekTo(peekIndex);
-        }
-        reportConsumedData(peekIndex - checkpoint);
-        checkpointLocation = location;
-        checkpoint = peekIndex;
-    }
-
     private void parseIvm() {
         majorVersion = buffer.peek(peekIndex++);
         minorVersion = buffer.peek(peekIndex++);
@@ -224,7 +214,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
             throw new IonException(String.format("Unsupported Ion version: %d.%d", majorVersion, minorVersion));
         }
         ivmConsumer.ivmEncountered(majorVersion, minorVersion);
-        setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
     }
 
     protected int peekByte() throws IOException {
@@ -242,19 +231,6 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
 
     protected void handleSkip() {
         // Nothing to do.
-    }
-
-    protected boolean skipRemainingValueBytes() throws IOException {
-        if (buffer.limit >= valueMarker.endIndex) {
-            buffer.quickSeekTo(valueMarker.endIndex);
-        } else if (!buffer.seekTo(valueMarker.endIndex)) {
-            return true;
-        }
-        peekIndex = buffer.getOffset();
-
-        handleSkip();
-        setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
-        return false;
     }
 
     private int fillDepth = 0;
@@ -294,6 +270,29 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
     }
 
     private class Careful implements LexerVariant {
+
+        void setCheckpoint(CheckpointLocation location) {
+            if (location == CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID) {
+                reset();
+                buffer.quickSeekTo(peekIndex);
+            }
+            reportConsumedData(peekIndex - checkpoint);
+            checkpointLocation = location;
+            checkpoint = peekIndex;
+        }
+
+        protected boolean skipRemainingValueBytes() throws IOException {
+            if (buffer.limit >= valueMarker.endIndex) {
+                buffer.quickSeekTo(valueMarker.endIndex);
+            } else if (!buffer.seekTo(valueMarker.endIndex)) {
+                return true;
+            }
+            peekIndex = buffer.getOffset();
+
+            handleSkip();
+            setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
+            return false;
+        }
 
         public boolean parseAnnotationWrapperHeader(IonTypeID valueTid) throws IOException {
             long valueLength;
@@ -484,6 +483,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
                                 return;
                             }
                             parseIvm();
+                            setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
                             continue;
                         }
                         if (parseTypeID(b, false)) {
