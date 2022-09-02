@@ -253,10 +253,10 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderRee
     }
 
     private IonTypeID prepareScalar() {
-        if (getCurrentEvent() != Event.VALUE_READY) {
+        scalarMarker = lexer.getValueMarker();
+        if (scalarMarker.startIndex < 0) {
             throw new IonException("No scalar has been loaded.");
         }
-        scalarMarker = lexer.getValueMarker();
         peekIndex = scalarMarker.startIndex;
         return lexer.getValueTid();
     }
@@ -739,6 +739,10 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderRee
 
     IonType peekType() {
         return lexer.peekType();
+    }
+
+    boolean isTopLevel() {
+        return lexer.isTopLevel();
     }
 
     @Override

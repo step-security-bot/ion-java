@@ -56,17 +56,14 @@ public class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_R
 
     @Override
     public IonType next() {
-        while (true) {
-            IonCursor.Event event = next(nextInstruction);
-            if (event == IonCursor.Event.NEEDS_DATA) {
-                type = null;
-                //if (getDepth() == 0) {
-                return null;
-                //}
-                //throw new IllegalStateException("The implementation failed to load the top-level value.");
-            }
-            // TODO can the following be moved to prepareValue()?
-            if (event == IonCursor.Event.START_SCALAR || (getDepth() == 0 && event == IonCursor.Event.START_CONTAINER)) {
+        if (getDepth() == 0) {
+            while (true) {
+                IonCursor.Event event = next(nextInstruction);
+                if (event == IonCursor.Event.NEEDS_DATA) {
+                    type = null;
+                    return null;
+                }
+                // TODO can the following be moved to prepareValue()?
                 nextInstruction = IonCursor.Instruction.LOAD_VALUE;
                 event = next(nextInstruction);
                 if (event == IonCursor.Event.NEEDS_DATA) {
@@ -77,15 +74,20 @@ public class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_R
                     nextInstruction = IonCursor.Instruction.NEXT_VALUE;
                     continue;
                 }
+                break;
             }
-            break;
-        }
-        if (nextInstruction == IonCursor.Instruction.LOAD_VALUE) {
-            nextInstruction = IonCursor.Instruction.NEXT_VALUE;
+            if (nextInstruction == IonCursor.Instruction.LOAD_VALUE) {
+                nextInstruction = IonCursor.Instruction.NEXT_VALUE;
+            }
+        } else {
+            IonCursor.Event event = next(nextInstruction);
+            if (event == IonCursor.Event.NEEDS_DATA) {
+                type = null;
+                return null;
+            }
         }
         type = reader.getType();
         return type;
-        //return getType();
     }
 
     @Override

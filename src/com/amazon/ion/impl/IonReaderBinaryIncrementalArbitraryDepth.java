@@ -995,9 +995,8 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
     }
 
     private boolean isPositionedOnSymbolTable() {
-        return
+        return raw.isTopLevel() &&
             raw.hasAnnotations() &&
-            getDepth() == 0 &&
             raw.peekType() == IonType.STRUCT &&
             raw.iterateAnnotationSids().next() == SystemSymbolIDs.ION_SYMBOL_TABLE_ID;
     }
@@ -1005,25 +1004,28 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
     @Override
     public Event next(Instruction instruction) throws IOException {
         Event event;
-        while (true) {
-            if (isReadingSymbolTable()) {
-                symbolTableReader.readSymbolTable();
-                if (state != State.READING_VALUE) {
-                    event = Event.NEEDS_DATA;
-                    break;
+        if (instruction == Instruction.NEXT_VALUE && (raw.isTopLevel() || isReadingSymbolTable())) {
+            while (true) {
+                if (isReadingSymbolTable()) {
+                    symbolTableReader.readSymbolTable();
+                    if (state != State.READING_VALUE) {
+                        event = Event.NEEDS_DATA;
+                        break;
+                    }
                 }
+                event = raw.next(instruction);
+                if (isPositionedOnSymbolTable()) {
+                    cachedReadOnlySymbolTable = null;
+                    symbolTableReader.resetState();
+                    state = State.ON_SYMBOL_TABLE_STRUCT;
+                    continue;
+                }
+                break;
             }
+        } else {
             event = raw.next(instruction);
-            resetAnnotations(); // TODO check
-            // TODO event check below unnecessary?
-            if (event == Event.START_CONTAINER && isPositionedOnSymbolTable()) {
-                cachedReadOnlySymbolTable = null;
-                symbolTableReader.resetState();
-                state = State.ON_SYMBOL_TABLE_STRUCT;
-                continue;
-            }
-            break;
         }
+        resetAnnotations();
         return event;
     }
 

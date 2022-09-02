@@ -891,6 +891,10 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         return type;
     }
 
+    boolean isTopLevel() {
+        return containerStack.isEmpty();
+    }
+
     boolean isAwaitingMoreData() {
         return !buffer.isTerminated()
             && (peekIndex > checkpoint
