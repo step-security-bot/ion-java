@@ -56,7 +56,7 @@ public class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_R
 
     @Override
     public IonType next() {
-        if (getDepth() == 0) {
+        if (reader.isTopLevel()) {
             while (true) {
                 IonCursor.Event event = next(nextInstruction);
                 if (event == IonCursor.Event.NEEDS_DATA) {

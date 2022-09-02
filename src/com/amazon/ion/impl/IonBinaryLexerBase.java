@@ -340,23 +340,18 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
 
         public boolean parseValueHeader(IonTypeID valueTid, boolean isAnnotated) throws IOException {
             long valueLength;
-            if (valueTid.isNull || valueTid.type == IonType.BOOL) {
-                // null values are always a single byte.
-                valueLength = 0;
-            } else {
-                if (valueTid.variableLength) {
-                    // At this point the value must be at least 2 more bytes: 1 for the smallest-possible value length
-                    // and 1 for the smallest-possible value representation.
-                    if (!buffer.fillAt(peekIndex, 2)) {
-                        return true;
-                    }
-                    valueLength = readVarUInt(2);
-                    if (valueLength < 0) {
-                        return true;
-                    }
-                } else {
-                    valueLength = valueTid.length;
+            if (valueTid.variableLength) {
+                // At this point the value must be at least 2 more bytes: 1 for the smallest-possible value length
+                // and 1 for the smallest-possible value representation.
+                if (!buffer.fillAt(peekIndex, 2)) {
+                    return true;
                 }
+                valueLength = readVarUInt(2);
+                if (valueLength < 0) {
+                    return true;
+                }
+            } else {
+                valueLength = valueTid.length;
             }
             if (IonType.isContainer(valueTid.type)) {
                 setCheckpoint(CheckpointLocation.AFTER_CONTAINER_HEADER);
@@ -602,15 +597,10 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
 
         public boolean parseValueHeader(IonTypeID valueTid, boolean isAnnotated) throws IOException {
             long valueLength;
-            if (valueTid.isNull || valueTid.type == IonType.BOOL) {
-                // null values are always a single byte.
-                valueLength = 0;
+            if (valueTid.variableLength) {
+                valueLength = readVarUInt(0);
             } else {
-                if (valueTid.variableLength) {
-                    valueLength = readVarUInt(2);
-                } else {
-                    valueLength = valueTid.length;
-                }
+                valueLength = valueTid.length;
             }
             if (IonType.isContainer(valueTid.type)) {
                 event = Event.START_CONTAINER;

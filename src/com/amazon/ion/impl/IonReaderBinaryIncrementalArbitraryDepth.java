@@ -1039,6 +1039,10 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         // todo
     }
 
+    boolean isTopLevel() {
+        return raw.isTopLevel();
+    }
+
     @Override
     public int getDepth() {
         return raw.getDepth();
