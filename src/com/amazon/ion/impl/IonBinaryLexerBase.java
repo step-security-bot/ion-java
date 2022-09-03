@@ -258,11 +258,11 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
     }
 
     private interface LexerVariant {
-        boolean parseAnnotationWrapperHeader(IonTypeID valueTid) throws IOException;
-        boolean parseValueHeader(IonTypeID valueTid, boolean isAnnotated) throws IOException;
-        boolean parseTypeID(final int typeIdByte, final boolean isAnnotated) throws IOException;
-        long readVarUInt(int knownAvailable) throws IOException;
-        boolean readFieldSid() throws IOException;
+        //boolean parseAnnotationWrapperHeader(IonTypeID valueTid) throws IOException;
+        //boolean parseValueHeader(IonTypeID valueTid, boolean isAnnotated) throws IOException;
+        //boolean parseTypeID(final int typeIdByte, final boolean isAnnotated) throws IOException;
+        //long readVarUInt(int knownAvailable) throws IOException;
+        //boolean readFieldSid() throws IOException;
         void nextHeader() throws IOException;
         void fillValue() throws IOException;
         void stepIn() throws IOException;
@@ -577,7 +577,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         public boolean parseAnnotationWrapperHeader(IonTypeID valueTid) throws IOException {
             long valueLength;
             if (valueTid.variableLength) {
-                valueLength = readVarUInt(0);
+                valueLength = readVarUInt();
             } else {
                 valueLength = valueTid.length;
             }
@@ -585,7 +585,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
             if (valueMarker.endIndex > buffer.limit) {
                 return true;
             }
-            int annotationsLength = (int) readVarUInt(0);
+            int annotationsLength = (int) readVarUInt();
             annotationSidsMarker.startIndex = peekIndex;
             annotationSidsMarker.endIndex = annotationSidsMarker.startIndex + annotationsLength;
             peekIndex = annotationSidsMarker.endIndex;
@@ -598,7 +598,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         public boolean parseValueHeader(IonTypeID valueTid, boolean isAnnotated) throws IOException {
             long valueLength;
             if (valueTid.variableLength) {
-                valueLength = readVarUInt(0);
+                valueLength = readVarUInt();
             } else {
                 valueLength = valueTid.length;
             }
@@ -664,26 +664,15 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
          * Reads a VarUInt. NOTE: the VarUInt must fit in a `long`. This is not a true limitation, as IonJava requires
          * VarUInts to fit in an `int`.
          *
-         * @param knownAvailable the number of bytes starting at 'peekIndex' known to be available in the buffer.
          */
-        public long readVarUInt(int knownAvailable) throws IOException {
-            int currentByte;
-            int numberOfBytesRead = 0;
-            long value = 0;
-            while (numberOfBytesRead < MAXIMUM_SUPPORTED_VAR_UINT_BYTES) {
+        public long readVarUInt() throws IOException {
+            int currentByte = 0;
+            long result = 0;
+            while ((currentByte & HIGHEST_BIT_BITMASK) == 0) {
                 currentByte = peekByte();
-                numberOfBytesRead++;
-                value = (value << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
-                if ((currentByte & HIGHEST_BIT_BITMASK) != 0) {
-                    return value;
-                }
+                result = (result << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
             }
-            throw new IonException("Found a VarUInt that was too large to fit in a `long`");
-        }
-
-        public boolean readFieldSid() throws IOException {
-            fieldSid = (int) readVarUInt(0); // TODO type alignment
-            return false;
+            return result;
         }
 
         public void nextHeader() throws IOException {
@@ -710,7 +699,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
                         continue;
                     }
                 } else if (parent.type == IonType.STRUCT) {
-                    readFieldSid();
+                    fieldSid = (int) readVarUInt(); // TODO type alignment
                     b = peekByte();
                 } else {
                     b = peekByte();
