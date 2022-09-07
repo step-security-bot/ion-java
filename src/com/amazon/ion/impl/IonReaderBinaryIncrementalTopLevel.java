@@ -19,7 +19,7 @@ import java.util.Iterator;
 
 import static com.amazon.ion.util.IonStreamUtils.throwAsIonException;
 
-public class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_ReaderWriter, _Private_IncrementalReader {
+public final class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_ReaderWriter {
 
     private final IonReaderBinaryIncrementalArbitraryDepth reader;
     private IonCursor.Instruction nextInstruction = IonCursor.Instruction.NEXT_VALUE;
@@ -237,7 +237,6 @@ public class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_R
         return reader.asFacet(facetType);
     }
 
-    @Override
     public void requireCompleteValue() {
         reader.requireCompleteValue();
     }

@@ -5,7 +5,7 @@ import com.amazon.ion.Decimal;
 import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonReaderReentrantSystem;
+import com.amazon.ion.IonReaderReentrantCore;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
@@ -20,7 +20,7 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Date;
 
-public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantSystem {
+final class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantCore {
 
     // Isolates the highest bit in a byte.
     private static final int HIGHEST_BIT_BITMASK = 0x80;
@@ -66,7 +66,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderRee
     // Java `long` via `IonReader.longValue()`.
     private final _Private_ScalarConversions.ValueVariant scalarConverter;
 
-    private final IonBinaryLexerBase<?> lexer;
+    private final IonBinaryLexerBase lexer;
 
     private final Utf8StringDecoder utf8Decoder = Utf8StringDecoderPool.getInstance().getOrCreate();
 
@@ -83,7 +83,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderRee
     // The symbol IDs for the annotations on the current value.
     private final IntList annotationSids;
 
-    IonReaderBinaryIncrementalArbitraryDepthRaw(IonBinaryLexerBase<?> lexer) {
+    IonReaderBinaryIncrementalArbitraryDepthRaw(IonBinaryLexerBase lexer) {
         scalarConverter = new _Private_ScalarConversions.ValueVariant();
         // Note: implementing Ion 1.1 support may require handling of Ion version changes in this class, rather
         // than simple upward delegation.
@@ -714,12 +714,6 @@ public class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderRee
     AnnotationIterator iterateAnnotationSids() {
         annotationIterator.ready();
         return annotationIterator;
-    }
-
-    @Override
-    public SymbolTable pop_passed_symbol_table() {
-        // Symbol tables are not treated specially at the raw level.
-        return null;
     }
 
     @Override

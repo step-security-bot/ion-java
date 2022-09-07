@@ -22,6 +22,7 @@ import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.impl.IonReaderBinaryIncrementalTopLevel;
 import com.amazon.ion.impl._Private_IncrementalReader;
 import com.amazon.ion.impl._Private_IonWriterFactory;
 import com.amazon.ion.system.IonReaderBuilder;
@@ -161,8 +162,8 @@ final class IonLoaderLite
             // If a value was incomplete, incremental readers will not yet have raised an error. Force an error
             // to be raised in this case.
             // TODO attempt to remove the following
-            if (_readerBuilder.isIncrementalReadingEnabled() && reader instanceof _Private_IncrementalReader) {
-                ((_Private_IncrementalReader) reader).requireCompleteValue();
+            if (_readerBuilder.isIncrementalReadingEnabled() && reader instanceof IonReaderBinaryIncrementalTopLevel) {
+                ((IonReaderBinaryIncrementalTopLevel) reader).requireCompleteValue();
             }
         }
     }

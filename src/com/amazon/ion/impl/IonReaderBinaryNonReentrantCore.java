@@ -8,23 +8,25 @@ import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonReaderReentrantCore;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
+import java.util.Iterator;
 
 import static com.amazon.ion.IonCursor.Event.NEEDS_DATA;
 import static com.amazon.ion.util.IonStreamUtils.throwAsIonException;
 
-abstract class IonReaderBinaryNonReentrantCore<T extends IonReaderReentrantCore>
-    implements IonReader, _Private_ReaderWriter {
+// TODO integrate with IonSystem.newSystemReader and tests
+class IonReaderBinaryNonReentrantCore implements IonReader {
 
-    protected final T reader;
+    protected final IonReaderReentrantCore reader;
     private IonType type = null; // TODO see if this can be removed by fixing type handling logic lower down
 
-    IonReaderBinaryNonReentrantCore(T reader) {
+    IonReaderBinaryNonReentrantCore(IonReaderReentrantCore reader) {
         this.reader = reader;
     }
 
@@ -193,8 +195,43 @@ abstract class IonReaderBinaryNonReentrantCore<T extends IonReaderReentrantCore>
     }
 
     @Override
-    public SymbolTable pop_passed_symbol_table() {
-        return reader.pop_passed_symbol_table();
+    public SymbolTable getSymbolTable() {
+        throw new UnsupportedOperationException("Method requires an application-level reader.");
+    }
+
+    @Override
+    public String[] getTypeAnnotations() {
+        throw new UnsupportedOperationException("Method requires an application-level reader.");
+    }
+
+    @Override
+    public SymbolToken[] getTypeAnnotationSymbols() {
+        throw new UnsupportedOperationException("Method requires an application-level reader.");
+    }
+
+    @Override
+    public Iterator<String> iterateTypeAnnotations() {
+        throw new UnsupportedOperationException("Method requires an application-level reader.");
+    }
+
+    @Override
+    public int getFieldId() {
+        return reader.getFieldId();
+    }
+
+    @Override
+    public String getFieldName() {
+        throw new UnsupportedOperationException("Method requires an application-level reader.");
+    }
+
+    @Override
+    public SymbolToken getFieldNameSymbol() {
+        throw new UnsupportedOperationException("Method requires an application-level reader.");
+    }
+
+    @Override
+    public SymbolToken symbolValue() {
+        throw new UnsupportedOperationException("Method requires an application-level reader.");
     }
 
     @Override

@@ -3,7 +3,7 @@ package com.amazon.ion.impl;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-class FixedBufferFromByteArray extends AbstractBuffer {
+final class FixedBufferFromByteArray extends AbstractBuffer {
 
     private final byte[] buffer;
 

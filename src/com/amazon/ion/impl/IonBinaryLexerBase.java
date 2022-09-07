@@ -1,5 +1,8 @@
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.IonCursor.Event;
+import static com.amazon.ion.IonCursor.Instruction;
+
 import com.amazon.ion.BufferConfiguration;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonCursor;
@@ -8,7 +11,8 @@ import com.amazon.ion.IonType;
 import java.io.IOException;
 import java.io.InputStream;
 
-abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonCursor {
+// TODO removed 'implements IonCursor' as a performance experiment. Try adding back.
+class IonBinaryLexerBase {
 
     private static final int LOWER_SEVEN_BITS_BITMASK = 0x7F;
     private static final int HIGHEST_BIT_BITMASK = 0x80;
@@ -101,7 +105,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
      */
     protected final _Private_RecyclingStack<ContainerInfo> containerStack;
 
-    protected final Buffer buffer;
+    protected final AbstractBuffer buffer;
 
     /**
      * The handler that will be notified when data is processed.
@@ -146,7 +150,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
     private LexerVariant current;
 
     IonBinaryLexerBase(
-        final Buffer buffer,
+        final AbstractBuffer buffer,
         final BufferConfiguration.DataHandler dataHandler,
         final IvmNotificationConsumer ivmConsumer
     ) {
@@ -162,7 +166,12 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         current = (buffer instanceof RefillableBuffer) ? careful : quick;
     }
 
-    protected abstract int readByte() throws IOException;
+    protected int readByte() throws IOException {
+        if (peekIndex >= buffer.limit) { // TODO any way to avoid?
+            return -1;
+        }
+        return buffer.peek(peekIndex++);
+    }
 
     protected void setValueMarker(long valueLength, boolean isAnnotated) {
         long endIndex = peekIndex + valueLength;
@@ -777,7 +786,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         return currentMakeBufferReadyFunction.makeBufferReady();
     }
 
-    @Override
+    //@Override
     public Event next(Instruction instruction) throws IOException {
         switch (instruction) {
             case STEP_IN:
@@ -796,12 +805,12 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
         return event;
     }
 
-    @Override
+    //@Override
     public Event getCurrentEvent() {
         return event;
     }
 
-    @Override
+    //@Override
     public void fill(InputStream inputStream) {
         // TODO
     }
@@ -881,7 +890,7 @@ abstract class IonBinaryLexerBase<Buffer extends AbstractBuffer> implements IonC
                 || buffer.isAwaitingMoreData());
     }
 
-    @Override
+    //@Override
     public void close() throws IOException {
         // Nothing to do.
     }

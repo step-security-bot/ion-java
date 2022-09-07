@@ -60,8 +60,7 @@ import java.util.Map;
  * To enable this implementation, use {@code IonReaderBuilder.withIncrementalReadingEnabled(true)}.
  * </p>
  */
-class IonReaderBinaryIncrementalArbitraryDepth implements
-    IonReaderReentrantApplication, _Private_ReaderWriter, _Private_IncrementalReader {
+final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentrantApplication {
 
     // Symbol IDs for symbols contained in the system symbol table.
     private static class SystemSymbolIDs {
@@ -161,10 +160,10 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
             dataHandler = builder.getBufferConfiguration().getDataHandler();
         }
         raw = new IonReaderBinaryIncrementalArbitraryDepthRaw(
-            new IonBinaryLexerFixed(
+            new IonBinaryLexerBase(
+                buffer,
                 dataHandler,
-                ivmNotificationConsumer,
-                buffer
+                ivmNotificationConsumer
             )
         );
     }
@@ -1060,7 +1059,6 @@ class IonReaderBinaryIncrementalArbitraryDepth implements
         return cachedReadOnlySymbolTable;
     }
 
-    @Override
     public SymbolTable pop_passed_symbol_table() {
         SymbolTable currentSymbolTable = getSymbolTable();
         if (currentSymbolTable == symbolTableLastTransferred) {

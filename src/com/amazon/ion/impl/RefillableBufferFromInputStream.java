@@ -8,7 +8,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class RefillableBufferFromInputStream extends RefillableBuffer {
+final class RefillableBufferFromInputStream extends RefillableBuffer {
 
     /**
      * The standard {@link IonBufferConfiguration}. This will be used unless the user chooses custom settings.

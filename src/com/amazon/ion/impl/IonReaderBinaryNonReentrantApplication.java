@@ -1,6 +1,5 @@
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonReaderReentrantApplication;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.system.IonReaderBuilder;
@@ -8,8 +7,10 @@ import com.amazon.ion.system.IonReaderBuilder;
 import java.io.InputStream;
 import java.util.Iterator;
 
-public class IonReaderBinaryNonReentrantApplication
-    extends IonReaderBinaryNonReentrantCore<IonReaderReentrantApplication> {
+final class IonReaderBinaryNonReentrantApplication
+    extends IonReaderBinaryNonReentrantCore implements _Private_ReaderWriter {
+
+    private final IonReaderBinaryIncrementalArbitraryDepth application;
 
     IonReaderBinaryNonReentrantApplication(IonReaderBuilder builder, InputStream inputStream) {
         super(
@@ -18,6 +19,7 @@ public class IonReaderBinaryNonReentrantApplication
                 new RefillableBufferFromInputStream(inputStream, builder.getBufferConfiguration())
             )
         );
+        application = (IonReaderBinaryIncrementalArbitraryDepth) reader;
     }
 
     IonReaderBinaryNonReentrantApplication(IonReaderBuilder builder, byte[] data, int offset, int length) {
@@ -27,46 +29,52 @@ public class IonReaderBinaryNonReentrantApplication
                 new FixedBufferFromByteArray(data, offset, length)
             )
         );
+        application = (IonReaderBinaryIncrementalArbitraryDepth) reader;
     }
 
     @Override
     public SymbolTable getSymbolTable() {
-        return reader.getSymbolTable();
+        return application.getSymbolTable();
     }
 
     @Override
     public String[] getTypeAnnotations() {
-        return reader.getTypeAnnotations();
+        return application.getTypeAnnotations();
     }
 
     @Override
     public SymbolToken[] getTypeAnnotationSymbols() {
-        return reader.getTypeAnnotationSymbols();
+        return application.getTypeAnnotationSymbols();
     }
 
     @Override
     public Iterator<String> iterateTypeAnnotations() {
-        return reader.iterateTypeAnnotations();
+        return application.iterateTypeAnnotations();
     }
 
     @Override
     public int getFieldId() {
-        return reader.getFieldId();
+        return application.getFieldId();
     }
 
     @Override
     public String getFieldName() {
-        return reader.getFieldName();
+        return application.getFieldName();
     }
 
     @Override
     public SymbolToken getFieldNameSymbol() {
-        return reader.getFieldNameSymbol();
+        return application.getFieldNameSymbol();
     }
 
     @Override
     public SymbolToken symbolValue() {
         prepareScalar();
-        return reader.symbolValue();
+        return application.symbolValue();
+    }
+
+    @Override
+    public SymbolTable pop_passed_symbol_table() {
+        return application.pop_passed_symbol_table();
     }
 }

@@ -1,11 +1,14 @@
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.IonCursor.Event;
+import static com.amazon.ion.IonCursor.Instruction;
+
 import com.amazon.ion.BufferConfiguration;
 import com.amazon.ion.IonException;
 
 import java.io.IOException;
 
-public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffer> {
+final class IonBinaryLexerRefillable extends IonBinaryLexerBase {
 
 
     private final BufferConfiguration.OversizedValueHandler oversizedValueHandler;
@@ -101,7 +104,7 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
     protected int peekByte() throws IOException {
         int b;
         if (isSkippingCurrentValue) {
-            b = buffer.readByteWithoutBuffering();
+            b = ((RefillableBuffer) buffer).readByteWithoutBuffering();
             if (b >= 0) {
                 individualBytesSkippedWithoutBuffering += 1;
             }
@@ -119,7 +122,7 @@ public class IonBinaryLexerRefillable extends IonBinaryLexerBase<RefillableBuffe
         if (isSkippingCurrentValue) {
             // If the value is being skipped, the byte will not have been buffered.
             //b = getInput().read();
-            b = buffer.readByteWithoutBuffering();
+            b = ((RefillableBuffer) buffer).readByteWithoutBuffering();
             if (b >= 0) {
                 individualBytesSkippedWithoutBuffering += 1;
             }
