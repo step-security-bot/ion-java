@@ -655,6 +655,7 @@ class IonBinaryLexerBase {
                 if (parseAnnotationWrapperHeader(valueTid)) {
                     return true;
                 }
+                return parseTypeID(peekByte(), true);
             } else {
                 if (parseValueHeader(valueTid, isAnnotated)) {
                     return true;
@@ -714,10 +715,6 @@ class IonBinaryLexerBase {
                     b = peekByte();
                 }
                 if (parseTypeID(b, false)) {
-                    return;
-                }
-                if (valueTid.type == IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {
-                    parseTypeID(peekByte(), true); // TODO see about making this recursive in parseAnnotationHeader
                     return;
                 }
             }
