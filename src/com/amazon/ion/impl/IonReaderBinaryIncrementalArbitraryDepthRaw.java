@@ -95,10 +95,6 @@ final class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReen
     @Override
     public Event next(Instruction instruction) throws IOException {
         lobBytesRead = 0;
-        if (instruction != Instruction.LOAD_VALUE) {
-            // Keep the annotations if remaining positioned on the same scalar; otherwise, drop them.
-            annotationSids.clear(); // TODO is there a better place for this?
-        }
         return lexer.next(instruction);
     }
 
@@ -660,15 +656,14 @@ final class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReen
      * @return the annotation symbol IDs, or an empty list if the current value is not annotated.
      */
     IntList getAnnotationSids() {
-        if (annotationSids.isEmpty()) {
-            long savedPeekIndex = peekIndex;
-            IonBinaryLexerRefillable.Marker annotationsMarker = lexer.getAnnotationSidsMarker();
-            peekIndex = annotationsMarker.startIndex;
-            while (peekIndex < annotationsMarker.endIndex) {
-                annotationSids.add(readVarUInt());
-            }
-            peekIndex = savedPeekIndex;
+        annotationSids.clear();
+        long savedPeekIndex = peekIndex;
+        IonBinaryLexerRefillable.Marker annotationsMarker = lexer.getAnnotationSidsMarker();
+        peekIndex = annotationsMarker.startIndex;
+        while (peekIndex < annotationsMarker.endIndex) {
+            annotationSids.add(readVarUInt());
         }
+        peekIndex = savedPeekIndex;
         return annotationSids;
     }
 
