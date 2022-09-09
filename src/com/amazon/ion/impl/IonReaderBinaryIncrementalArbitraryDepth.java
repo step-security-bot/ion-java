@@ -990,7 +990,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
     private State state = State.READING_VALUE;
 
     private boolean isReadingSymbolTable() {
-        return state.ordinal() < State.READING_VALUE.ordinal();
+        return state != State.READING_VALUE;
     }
 
     private boolean isPositionedOnSymbolTable() {

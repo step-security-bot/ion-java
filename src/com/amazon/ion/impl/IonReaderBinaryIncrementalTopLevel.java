@@ -23,6 +23,7 @@ public final class IonReaderBinaryIncrementalTopLevel implements IonReader, _Pri
 
     private final IonReaderBinaryIncrementalArbitraryDepth reader;
     private IonCursor.Instruction nextInstruction = IonCursor.Instruction.NEXT_VALUE;
+    private final boolean isFixed;
     private IonType type = null; // TODO see if it's possible to remove this
 
     IonReaderBinaryIncrementalTopLevel(IonReaderBuilder builder, InputStream inputStream) {
@@ -30,6 +31,7 @@ public final class IonReaderBinaryIncrementalTopLevel implements IonReader, _Pri
             builder,
             new RefillableBufferFromInputStream(inputStream, builder.getBufferConfiguration())
         );
+        isFixed = false;
     }
 
     IonReaderBinaryIncrementalTopLevel(IonReaderBuilder builder, byte[] data, int offset, int length) {
@@ -37,6 +39,7 @@ public final class IonReaderBinaryIncrementalTopLevel implements IonReader, _Pri
             builder,
             new FixedBufferFromByteArray(data, offset, length)
         );
+        isFixed = true;
     }
 
     @Override
@@ -56,7 +59,13 @@ public final class IonReaderBinaryIncrementalTopLevel implements IonReader, _Pri
 
     @Override
     public IonType next() {
-        if (reader.isTopLevel()) {
+        if (isFixed || !reader.isTopLevel()) {
+            IonCursor.Event event = next(IonCursor.Instruction.NEXT_VALUE);
+            if (event == IonCursor.Event.NEEDS_DATA) {
+                type = null;
+                return null;
+            }
+        } else {
             while (true) {
                 IonCursor.Event event = next(nextInstruction);
                 if (event == IonCursor.Event.NEEDS_DATA) {
@@ -77,12 +86,6 @@ public final class IonReaderBinaryIncrementalTopLevel implements IonReader, _Pri
             }
             if (nextInstruction == IonCursor.Instruction.LOAD_VALUE) {
                 nextInstruction = IonCursor.Instruction.NEXT_VALUE;
-            }
-        } else {
-            IonCursor.Event event = next(IonCursor.Instruction.NEXT_VALUE);
-            if (event == IonCursor.Event.NEEDS_DATA) {
-                type = null;
-                return null;
             }
         }
         type = reader.getType();
