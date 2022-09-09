@@ -1,7 +1,6 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.IonCursor.Event;
-import static com.amazon.ion.IonCursor.Instruction;
 
 import com.amazon.ion.BufferConfiguration;
 import com.amazon.ion.IonException;
@@ -783,33 +782,29 @@ class IonBinaryLexerBase {
         return currentMakeBufferReadyFunction.makeBufferReady();
     }
 
-    //@Override
-    public Event next(Instruction instruction) throws IOException {
-        switch (instruction) {
-            case STEP_IN:
-                current.stepIn();
-                break;
-            case NEXT_VALUE:
-                current.nextHeader();
-                break;
-            case LOAD_VALUE:
-                current.fillValue();
-                break;
-            case STEP_OUT:
-                current.stepOut();
-                break;
-        }
+    Event stepIn() throws IOException {
+        current.stepIn();
+        return event;
+    }
+
+    Event stepOut() throws IOException {
+        current.stepOut();
+        return event;
+    }
+
+    Event next() throws IOException {
+        current.nextHeader();
+        return event;
+    }
+
+    Event fillValue() throws IOException {
+        current.fillValue();
         return event;
     }
 
     //@Override
     public Event getCurrentEvent() {
         return event;
-    }
-
-    //@Override
-    public void fill(InputStream inputStream) {
-        // TODO
     }
 
     int ionMajorVersion() {

@@ -22,8 +22,8 @@ import static com.amazon.ion.util.IonStreamUtils.throwAsIonException;
 public final class IonReaderBinaryIncrementalTopLevel implements IonReader, _Private_ReaderWriter {
 
     private final IonReaderBinaryIncrementalArbitraryDepth reader;
-    private IonCursor.Instruction nextInstruction = IonCursor.Instruction.NEXT_VALUE;
     private final boolean isFixed;
+    private boolean isLoadingValue = false;
     private IonType type = null; // TODO see if it's possible to remove this
 
     IonReaderBinaryIncrementalTopLevel(IonReaderBuilder builder, InputStream inputStream) {
@@ -47,10 +47,20 @@ public final class IonReaderBinaryIncrementalTopLevel implements IonReader, _Pri
         throw new UnsupportedOperationException("Not implemented");
     }
 
-    private IonCursor.Event next(IonCursor.Instruction instruction) {
+    private IonCursor.Event nextHeader() {
         IonCursor.Event event = null;
         try {
-            event = reader.next(instruction);
+            event = reader.next();
+        } catch (IOException e) {
+            throwAsIonException(e);
+        }
+        return event;
+    }
+
+    private IonCursor.Event fillValue() {
+        IonCursor.Event event = null;
+        try {
+            event = reader.fillValue();
         } catch (IOException e) {
             throwAsIonException(e);
         }
@@ -60,33 +70,31 @@ public final class IonReaderBinaryIncrementalTopLevel implements IonReader, _Pri
     @Override
     public IonType next() {
         if (isFixed || !reader.isTopLevel()) {
-            IonCursor.Event event = next(IonCursor.Instruction.NEXT_VALUE);
+            IonCursor.Event event = nextHeader();
             if (event == IonCursor.Event.NEEDS_DATA) {
                 type = null;
                 return null;
             }
         } else {
             while (true) {
-                IonCursor.Event event = next(nextInstruction);
+                IonCursor.Event event = isLoadingValue ? fillValue() : nextHeader();
                 if (event == IonCursor.Event.NEEDS_DATA) {
                     type = null;
                     return null;
                 }
-                nextInstruction = IonCursor.Instruction.LOAD_VALUE;
-                event = next(nextInstruction);
+                isLoadingValue = true;
+                event = fillValue(); // TODO this is called twice if re-entering with LOAD_VALUE as the next instruction
                 if (event == IonCursor.Event.NEEDS_DATA) {
                     type = null;
                     return null;
                 } else if (event == IonCursor.Event.NEEDS_INSTRUCTION) {
                     // The value was skipped for being too large. Get the next one.
-                    nextInstruction = IonCursor.Instruction.NEXT_VALUE;
+                    isLoadingValue = false;
                     continue;
                 }
                 break;
             }
-            if (nextInstruction == IonCursor.Instruction.LOAD_VALUE) {
-                nextInstruction = IonCursor.Instruction.NEXT_VALUE;
-            }
+            isLoadingValue = false;
         }
         type = reader.getType();
         return type;
@@ -94,13 +102,21 @@ public final class IonReaderBinaryIncrementalTopLevel implements IonReader, _Pri
 
     @Override
     public void stepIn() {
-        next(IonCursor.Instruction.STEP_IN);
+        try {
+            reader.stepIn();
+        } catch (IOException e) {
+            throwAsIonException(e);
+        }
         type = null;
     }
 
     @Override
     public void stepOut() {
-        next(IonCursor.Instruction.STEP_OUT);
+        try {
+            reader.stepOut();
+        } catch (IOException e) {
+            throwAsIonException(e);
+        }
         type = null;
     }
 

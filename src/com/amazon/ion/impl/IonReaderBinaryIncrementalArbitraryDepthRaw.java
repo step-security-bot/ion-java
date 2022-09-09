@@ -93,19 +93,29 @@ final class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReen
     }
 
     @Override
-    public Event next(Instruction instruction) throws IOException {
+    public Event next() throws IOException {
         lobBytesRead = 0;
-        return lexer.next(instruction);
+        return lexer.next();
+    }
+
+    @Override
+    public Event stepIn() throws IOException {
+        return lexer.stepIn();
+    }
+
+    @Override
+    public Event stepOut() throws IOException {
+        return lexer.stepOut();
+    }
+
+    @Override
+    public Event fillValue() throws IOException {
+        return lexer.fillValue();
     }
 
     @Override
     public Event getCurrentEvent() {
         return lexer.getCurrentEvent();
-    }
-
-    @Override
-    public void fill(InputStream inputStream) {
-        lexer.fill(inputStream);
     }
 
     /**

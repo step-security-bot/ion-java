@@ -32,10 +32,6 @@ import static com.amazon.ion.IonCursor.Event.NEEDS_INSTRUCTION;
 import static com.amazon.ion.IonCursor.Event.START_CONTAINER;
 import static com.amazon.ion.IonCursor.Event.START_SCALAR;
 import static com.amazon.ion.IonCursor.Event.VALUE_READY;
-import static com.amazon.ion.IonCursor.Instruction.LOAD_VALUE;
-import static com.amazon.ion.IonCursor.Instruction.NEXT_VALUE;
-import static com.amazon.ion.IonCursor.Instruction.STEP_IN;
-import static com.amazon.ion.IonCursor.Instruction.STEP_OUT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -169,27 +165,27 @@ public class IonReaderBinaryIncrementalArbitraryDepthTest {
     }
 
     private static void assertInt(int expected, IonReaderBinaryIncrementalArbitraryDepth reader) throws IOException {
-        assertEquals(VALUE_READY, reader.next(LOAD_VALUE));
+        assertEquals(VALUE_READY, reader.fillValue());
         assertEquals(IonType.INT, reader.getType());
         assertTrue(reader.getIntegerSize().ordinal() >= IntegerSize.INT.ordinal());
         assertEquals(expected, reader.intValue());
     }
 
     private static void assertStreamEnd(IonReaderBinaryIncrementalArbitraryDepth reader) throws IOException {
-        assertEquals(NEEDS_DATA, reader.next(NEXT_VALUE));
+        assertEquals(NEEDS_DATA, reader.next());
         assertNull(null, reader.getType());
     }
 
     @Test
     public void annotatedTopLevelIterator() throws Exception {
         IonReaderBinaryIncrementalArbitraryDepth reader = readerFor("foo::bar::123 baz::456");
-        assertEquals(START_SCALAR, reader.next(NEXT_VALUE));
+        assertEquals(START_SCALAR, reader.next());
         List<String> annotations = new ArrayList<String>();
         drainAnnotations(reader, annotations);
         assertEquals(Arrays.asList("foo", "bar"), annotations);
         annotations.clear();
         assertInt(123, reader);
-        assertEquals(START_SCALAR, reader.next(NEXT_VALUE));
+        assertEquals(START_SCALAR, reader.next());
         drainAnnotations(reader, annotations);
         assertEquals(Collections.singletonList("baz"), annotations);
         assertInt(456, reader);
@@ -200,16 +196,16 @@ public class IonReaderBinaryIncrementalArbitraryDepthTest {
     @Test
     public void annotatedInContainer() throws Exception {
         IonReaderBinaryIncrementalArbitraryDepth reader = readerFor("[foo::bar::123, baz::456]");
-        assertEquals(START_CONTAINER, reader.next(NEXT_VALUE));
-        assertEquals(NEEDS_INSTRUCTION, reader.next(STEP_IN));
-        assertEquals(START_SCALAR, reader.next(NEXT_VALUE));
+        assertEquals(START_CONTAINER, reader.next());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepIn());
+        assertEquals(START_SCALAR, reader.next());
         assertEquals(Arrays.asList("foo", "bar"), Arrays.asList(reader.getTypeAnnotations()));
         assertInt(123, reader);
-        assertEquals(START_SCALAR, reader.next(NEXT_VALUE));
+        assertEquals(START_SCALAR, reader.next());
         assertEquals(Collections.singletonList("baz"), Arrays.asList(reader.getTypeAnnotations()));
         assertInt(456, reader);
-        assertEquals(END_CONTAINER, reader.next(NEXT_VALUE));
-        assertEquals(NEEDS_INSTRUCTION, reader.next(STEP_OUT));
+        assertEquals(END_CONTAINER, reader.next());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepOut());
         assertStreamEnd(reader);
         reader.close();
     }
@@ -219,49 +215,49 @@ public class IonReaderBinaryIncrementalArbitraryDepthTest {
         IonReaderBinaryIncrementalArbitraryDepth reader = readerFor("{abc: foo::bar::(123), def: baz::[456, {}]}");
         assertNull(reader.getType());
         assertEquals(0, reader.getDepth());
-        assertEquals(START_CONTAINER, reader.next(NEXT_VALUE));
+        assertEquals(START_CONTAINER, reader.next());
         assertEquals(IonType.STRUCT, reader.getType());
-        assertEquals(NEEDS_INSTRUCTION, reader.next(STEP_IN));
+        assertEquals(NEEDS_INSTRUCTION, reader.stepIn());
         assertTrue(reader.isInStruct());
         assertNull(reader.getType());
         assertEquals(1, reader.getDepth());
-        assertEquals(START_CONTAINER, reader.next(NEXT_VALUE));
+        assertEquals(START_CONTAINER, reader.next());
         assertEquals(IonType.SEXP, reader.getType());
         assertEquals(Arrays.asList("foo", "bar"), Arrays.asList(reader.getTypeAnnotations()));
-        assertEquals(NEEDS_INSTRUCTION, reader.next(STEP_IN));
+        assertEquals(NEEDS_INSTRUCTION, reader.stepIn());
         assertFalse(reader.isInStruct());
         assertEquals(2, reader.getDepth());
         assertNull(reader.getType());
-        assertEquals(START_SCALAR, reader.next(NEXT_VALUE));
+        assertEquals(START_SCALAR, reader.next());
         assertEquals(IonType.INT, reader.getType());
         assertInt(123, reader);
-        assertEquals(END_CONTAINER, reader.next(NEXT_VALUE));
+        assertEquals(END_CONTAINER, reader.next());
         assertEquals(2, reader.getDepth());
-        assertEquals(NEEDS_INSTRUCTION, reader.next(STEP_OUT));
+        assertEquals(NEEDS_INSTRUCTION, reader.stepOut());
         assertEquals(1, reader.getDepth());
         assertNull(reader.getType());
-        assertEquals(START_CONTAINER, reader.next(NEXT_VALUE));
+        assertEquals(START_CONTAINER, reader.next());
         assertEquals(IonType.LIST, reader.getType());
         assertEquals(Collections.singletonList("baz"), Arrays.asList(reader.getTypeAnnotations()));
-        assertEquals(NEEDS_INSTRUCTION, reader.next(STEP_IN));
+        assertEquals(NEEDS_INSTRUCTION, reader.stepIn());
         assertEquals(2, reader.getDepth());
         assertNull(reader.getType());
-        assertEquals(START_SCALAR, reader.next(NEXT_VALUE));
+        assertEquals(START_SCALAR, reader.next());
         assertEquals(IonType.INT, reader.getType());
         assertInt(456, reader);
-        assertEquals(START_CONTAINER, reader.next(NEXT_VALUE));
+        assertEquals(START_CONTAINER, reader.next());
         assertEquals(IonType.STRUCT, reader.getType());
         assertEquals(2, reader.getDepth());
-        assertEquals(END_CONTAINER, reader.next(NEXT_VALUE));
+        assertEquals(END_CONTAINER, reader.next());
         assertEquals(2, reader.getDepth());
         assertNull(reader.getType());
-        assertEquals(NEEDS_INSTRUCTION, reader.next(STEP_OUT));
+        assertEquals(NEEDS_INSTRUCTION, reader.stepOut());
         assertEquals(1, reader.getDepth());
         assertNull(reader.getType());
-        assertEquals(END_CONTAINER, reader.next(NEXT_VALUE));
+        assertEquals(END_CONTAINER, reader.next());
         assertNull(reader.getType());
         assertEquals(1, reader.getDepth());
-        assertEquals(NEEDS_INSTRUCTION, reader.next(STEP_OUT));
+        assertEquals(NEEDS_INSTRUCTION, reader.stepOut());
         assertEquals(0, reader.getDepth());
         assertNull(reader.getType());
         assertStreamEnd(reader);
@@ -273,32 +269,32 @@ public class IonReaderBinaryIncrementalArbitraryDepthTest {
         IonReaderBinaryIncrementalArbitraryDepth reader = readerFor(
             "[123] 456 {abc: foo::bar::123, def: baz::456} [123] 789 [foo::bar::123, baz::456] [123]"
         );
-        assertEquals(START_CONTAINER, reader.next(NEXT_VALUE));
+        assertEquals(START_CONTAINER, reader.next());
         assertEquals(IonType.LIST, reader.getType());
-        assertEquals(START_SCALAR, reader.next(NEXT_VALUE));
+        assertEquals(START_SCALAR, reader.next());
         assertEquals(IonType.INT, reader.getType());
-        assertEquals(START_CONTAINER, reader.next(NEXT_VALUE));
+        assertEquals(START_CONTAINER, reader.next());
         assertEquals(IonType.STRUCT, reader.getType());
-        assertEquals(START_CONTAINER, reader.next(NEXT_VALUE));
+        assertEquals(START_CONTAINER, reader.next());
         assertEquals(IonType.LIST, reader.getType());
-        assertEquals(NEEDS_INSTRUCTION, reader.next(STEP_IN));
+        assertEquals(NEEDS_INSTRUCTION, reader.stepIn());
         assertNull(reader.getType());
-        assertEquals(START_SCALAR, reader.next(NEXT_VALUE));
+        assertEquals(START_SCALAR, reader.next());
         assertInt(123, reader);
-        assertEquals(NEEDS_INSTRUCTION, reader.next(STEP_OUT));
+        assertEquals(NEEDS_INSTRUCTION, reader.stepOut());
         assertNull(reader.getType());
-        assertEquals(START_SCALAR, reader.next(NEXT_VALUE));
+        assertEquals(START_SCALAR, reader.next());
         assertInt(789, reader);
-        assertEquals(START_CONTAINER, reader.next(NEXT_VALUE));
+        assertEquals(START_CONTAINER, reader.next());
         assertEquals(IonType.LIST, reader.getType());
-        assertEquals(START_CONTAINER, reader.next(NEXT_VALUE));
+        assertEquals(START_CONTAINER, reader.next());
         assertEquals(IonType.LIST, reader.getType());
         assertStreamEnd(reader);
         reader.close();
     }
 
     private static void assertText(IonType type, String value, IonReaderBinaryIncrementalArbitraryDepth reader) throws IOException {
-        assertEquals(VALUE_READY, reader.next(LOAD_VALUE));
+        assertEquals(VALUE_READY, reader.fillValue());
         assertEquals(type, reader.getType());
         assertEquals(value, reader.stringValue());
     }
@@ -330,22 +326,22 @@ public class IonReaderBinaryIncrementalArbitraryDepthTest {
             }
         });
 
-        assertEquals(START_CONTAINER, reader.next(NEXT_VALUE));
+        assertEquals(START_CONTAINER, reader.next());
         assertEquals(IonType.STRUCT, reader.getType());
-        assertEquals(NEEDS_INSTRUCTION, reader.next(STEP_IN));
-        assertEquals(START_SCALAR, reader.next(NEXT_VALUE));
+        assertEquals(NEEDS_INSTRUCTION, reader.stepIn());
+        assertEquals(START_SCALAR, reader.next());
         assertEquals(IonType.SYMBOL, reader.getType());
         assertEquals("foo", reader.getFieldName());
         assertEquals(Collections.singletonList("uvw"), Arrays.asList(reader.getTypeAnnotations()));
         assertSymbol("abc", reader);
-        assertEquals(START_SCALAR, reader.next(NEXT_VALUE));
+        assertEquals(START_SCALAR, reader.next());
         assertEquals(IonType.SYMBOL, reader.getType());
         assertEquals("bar", reader.getFieldName());
         assertEquals(Arrays.asList("qrs", "xyz"), Arrays.asList(reader.getTypeAnnotations()));
         assertSymbol("def", reader);
-        assertEquals(NEEDS_INSTRUCTION, reader.next(STEP_OUT));
+        assertEquals(NEEDS_INSTRUCTION, reader.stepOut());
         SymbolTable preAppend = reader.getSymbolTable();
-        assertEquals(START_SCALAR, reader.next(NEXT_VALUE));
+        assertEquals(START_SCALAR, reader.next());
         assertEquals(IonType.SYMBOL, reader.getType());
         SymbolTable postAppend = reader.getSymbolTable();
         assertSymbol("orange", reader);
@@ -363,17 +359,19 @@ public class IonReaderBinaryIncrementalArbitraryDepthTest {
             new RefillableBufferFromInputStream(pipe, STANDARD_READER_BUILDER.getBufferConfiguration())
         );
         byte[] bytes = toBinary("\"StringValueLong\"");
-        IonCursor.Instruction instruction = NEXT_VALUE;
+        boolean fillValue = false;
         for (int i = 0; i < bytes.length; i++) {
             if (i == _Private_IonConstants.BINARY_VERSION_MARKER_SIZE + 3) {
-                assertEquals(START_SCALAR, reader.next(instruction));
-                instruction = LOAD_VALUE;
+                assertEquals(START_SCALAR, reader.next());
+                fillValue = true;
+            } else if (fillValue) {
+                assertEquals(NEEDS_DATA, reader.fillValue());
             } else {
-                assertEquals(NEEDS_DATA, reader.next(instruction));
+                assertEquals(NEEDS_DATA, reader.next());
             }
             pipe.receive(bytes[i]);
         }
-        assertEquals(VALUE_READY, reader.next(instruction));
+        assertEquals(VALUE_READY, reader.fillValue());
         assertEquals(IonType.STRING, reader.getType());
         assertString("StringValueLong", reader);
         assertStreamEnd(reader);
@@ -442,70 +440,70 @@ public class IonReaderBinaryIncrementalArbitraryDepthTest {
         );
         byte[] bytes = symbolTable.toByteArray();
         for (byte b : bytes) {
-            assertEquals(NEEDS_DATA, reader.next(NEXT_VALUE));
+            assertEquals(NEEDS_DATA, reader.next());
             pipe.receive(b);
         }
         bytes = firstValue.toByteArray();
         pipe.receive(bytes[0]); // This is the struct header
-        assertEquals(START_CONTAINER, reader.next(NEXT_VALUE));
-        assertEquals(NEEDS_INSTRUCTION, reader.next(STEP_IN));
+        assertEquals(START_CONTAINER, reader.next());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepIn());
         for (int i = 1; i < bytes.length - 4; i++) {
-            assertEquals(NEEDS_DATA, reader.next(NEXT_VALUE));
+            assertEquals(NEEDS_DATA, reader.next());
             pipe.receive(bytes[i]);
         }
-        assertEquals(NEEDS_DATA, reader.next(NEXT_VALUE));
+        assertEquals(NEEDS_DATA, reader.next());
         pipe.receive(bytes[bytes.length - 4]);
-        assertEquals(START_SCALAR, reader.next(NEXT_VALUE));
+        assertEquals(START_SCALAR, reader.next());
         for (int i = -3; i <= -1; i++) {
-            assertEquals(NEEDS_DATA, reader.next(LOAD_VALUE));
+            assertEquals(NEEDS_DATA, reader.fillValue());
             pipe.receive(bytes[bytes.length + i]);
         }
-        assertEquals(VALUE_READY, reader.next(LOAD_VALUE));
+        assertEquals(VALUE_READY, reader.fillValue());
         assertEquals(IonType.STRING, reader.getType());
         assertEquals(Collections.singletonList("def"), Arrays.asList(reader.getTypeAnnotations()));
         assertEquals("abcdefghijklmnopqrstuvwxyz", reader.getFieldName());
         assertEquals("foo", reader.stringValue());
-        assertEquals(END_CONTAINER, reader.next(NEXT_VALUE));
-        assertEquals(NEEDS_INSTRUCTION, reader.next(STEP_OUT));
-        assertEquals(NEEDS_DATA, reader.next(NEXT_VALUE));
+        assertEquals(END_CONTAINER, reader.next());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepOut());
+        assertEquals(NEEDS_DATA, reader.next());
 
         bytes = secondSymbolTable.toByteArray();
         for (byte b : bytes) {
-            assertEquals(NEEDS_DATA, reader.next(NEXT_VALUE));
+            assertEquals(NEEDS_DATA, reader.next());
             pipe.receive(b);
         }
 
         bytes = secondValue.toByteArray();
         pipe.receive(bytes[0]); // This is the struct type ID
-        assertEquals(NEEDS_DATA, reader.next(NEXT_VALUE));
+        assertEquals(NEEDS_DATA, reader.next());
         pipe.receive(bytes[1]); // This is the length byte
         pipe.receive(bytes[2]); // This is the first field SID
-        assertEquals(START_CONTAINER, reader.next(NEXT_VALUE));
-        assertEquals(NEEDS_INSTRUCTION, reader.next(STEP_IN));
+        assertEquals(START_CONTAINER, reader.next());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepIn());
         int finalStringLength = "fairlyLongString".length() + 2; // +2: 1 for the type ID, 1 for the length byte.
         int i = 3;
         for (; i < bytes.length - finalStringLength; i++) {
-            assertEquals(NEEDS_DATA, reader.next(NEXT_VALUE));
+            assertEquals(NEEDS_DATA, reader.next());
             pipe.receive(bytes[i]);
         }
-        assertEquals(NEEDS_DATA, reader.next(NEXT_VALUE));
+        assertEquals(NEEDS_DATA, reader.next());
         pipe.receive(bytes[i]); // This is "fairlyLongString"'s type ID
-        assertEquals(NEEDS_DATA, reader.next(NEXT_VALUE));
+        assertEquals(NEEDS_DATA, reader.next());
         pipe.receive(bytes[++i]); // This is "fairlyLongString"'s length byte
         pipe.receive(bytes[++i]); // This is "fairlyLongString"'s first field SID
-        assertEquals(START_SCALAR, reader.next(NEXT_VALUE));
+        assertEquals(START_SCALAR, reader.next());
         for (i += 1; i < bytes.length; i++) {
-            assertEquals(NEEDS_DATA, reader.next(LOAD_VALUE));
+            assertEquals(NEEDS_DATA, reader.fillValue());
             pipe.receive(bytes[i]);
         }
-        assertEquals(VALUE_READY, reader.next(LOAD_VALUE));
+        assertEquals(VALUE_READY, reader.fillValue());
         assertEquals(IonType.STRING, reader.getType());
         assertEquals("fairlyLongString", reader.stringValue());
         assertEquals("abcdefghijklmnopqrstuvwxyz", reader.getFieldName());
         assertEquals(Arrays.asList("foo", "bar"), Arrays.asList(reader.getTypeAnnotations()));
-        assertEquals(END_CONTAINER, reader.next(NEXT_VALUE));
-        assertEquals(NEEDS_INSTRUCTION, reader.next(STEP_OUT));
-        assertEquals(NEEDS_DATA, reader.next(NEXT_VALUE));
+        assertEquals(END_CONTAINER, reader.next());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepOut());
+        assertEquals(NEEDS_DATA, reader.next());
         reader.close();
     }
 }

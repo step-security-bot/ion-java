@@ -4,7 +4,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 
-// TODO consider a different one for raw
 public interface IonCursor extends Closeable {
     enum Event {
         NEEDS_DATA,
@@ -15,17 +14,9 @@ public interface IonCursor extends Closeable {
         END_CONTAINER
     }
 
-    enum Instruction {
-        NEXT_VALUE,
-        LOAD_VALUE,
-        STEP_IN,
-        STEP_OUT
-    }
-
-    Event next(Instruction instruction) throws IOException;
-
+    Event next() throws IOException;
+    Event stepIn() throws IOException;
+    Event stepOut() throws IOException;
+    Event fillValue() throws IOException;
     Event getCurrentEvent();
-
-    // TODO more variants (byte[], ByteBuffer)
-    void fill(InputStream inputStream);
 }

@@ -737,12 +737,12 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
         }
 
         private boolean valueUnavailable() throws IOException {
-            Event event = raw.next(Instruction.LOAD_VALUE);
+            Event event = raw.fillValue();
             return event == Event.NEEDS_DATA || event == Event.NEEDS_INSTRUCTION;
         }
 
         private void finishReadingSymbolTableStruct() throws IOException {
-            raw.next(Instruction.STEP_OUT);
+            raw.stepOut();
             if (!hasSeenImports) {
                 resetSymbolTable();
                 resetImports();
@@ -788,7 +788,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
         }
 
         private void finishReadingImportsList() throws IOException {
-            raw.next(Instruction.STEP_OUT);
+            raw.stepOut();
             imports = new LocalSymbolTableImports(newImports);
             state = State.ON_SYMBOL_TABLE_FIELD;
         }
@@ -812,20 +812,20 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
         }
 
         private void finishReadingSymbolsList() throws IOException {
-            raw.next(Instruction.STEP_OUT);
+            raw.stepOut();
             state = State.ON_SYMBOL_TABLE_FIELD;
         }
 
         private void startReadingImportStruct() throws IOException {
             resetImportInfo();
             if (raw.getType() == IonType.STRUCT) {
-                raw.next(Instruction.STEP_IN);
+                raw.stepIn();
                 state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
             }
         }
 
         private void finishReadingImportStruct() throws IOException {
-            raw.next(Instruction.STEP_OUT);
+            raw.stepOut();
             newImports.add(createImport(name, version, maxId));
             state = State.READING_SYMBOL_TABLE_IMPORTS_LIST;
         }
@@ -867,13 +867,13 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
             while (true) {
                 switch (state) {
                     case ON_SYMBOL_TABLE_STRUCT:
-                        if (Event.NEEDS_DATA == raw.next(Instruction.STEP_IN)) {
+                        if (Event.NEEDS_DATA == raw.stepIn()) {
                             return;
                         }
                         state = State.ON_SYMBOL_TABLE_FIELD;
                         break;
                     case ON_SYMBOL_TABLE_FIELD:
-                        event = raw.next(Instruction.NEXT_VALUE);
+                        event = raw.next();
                         if (Event.NEEDS_DATA == event) {
                             return;
                         }
@@ -885,7 +885,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
                         break;
                     case ON_SYMBOL_TABLE_SYMBOLS:
                         if (raw.getType() == IonType.LIST) {
-                            if (Event.NEEDS_DATA == raw.next(Instruction.STEP_IN)) {
+                            if (Event.NEEDS_DATA == raw.stepIn()) {
                                 return;
                             }
                             startReadingSymbolsList();
@@ -895,7 +895,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
                         break;
                     case ON_SYMBOL_TABLE_IMPORTS:
                         if (raw.getType() == IonType.LIST) {
-                            if (Event.NEEDS_DATA == raw.next(Instruction.STEP_IN)) {
+                            if (Event.NEEDS_DATA == raw.stepIn()) {
                                 return;
                             }
                             startReadingImportsList();
@@ -909,7 +909,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
                         }
                         break;
                     case READING_SYMBOL_TABLE_SYMBOLS_LIST:
-                        event = raw.next(Instruction.NEXT_VALUE);
+                        event = raw.next();
                         if (event == Event.NEEDS_DATA) {
                             return;
                         }
@@ -926,7 +926,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
                         finishReadingSymbol();
                         break;
                     case READING_SYMBOL_TABLE_IMPORTS_LIST:
-                        event = raw.next(Instruction.NEXT_VALUE);
+                        event = raw.next();
                         if (event == Event.NEEDS_DATA) {
                             return;
                         }
@@ -937,7 +937,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
                         startReadingImportStruct();
                         break;
                     case READING_SYMBOL_TABLE_IMPORT_STRUCT:
-                        event = raw.next(Instruction.NEXT_VALUE);
+                        event = raw.next();
                         if (event == Event.NEEDS_DATA) {
                             return;
                         }
@@ -1001,9 +1001,9 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
     }
 
     @Override
-    public Event next(Instruction instruction) throws IOException {
+    public Event next() throws IOException {
         Event event;
-        if (instruction == Instruction.NEXT_VALUE && (raw.isTopLevel() || isReadingSymbolTable())) {
+        if (raw.isTopLevel() || isReadingSymbolTable()) {
             while (true) {
                 if (isReadingSymbolTable()) {
                     symbolTableReader.readSymbolTable();
@@ -1012,7 +1012,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
                         break;
                     }
                 }
-                event = raw.next(instruction);
+                event = raw.next();
                 if (isPositionedOnSymbolTable()) {
                     cachedReadOnlySymbolTable = null;
                     symbolTableReader.resetState();
@@ -1022,20 +1022,30 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
                 break;
             }
         } else {
-            event = raw.next(instruction);
+            event = raw.next();
         }
         resetAnnotations();
         return event;
     }
 
     @Override
-    public Event getCurrentEvent() {
-        return raw.getCurrentEvent();
+    public Event stepIn() throws IOException {
+        return raw.stepIn();
     }
 
     @Override
-    public void fill(InputStream inputStream) {
-        // todo
+    public Event stepOut() throws IOException {
+        return raw.stepOut();
+    }
+
+    @Override
+    public Event fillValue() throws IOException {
+        return raw.fillValue();
+    }
+
+    @Override
+    public Event getCurrentEvent() {
+        return raw.getCurrentEvent();
     }
 
     boolean isTopLevel() {

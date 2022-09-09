@@ -1,10 +1,8 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.IonCursor.Event;
-import static com.amazon.ion.IonCursor.Instruction;
 
 import com.amazon.ion.BufferConfiguration;
-import com.amazon.ion.IonException;
 
 import java.io.IOException;
 
@@ -47,37 +45,44 @@ final class IonBinaryLexerRefillable extends IonBinaryLexerBase {
         pageSize = buffer.getConfiguration().getInitialBufferSize();
     }
 
+    private void handleOversizedValue() throws IOException {
+        // The value was oversized.
+        oversizedValueHandler.onOversizedValue();
+        if (!buffer.isTerminated()) { // TODO note: not required
+            // TODO reuse setCheckpoint
+            buffer.seek(valueMarker.endIndex - buffer.getOffset() - individualBytesSkippedWithoutBuffering);
+            reportConsumedData(valueMarker.endIndex - checkpoint);
+            checkpointLocation = CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID;
+            peekIndex = buffer.getOffset();
+            checkpoint = peekIndex;
+            reset();
+        }
+        isSkippingCurrentValue = false;
+        individualBytesSkippedWithoutBuffering = 0;
+    }
+
     @Override
-    public Event next(Instruction instruction) throws IOException {
+    public Event next() throws IOException {
         while (true) {
-            Event event = super.next(instruction);
+            Event event = super.next();
             if (isSkippingCurrentValue) {
-                // The value was oversized.
-                try {
-                    oversizedValueHandler.onOversizedValue();
-                    if (!buffer.isTerminated()) { // TODO note: not required
-                        // TODO reuse setCheckpoint
-                        buffer.seek(valueMarker.endIndex - buffer.getOffset() - individualBytesSkippedWithoutBuffering);
-                        reportConsumedData(valueMarker.endIndex - checkpoint);
-                        checkpointLocation = CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID;
-                        peekIndex = buffer.getOffset();
-                        checkpoint = peekIndex;
-                        reset();
-                    }
-                } catch (Exception e) {
-                    throw new IonException(e); // TODO clean up
-                }
-                isSkippingCurrentValue = false;
-                individualBytesSkippedWithoutBuffering = 0;
-                if (instruction == Instruction.NEXT_VALUE) {
-                    // The user has requested a value. Continue to the next one.
-                    continue;
-                }
+                handleOversizedValue();
+                // The user has requested a value. Continue to the next one.
+                continue;
                 // This was a request to fill a value, but the request could not be completed because the value
                 // was oversized. Convey that NEXT is now required.
             }
             return event;
         }
+    }
+
+    @Override
+    public Event fillValue() throws IOException {
+        Event event = super.fillValue();
+        if (isSkippingCurrentValue) {
+            handleOversizedValue();
+        }
+        return event;
     }
 
     private interface ReadByteFunction {

@@ -35,19 +35,15 @@ class IonReaderBinaryNonReentrantCore implements IonReader {
         throw new UnsupportedOperationException("Not implemented");
     }
 
-    private IonCursor.Event next(IonCursor.Instruction instruction) {
+    @Override
+    public IonType next() {
         IonCursor.Event event = null;
         try {
-            event = reader.next(instruction);
+            event = reader.next();
         } catch (IOException e) {
             throwAsIonException(e);
         }
-        return event;
-    }
-
-    @Override
-    public IonType next() {
-        if (NEEDS_DATA == next(IonCursor.Instruction.NEXT_VALUE)) {
+        if (event == NEEDS_DATA) {
             reader.requireCompleteValue();
             type = null;
         } else {
@@ -58,13 +54,21 @@ class IonReaderBinaryNonReentrantCore implements IonReader {
 
     @Override
     public void stepIn() {
-        next(IonCursor.Instruction.STEP_IN);
+        try {
+            reader.stepIn();
+        } catch (IOException e) {
+            throwAsIonException(e);
+        }
         type = null;
     }
 
     @Override
     public void stepOut() {
-        next(IonCursor.Instruction.STEP_OUT);
+        try {
+            reader.stepOut();
+        } catch (IOException e) {
+            throwAsIonException(e);
+        }
         type = null;
     }
 
@@ -79,6 +83,7 @@ class IonReaderBinaryNonReentrantCore implements IonReader {
     }
 
     protected void prepareScalar() {
+        // TODO avoidable if fixed buffer is used
         if (reader.getCurrentEvent() == IonCursor.Event.VALUE_READY) {
             return;
         }
@@ -86,7 +91,13 @@ class IonReaderBinaryNonReentrantCore implements IonReader {
             // Note: existing tests expect IllegalStateException in this case.
             throw new IllegalStateException("Reader is not positioned on a scalar value.");
         }
-        if (next(IonCursor.Instruction.LOAD_VALUE) != IonCursor.Event.VALUE_READY) {
+        IonCursor.Event event = null;
+        try {
+            event = reader.fillValue();
+        } catch (IOException e) {
+            throwAsIonException(e);
+        }
+        if (event != IonCursor.Event.VALUE_READY) {
             throw new IonException("Unexpected EOF.");
         }
     }
