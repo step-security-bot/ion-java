@@ -265,19 +265,19 @@ class IonBinaryLexerBase {
         //current = careful;
     }
 
-    private interface LexerVariant {
+    private static abstract class LexerVariant {
         //boolean parseAnnotationWrapperHeader(IonTypeID valueTid) throws IOException;
         //boolean parseValueHeader(IonTypeID valueTid, boolean isAnnotated) throws IOException;
         //boolean parseTypeID(final int typeIdByte, final boolean isAnnotated) throws IOException;
         //long readVarUInt(int knownAvailable) throws IOException;
         //boolean readFieldSid() throws IOException;
-        void nextHeader() throws IOException;
-        void fillValue() throws IOException;
-        void stepIn() throws IOException;
-        void stepOut() throws IOException;
+        abstract void nextHeader() throws IOException;
+        abstract void fillValue() throws IOException;
+        abstract void stepIn() throws IOException;
+        abstract void stepOut() throws IOException;
     }
 
-    private class Careful implements LexerVariant {
+    private final class Careful extends LexerVariant {
 
         void setCheckpoint(CheckpointLocation location) {
             if (location == CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID) {
@@ -580,7 +580,7 @@ class IonBinaryLexerBase {
         }
     }
 
-    private class Quick implements LexerVariant {
+    private final class Quick extends LexerVariant {
 
         public boolean parseAnnotationWrapperHeader(IonTypeID valueTid) throws IOException {
             long valueLength;
