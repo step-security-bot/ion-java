@@ -7,12 +7,7 @@ import java.nio.ByteBuffer;
 // TODO get rid of this, move logic to LexerBase
 abstract class AbstractBuffer implements Closeable {
 
-    protected enum State {
-        FILL,
-        SEEK,
-        READY,
-        TERMINATED
-    }
+
 
     private interface SeekToFunction {
         boolean seekTo(long index) throws IOException;
@@ -74,7 +69,6 @@ abstract class AbstractBuffer implements Closeable {
 
     ByteBuffer byteBuffer;
 
-    State state = State.READY;
 
     long bytesRequested = 0;
 
@@ -130,31 +124,11 @@ abstract class AbstractBuffer implements Closeable {
         return currentSeekToFunction.seekTo(index);
     }
 
-    boolean makeReady() throws IOException {
-        switch (state) {
-            case READY:
-                return true;
-            case SEEK:
-                return seek(bytesRequested);
-            case FILL:
-                return fill(bytesRequested);
-            case TERMINATED:
-                return false;
-            default:
-                throw new IllegalStateException();
-        }
-    }
-
-    long getOffset() {
-        return offset;
-    }
-
-    boolean isReady() {
-        return state == State.READY;
+    protected boolean isReady() {
+        return true;
     }
 
     boolean isAwaitingMoreData() {
-        // TODO doesn't feel quite right
-        return state == State.SEEK || bytesRequested > 1;
+        return bytesRequested > 1;
     }
 }

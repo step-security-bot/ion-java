@@ -35,6 +35,13 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
         AFTER_CONTAINER_HEADER
     }
 
+    protected enum State {
+        FILL,
+        SEEK,
+        READY,
+        TERMINATED
+    }
+
     // TODO should this be an IonBufferConfiguration?
     private final BufferConfiguration<?> configuration;
 
@@ -72,6 +79,8 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
     private final IonCursor quick = new Quick();
 
     private IonCursor current;
+
+    protected State state = State.READY;
 
     IonBinaryLexerRefillable(final BufferConfiguration<?> configuration) {
         super(0, configuration.getDataHandler());
@@ -155,7 +164,7 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
 
     @Override
     Event stepIn() throws IOException {
-        return current.stepIntoContainer();
+        return current.stepIntoContainer(); // TODO performance experiment: compare to simple branching rather than delegation
     }
 
     @Override
@@ -324,47 +333,14 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
         super.setValueMarker(valueLength, isAnnotated);
     }
 
-    private interface MakeBufferReadyFunction {
-        boolean makeBufferReady() throws IOException;
-    }
-
-    private final MakeBufferReadyFunction carefulMakeBufferReadyFunction = new MakeBufferReadyFunction() {
-        @Override
-        public boolean makeBufferReady() throws IOException {
-            if (!makeReady()) {
-                event = Event.NEEDS_DATA;
-                return false;
-            }
-            return true;
-        }
-    };
-
-    private static final MakeBufferReadyFunction QUICK_MAKE_BUFFER_READY_FUNCTION = new MakeBufferReadyFunction() {
-        @Override
-        public boolean makeBufferReady() {
-            return true;
-        }
-    };
-
-
-    // TODO remove. Only used in Careful mode
-    private MakeBufferReadyFunction currentMakeBufferReadyFunction = carefulMakeBufferReadyFunction;
-
-
-    protected boolean makeBufferReady() throws IOException {
-        return currentMakeBufferReadyFunction.makeBufferReady();
-    }
-
     protected void enterQuickMode() {
         quick();
-        currentMakeBufferReadyFunction = QUICK_MAKE_BUFFER_READY_FUNCTION;
         currentReadByteFunction = quickReadByteFunction;
         //current = quick;
     }
 
     protected void exitQuickMode() {
         careful();
-        currentMakeBufferReadyFunction = carefulMakeBufferReadyFunction;
         currentReadByteFunction = carefulReadByteFunction;
         //current = careful;
     }
@@ -419,6 +395,30 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
             return Event.VALUE_READY;
         }
 
+        private boolean makeBufferReady() throws IOException {
+            boolean isReady;
+            switch (state) {
+                case READY:
+                    isReady = true;
+                    break;
+                case SEEK:
+                    isReady = seek(bytesRequested);
+                    break;
+                case FILL:
+                    isReady = fill(bytesRequested);
+                    break;
+                case TERMINATED:
+                    isReady = false;
+                    break;
+                default:
+                    throw new IllegalStateException();
+            }
+            if (!isReady) {
+                event = Event.NEEDS_DATA; // TODO should this be set in seek/fill to avoid the extra check?
+            }
+            return isReady;
+        }
+
         private void setCheckpoint(CheckpointLocation location) {
             if (location == CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID) {
                 reset();
@@ -435,7 +435,7 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
             } else if (!seekTo(valueMarker.endIndex)) {
                 return true;
             }
-            peekIndex = getOffset();
+            peekIndex = offset;
 
             if (peekIndex < valueMarker.endIndex) {
                 shiftContainerEnds(valueMarker.endIndex - peekIndex);
@@ -516,7 +516,7 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
                     event = Event.NEEDS_DATA;
                     return true;
                 }
-                peekIndex = getOffset();
+                peekIndex = offset;
                 valueLength = 0;
                 setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
                 checkContainerEnd();
@@ -760,6 +760,11 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
         }
     }
 
+    @Override
+    protected boolean isReady() {
+        return state == State.READY;
+    }
+
     private long amountToShift = 0;
 
     private final _Private_RecyclingStack.Consumer<ContainerInfo> shiftContainerIndex =
@@ -812,6 +817,7 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
     boolean isAwaitingMoreData() {
         return !isTerminated()
             && (checkpointLocation.ordinal() > CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID.ordinal()
+            || state == State.SEEK
             || super.isAwaitingMoreData());
     }
 }
