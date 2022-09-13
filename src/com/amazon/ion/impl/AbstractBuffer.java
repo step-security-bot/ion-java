@@ -157,13 +157,4 @@ abstract class AbstractBuffer implements Closeable {
         // TODO doesn't feel quite right
         return state == State.SEEK || bytesRequested > 1;
     }
-
-    void terminate() {
-        state = State.TERMINATED;
-    }
-
-    boolean isTerminated() {
-        return state == State.TERMINATED;
-    }
-
 }

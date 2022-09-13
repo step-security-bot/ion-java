@@ -28,6 +28,13 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
         void bufferOverflowDetected();
     }
 
+    private enum CheckpointLocation {
+        BEFORE_UNANNOTATED_TYPE_ID,
+        BEFORE_ANNOTATED_TYPE_ID,
+        AFTER_SCALAR_HEADER,
+        AFTER_CONTAINER_HEADER
+    }
+
     // TODO should this be an IonBufferConfiguration?
     private final BufferConfiguration<?> configuration;
 
@@ -57,6 +64,8 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
     private boolean isSkippingCurrentValue = false;
 
     private int individualBytesSkippedWithoutBuffering = 0;
+
+    private CheckpointLocation checkpointLocation = CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID;
 
     private final IonCursor careful = new Careful();
 
@@ -789,5 +798,20 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
 
     BufferConfiguration<?> getConfiguration() {
         return configuration;
+    }
+
+    void terminate() {
+        state = State.TERMINATED;
+    }
+
+    boolean isTerminated() {
+        return state == State.TERMINATED;
+    }
+
+    @Override
+    boolean isAwaitingMoreData() {
+        return !isTerminated()
+            && (checkpointLocation.ordinal() > CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID.ordinal()
+            || super.isAwaitingMoreData());
     }
 }

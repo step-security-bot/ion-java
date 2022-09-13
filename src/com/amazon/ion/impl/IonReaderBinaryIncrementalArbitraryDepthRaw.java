@@ -773,10 +773,6 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
         }
     }
 
-    void terminate() {
-        lexer.terminate();
-    }
-
     @Override
     public void close() throws IOException {
         utf8Decoder.close();

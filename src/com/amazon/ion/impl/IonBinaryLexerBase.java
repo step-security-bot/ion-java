@@ -28,14 +28,6 @@ abstract class IonBinaryLexerBase extends AbstractBuffer {
         }
     };
 
-    // TODO move to LexerRefillable
-    protected enum CheckpointLocation {
-        BEFORE_UNANNOTATED_TYPE_ID,
-        BEFORE_ANNOTATED_TYPE_ID,
-        AFTER_SCALAR_HEADER,
-        AFTER_CONTAINER_HEADER
-    }
-
     /**
      * Holds the start and end indices of a slice of the buffer.
      */
@@ -131,9 +123,6 @@ abstract class IonBinaryLexerBase extends AbstractBuffer {
      * The type ID byte of the current value.
      */
     protected IonTypeID valueTid;
-
-    // TODO move to LexerRefillable
-    protected CheckpointLocation checkpointLocation = CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID;
 
     protected int fieldSid;
     
@@ -470,10 +459,7 @@ abstract class IonBinaryLexerBase extends AbstractBuffer {
 
     @Override
     boolean isAwaitingMoreData() {
-        return !isTerminated()
-            && (peekIndex > checkpoint
-                || checkpointLocation.ordinal() > CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID.ordinal()
-                || super.isAwaitingMoreData());
+        return peekIndex > checkpoint || super.isAwaitingMoreData();
     }
 
     //@Override
