@@ -21,6 +21,7 @@ import static com.amazon.ion.IonCursor.Event.NEEDS_DATA;
 import static com.amazon.ion.util.IonStreamUtils.throwAsIonException;
 
 // TODO integrate with IonSystem.newSystemReader and tests
+// TODO extend IonReaderBinaryIncrementalArbitraryDepthRaw, see about sharing logic with IonReaderBinaryNonReentrantApplication
 class IonReaderBinaryNonReentrantCore implements IonReader {
 
     protected final IonReaderReentrantCore reader;
