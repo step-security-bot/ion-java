@@ -52,114 +52,114 @@ public class IonReaderBinaryIncrementalArbitraryDepthRawTest {
     @Test
     public void basicContainer() throws Exception {
         initializeBuffer(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD3, 0x84, 0x21, 0x01));
-        assertEquals(START_CONTAINER, reader.next());
-        assertEquals(NEEDS_INSTRUCTION, reader.stepIn());
-        assertEquals(START_SCALAR, reader.next());
+        assertEquals(START_CONTAINER, reader.nextValue());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepIntoContainer());
+        assertEquals(START_SCALAR, reader.nextValue());
         assertEquals(4, reader.getFieldId());
         assertEquals(VALUE_READY, reader.fillValue());
         assertEquals(1, reader.intValue());
-        assertEquals(END_CONTAINER, reader.next());
-        assertEquals(NEEDS_INSTRUCTION, reader.stepOut());
-        assertEquals(NEEDS_DATA, reader.next());
+        assertEquals(END_CONTAINER, reader.nextValue());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepOutOfContainer());
+        assertEquals(NEEDS_DATA, reader.nextValue());
     }
 
     @Test
     public void basicStrings() throws Exception {
         initializeBuffer(bytes(0xE0, 0x01, 0x00, 0xEA, 0x83, 'f', 'o', 'o', 0x83, 'b', 'a', 'r'));
-        assertEquals(START_SCALAR, reader.next());
+        assertEquals(START_SCALAR, reader.nextValue());
         assertEquals(VALUE_READY, reader.fillValue());
         assertEquals("foo", reader.stringValue());
-        assertEquals(START_SCALAR, reader.next());
+        assertEquals(START_SCALAR, reader.nextValue());
         assertEquals(VALUE_READY, reader.fillValue());
         assertEquals("bar", reader.stringValue());
-        assertEquals(NEEDS_DATA, reader.next());
+        assertEquals(NEEDS_DATA, reader.nextValue());
     }
 
     @Test
     public void basicNoFill() throws Exception {
         initializeBuffer(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD3, 0x84, 0x21, 0x01));
-        assertEquals(START_CONTAINER, reader.next());
-        assertEquals(NEEDS_INSTRUCTION, reader.stepIn());
-        assertEquals(START_SCALAR, reader.next());
+        assertEquals(START_CONTAINER, reader.nextValue());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepIntoContainer());
+        assertEquals(START_SCALAR, reader.nextValue());
         assertEquals(4, reader.getFieldId());
-        assertEquals(END_CONTAINER, reader.next());
-        assertEquals(NEEDS_INSTRUCTION, reader.stepOut());
-        assertEquals(NEEDS_DATA, reader.next());
+        assertEquals(END_CONTAINER, reader.nextValue());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepOutOfContainer());
+        assertEquals(NEEDS_DATA, reader.nextValue());
     }
 
     @Test
     public void basicStepOutEarly() throws Exception {
         initializeBuffer(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD3, 0x84, 0x21, 0x01));
-        assertEquals(START_CONTAINER, reader.next());
-        assertEquals(NEEDS_INSTRUCTION, reader.stepIn());
-        assertEquals(START_SCALAR, reader.next());
-        assertEquals(NEEDS_INSTRUCTION, reader.stepOut());
+        assertEquals(START_CONTAINER, reader.nextValue());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepIntoContainer());
+        assertEquals(START_SCALAR, reader.nextValue());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepOutOfContainer());
         assertEquals(-1, reader.getFieldId());
-        assertEquals(NEEDS_DATA, reader.next());
+        assertEquals(NEEDS_DATA, reader.nextValue());
     }
 
     @Test
     public void basicTopLevelSkip() throws Exception {
         initializeBuffer(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD3, 0x84, 0x21, 0x01));
-        assertEquals(START_CONTAINER, reader.next());
-        assertEquals(NEEDS_DATA, reader.next());
+        assertEquals(START_CONTAINER, reader.nextValue());
+        assertEquals(NEEDS_DATA, reader.nextValue());
     }
 
     @Test
     public void basicTopLevelSkipThenConsume() throws Exception {
         initializeBuffer(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD3, 0x84, 0x21, 0x01, 0x21, 0x03));
-        assertEquals(START_CONTAINER, reader.next());
-        assertEquals(START_SCALAR, reader.next());
+        assertEquals(START_CONTAINER, reader.nextValue());
+        assertEquals(START_SCALAR, reader.nextValue());
         assertEquals(VALUE_READY, reader.fillValue());
         assertEquals(3, reader.intValue());
-        assertEquals(NEEDS_DATA, reader.next());
+        assertEquals(NEEDS_DATA, reader.nextValue());
     }
 
     @Test
     public void nestedContainers() throws Exception {
         initializeBuffer(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD6, 0x83, 0xB1, 0x40, 0x84, 0x21, 0x01));
-        assertEquals(START_CONTAINER, reader.next());
-        assertEquals(NEEDS_INSTRUCTION, reader.stepIn());
-        assertEquals(START_CONTAINER, reader.next());
-        assertEquals(NEEDS_INSTRUCTION, reader.stepIn());
-        assertEquals(START_SCALAR, reader.next());
-        assertEquals(NEEDS_INSTRUCTION, reader.stepOut());
-        assertEquals(START_SCALAR, reader.next());
+        assertEquals(START_CONTAINER, reader.nextValue());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepIntoContainer());
+        assertEquals(START_CONTAINER, reader.nextValue());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepIntoContainer());
+        assertEquals(START_SCALAR, reader.nextValue());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepOutOfContainer());
+        assertEquals(START_SCALAR, reader.nextValue());
         assertEquals(VALUE_READY, reader.fillValue());
         assertEquals(1, reader.intValue());
-        assertEquals(NEEDS_INSTRUCTION, reader.stepOut());
-        assertEquals(NEEDS_DATA, reader.next());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepOutOfContainer());
+        assertEquals(NEEDS_DATA, reader.nextValue());
     }
 
     @Test
     public void fillContainerAtDepth0() throws Exception {
         initializeBuffer(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD6, 0x83, 0xB1, 0x40, 0x84, 0x21, 0x01));
-        assertEquals(START_CONTAINER, reader.next());
+        assertEquals(START_CONTAINER, reader.nextValue());
         assertEquals(VALUE_READY, reader.fillValue());
 
-        assertEquals(NEEDS_INSTRUCTION, reader.stepIn());
-        assertEquals(START_CONTAINER, reader.next());
-        assertEquals(NEEDS_INSTRUCTION, reader.stepIn());
-        assertEquals(START_SCALAR, reader.next());
-        assertEquals(NEEDS_INSTRUCTION, reader.stepOut());
-        assertEquals(START_SCALAR, reader.next());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepIntoContainer());
+        assertEquals(START_CONTAINER, reader.nextValue());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepIntoContainer());
+        assertEquals(START_SCALAR, reader.nextValue());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepOutOfContainer());
+        assertEquals(START_SCALAR, reader.nextValue());
         assertEquals(VALUE_READY, reader.fillValue());
         assertEquals(1, reader.intValue());
-        assertEquals(NEEDS_INSTRUCTION, reader.stepOut());
-        assertEquals(NEEDS_DATA, reader.next());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepOutOfContainer());
+        assertEquals(NEEDS_DATA, reader.nextValue());
     }
 
     @Test
     public void fillContainerAtDepth1() throws Exception {
         initializeBuffer(bytes(0xE0, 0x01, 0x00, 0xEA, 0xD6, 0x83, 0xB1, 0x40, 0x84, 0x21, 0x01));
-        assertEquals(START_CONTAINER, reader.next());
-        assertEquals(NEEDS_INSTRUCTION, reader.stepIn());
-        assertEquals(START_CONTAINER, reader.next());
+        assertEquals(START_CONTAINER, reader.nextValue());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepIntoContainer());
+        assertEquals(START_CONTAINER, reader.nextValue());
         assertEquals(VALUE_READY, reader.fillValue());
 
-        assertEquals(NEEDS_INSTRUCTION, reader.stepIn());
-        assertEquals(START_SCALAR, reader.next());
-        assertEquals(END_CONTAINER, reader.next());
-        assertEquals(NEEDS_INSTRUCTION, reader.stepOut());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepIntoContainer());
+        assertEquals(START_SCALAR, reader.nextValue());
+        assertEquals(END_CONTAINER, reader.nextValue());
+        assertEquals(NEEDS_INSTRUCTION, reader.stepOutOfContainer());
     }
 }

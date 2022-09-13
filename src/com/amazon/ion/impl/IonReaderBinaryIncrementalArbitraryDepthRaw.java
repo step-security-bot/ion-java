@@ -93,18 +93,18 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
     }
 
     @Override
-    public Event next() throws IOException {
+    public Event nextValue() throws IOException {
         lobBytesRead = 0;
         return lexer.next();
     }
 
     @Override
-    public Event stepIn() throws IOException {
+    public Event stepIntoContainer() throws IOException {
         return lexer.stepIn();
     }
 
     @Override
-    public Event stepOut() throws IOException {
+    public Event stepOutOfContainer() throws IOException {
         return lexer.stepOut();
     }
 
@@ -318,7 +318,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
      * @param required the required type of current value.
      */
     private void requireType(IonType required) {
-        if (required != getType()) {
+        if (required != lexer.getType()) {
             // Note: this is IllegalStateException to match the behavior of the other binary IonReader implementation.
             throw new IllegalStateException(
                 String.format("Invalid type. Required %s but found %s.", required, lexer.getType())
@@ -329,7 +329,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
     @Override
     public int byteSize() {
         prepareScalar();
-        if (!IonType.isLob(getType()) && !isNullValue()) {
+        if (!IonType.isLob(lexer.getType()) && !isNullValue()) {
             throw new IonException("Reader must be positioned on a blob or clob.");
         }
         return (int) (scalarMarker.endIndex - scalarMarker.startIndex);

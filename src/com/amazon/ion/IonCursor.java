@@ -14,9 +14,9 @@ public interface IonCursor extends Closeable {
         END_CONTAINER
     }
 
-    Event next() throws IOException;
-    Event stepIn() throws IOException;
-    Event stepOut() throws IOException;
+    Event nextValue() throws IOException;
+    Event stepIntoContainer() throws IOException;
+    Event stepOutOfContainer() throws IOException;
     Event fillValue() throws IOException;
     Event getCurrentEvent();
 }

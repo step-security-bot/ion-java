@@ -39,7 +39,7 @@ class IonReaderBinaryNonReentrantCore implements IonReader {
     public IonType next() {
         IonCursor.Event event = null;
         try {
-            event = reader.next();
+            event = reader.nextValue();
         } catch (IOException e) {
             throwAsIonException(e);
         }
@@ -55,7 +55,7 @@ class IonReaderBinaryNonReentrantCore implements IonReader {
     @Override
     public void stepIn() {
         try {
-            reader.stepIn();
+            reader.stepIntoContainer();
         } catch (IOException e) {
             throwAsIonException(e);
         }
@@ -65,7 +65,7 @@ class IonReaderBinaryNonReentrantCore implements IonReader {
     @Override
     public void stepOut() {
         try {
-            reader.stepOut();
+            reader.stepOutOfContainer();
         } catch (IOException e) {
             throwAsIonException(e);
         }
