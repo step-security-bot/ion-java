@@ -19,7 +19,7 @@ public final class IonReaderBinaryIncrementalTopLevel extends IonReaderBinaryInc
     IonReaderBinaryIncrementalTopLevel(IonReaderBuilder builder, InputStream inputStream) {
         super(
             builder,
-            new RefillableBufferFromInputStream(inputStream, builder.getBufferConfiguration())
+            new IonBinaryLexerRefillableFromInputStream(inputStream, builder.getBufferConfiguration())
         );
         isFixed = false;
     }
@@ -27,7 +27,7 @@ public final class IonReaderBinaryIncrementalTopLevel extends IonReaderBinaryInc
     IonReaderBinaryIncrementalTopLevel(IonReaderBuilder builder, byte[] data, int offset, int length) {
         super(
             builder,
-            new FixedBufferFromByteArray(data, offset, length)
+            new IonBinaryLexerFixedFromByteArray(builder.getBufferConfiguration(), data, offset, length)
         );
         isFixed = true;
     }

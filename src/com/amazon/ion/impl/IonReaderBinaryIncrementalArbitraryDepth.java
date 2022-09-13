@@ -133,13 +133,8 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
      * @param builder the builder containing the configuration for the new reader.
      * @param buffer the buffer that provides binary Ion data.
      */
-    IonReaderBinaryIncrementalArbitraryDepth(IonReaderBuilder builder, FixedBufferFromByteArray buffer) {
-        super(
-            new IonBinaryLexerBase(
-                buffer,
-                builder.getBufferConfiguration() == null ? null : builder.getBufferConfiguration().getDataHandler()
-            )
-        );
+    IonReaderBinaryIncrementalArbitraryDepth(IonReaderBuilder builder, IonBinaryLexerFixedFromByteArray lexer) {
+        super(lexer);
         this.catalog = builder.getCatalog() == null ? EMPTY_CATALOG : builder.getCatalog();
         if (builder.isAnnotationIteratorReuseEnabled()) {
             isAnnotationIteratorReuseEnabled = true;
@@ -159,8 +154,8 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
      * @param builder the builder containing the configuration for the new reader.
      * @param buffer the buffer that provides binary Ion data.
      */
-    IonReaderBinaryIncrementalArbitraryDepth(IonReaderBuilder builder, RefillableBuffer buffer) {
-        super(new IonBinaryLexerRefillable(buffer));
+    IonReaderBinaryIncrementalArbitraryDepth(IonReaderBuilder builder, IonBinaryLexerRefillable lexer) {
+        super(lexer);
         this.catalog = builder.getCatalog() == null ? EMPTY_CATALOG : builder.getCatalog();
         if (builder.isAnnotationIteratorReuseEnabled()) {
             isAnnotationIteratorReuseEnabled = true;
@@ -172,9 +167,9 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
         symbols = new ArrayList<String>(SYMBOLS_LIST_INITIAL_CAPACITY);
         symbolTableReader = new SymbolTableReader();
         resetImports();
-        final IonBufferConfiguration configuration = (IonBufferConfiguration) buffer.getConfiguration();
+        final IonBufferConfiguration configuration = (IonBufferConfiguration) lexer.getConfiguration();
         lexer.registerIvmNotificationConsumer(ivmNotificationConsumer);
-        ((IonBinaryLexerRefillable) lexer).registerOversizedValueHandler(
+        lexer.registerOversizedValueHandler(
             new BufferConfiguration.OversizedValueHandler() {
                 @Override
                 public void onOversizedValue() {

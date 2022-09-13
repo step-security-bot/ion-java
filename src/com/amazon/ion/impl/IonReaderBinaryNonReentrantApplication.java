@@ -29,14 +29,14 @@ final class IonReaderBinaryNonReentrantApplication
     IonReaderBinaryNonReentrantApplication(IonReaderBuilder builder, InputStream inputStream) {
         super(
             builder,
-            new RefillableBufferFromInputStream(inputStream, builder.getBufferConfiguration())
+            new IonBinaryLexerRefillableFromInputStream(inputStream, builder.getBufferConfiguration())
         );
     }
 
     IonReaderBinaryNonReentrantApplication(IonReaderBuilder builder, byte[] data, int offset, int length) {
         super(
             builder,
-            new FixedBufferFromByteArray(data, offset, length)
+            new IonBinaryLexerFixedFromByteArray(builder.getBufferConfiguration(), data, offset, length)
         );
     }
 

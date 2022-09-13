@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 // TODO removed 'implements IonCursor' as a performance experiment. Try adding back.
-class IonBinaryLexerBase {
+abstract class IonBinaryLexerBase extends AbstractBuffer {
 
     private static final int LOWER_SEVEN_BITS_BITMASK = 0x7F;
     private static final int HIGHEST_BIT_BITMASK = 0x80;
@@ -104,8 +104,6 @@ class IonBinaryLexerBase {
      */
     protected final _Private_RecyclingStack<ContainerInfo> containerStack;
 
-    protected final AbstractBuffer buffer;
-
     /**
      * The handler that will be notified when data is processed.
      */
@@ -149,18 +147,18 @@ class IonBinaryLexerBase {
     private LexerVariant current;
 
     IonBinaryLexerBase(
-        final AbstractBuffer buffer,
+        final long offset,
+        final boolean isFixed,
         final BufferConfiguration.DataHandler dataHandler
     ) {
-        this.buffer = buffer;
         this.dataHandler = dataHandler == null ? NO_OP_DATA_HANDLER : dataHandler;
         containerStack = new _Private_RecyclingStack<ContainerInfo>(
             CONTAINER_STACK_INITIAL_CAPACITY,
             CONTAINER_INFO_FACTORY
         );
-        peekIndex = buffer.getOffset();
+        peekIndex = offset;
         checkpoint = peekIndex;
-        current = (buffer instanceof RefillableBuffer) ? careful : quick;
+        current = isFixed ? quick : careful;
     }
 
     void registerIvmNotificationConsumer(IvmNotificationConsumer ivmConsumer) {
@@ -168,10 +166,10 @@ class IonBinaryLexerBase {
     }
 
     protected int readByte() throws IOException {
-        if (peekIndex >= buffer.limit) { // TODO any way to avoid?
+        if (peekIndex >= limit) { // TODO any way to avoid?
             return -1;
         }
-        return buffer.peek(peekIndex++);
+        return peek(peekIndex++);
     }
 
     protected void setValueMarker(long valueLength, boolean isAnnotated) {
@@ -215,9 +213,9 @@ class IonBinaryLexerBase {
     }
 
     private void parseIvm() {
-        majorVersion = buffer.peek(peekIndex++);
-        minorVersion = buffer.peek(peekIndex++);
-        if (buffer.peek(peekIndex++) != IVM_FINAL_BYTE) {
+        majorVersion = peek(peekIndex++);
+        minorVersion = peek(peekIndex++);
+        if (peek(peekIndex++) != IVM_FINAL_BYTE) {
             throw new IonException("Invalid Ion version marker.");
         }
         if (majorVersion != 1 || minorVersion != 0) {
@@ -227,7 +225,7 @@ class IonBinaryLexerBase {
     }
 
     protected int peekByte() throws IOException {
-        return buffer.peek(peekIndex++);
+        return peek(peekIndex++);
     }
 
     private void prohibitEmptyOrderedStruct() {
@@ -256,13 +254,13 @@ class IonBinaryLexerBase {
     }
 
     protected void enterQuickMode() {
-        buffer.quick();
+        quick();
         currentMakeBufferReadyFunction = QUICK_MAKE_BUFFER_READY_FUNCTION;
         //current = quick;
     }
 
     protected void exitQuickMode() {
-        buffer.careful();
+        careful();
         currentMakeBufferReadyFunction = carefulMakeBufferReadyFunction;
         //current = careful;
     }
@@ -284,7 +282,7 @@ class IonBinaryLexerBase {
         void setCheckpoint(CheckpointLocation location) {
             if (location == CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID) {
                 reset();
-                buffer.quickSeekTo(peekIndex);
+                quickSeekTo(peekIndex);
             }
             reportConsumedData(peekIndex - checkpoint);
             checkpointLocation = location;
@@ -292,12 +290,12 @@ class IonBinaryLexerBase {
         }
 
         protected boolean skipRemainingValueBytes() throws IOException {
-            if (buffer.limit >= valueMarker.endIndex) {
-                buffer.quickSeekTo(valueMarker.endIndex);
-            } else if (!buffer.seekTo(valueMarker.endIndex)) {
+            if (limit >= valueMarker.endIndex) {
+                quickSeekTo(valueMarker.endIndex);
+            } else if (!seekTo(valueMarker.endIndex)) {
                 return true;
             }
-            peekIndex = buffer.getOffset();
+            peekIndex = getOffset();
 
             handleSkip();
             setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
@@ -312,7 +310,7 @@ class IonBinaryLexerBase {
                 // for the smallest-possible annotations length, one for the smallest-possible annotation, and 1 for the
                 // smallest-possible value representation.
                 minimumAdditionalBytesNeeded = 4;
-                if (!buffer.fillAt(peekIndex, minimumAdditionalBytesNeeded)) {
+                if (!fillAt(peekIndex, minimumAdditionalBytesNeeded)) {
                     return true;
                 }
                 valueLength = readVarUInt(minimumAdditionalBytesNeeded);
@@ -323,7 +321,7 @@ class IonBinaryLexerBase {
                 // At this point the value must be at least 3 more bytes: 1 for the smallest-possible annotations
                 // length, 1 for the smallest-possible annotation, and 1 for the smallest-possible value representation.
                 minimumAdditionalBytesNeeded = 3;
-                if (!buffer.fillAt(peekIndex, minimumAdditionalBytesNeeded)) {
+                if (!fillAt(peekIndex, minimumAdditionalBytesNeeded)) {
                     return true;
                 }
                 valueLength = valueTid.length;
@@ -335,7 +333,7 @@ class IonBinaryLexerBase {
             if (annotationsLength < 0) {
                 return true;
             }
-            if (!buffer.fillAt(peekIndex, annotationsLength)) {
+            if (!fillAt(peekIndex, annotationsLength)) {
                 return true;
             }
             annotationSidsMarker.startIndex = peekIndex;
@@ -353,7 +351,7 @@ class IonBinaryLexerBase {
             if (valueTid.variableLength) {
                 // At this point the value must be at least 2 more bytes: 1 for the smallest-possible value length
                 // and 1 for the smallest-possible value representation.
-                if (!buffer.fillAt(peekIndex, 2)) {
+                if (!fillAt(peekIndex, 2)) {
                     return true;
                 }
                 valueLength = readVarUInt(2);
@@ -372,11 +370,11 @@ class IonBinaryLexerBase {
                         "Invalid annotation wrapper: NOP pad may not occur inside an annotation wrapper."
                     );
                 }
-                if (!buffer.seekTo(peekIndex + valueLength)) {
+                if (!seekTo(peekIndex + valueLength)) {
                     event = Event.NEEDS_DATA;
                     return true;
                 }
-                peekIndex = buffer.getOffset();
+                peekIndex = getOffset();
                 valueLength = 0;
                 setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
                 checkContainerEnd();
@@ -458,7 +456,7 @@ class IonBinaryLexerBase {
         public boolean readFieldSid() throws IOException {
             // The value must have at least 2 more bytes: 1 for the smallest-possible field SID and 1 for
             // the smallest-possible representation.
-            if (!buffer.fillAt(peekIndex, 2)) {
+            if (!fillAt(peekIndex, 2)) {
                 return true;
             }
             fieldSid = (int) readVarUInt(2); // TODO type alignment
@@ -484,7 +482,7 @@ class IonBinaryLexerBase {
                             return;
                         }
                         if (b == IVM_START_BYTE && containerStack.isEmpty()) {
-                            if (!buffer.fillAt(peekIndex, IVM_REMAINING_LENGTH)) {
+                            if (!fillAt(peekIndex, IVM_REMAINING_LENGTH)) {
                                 return;
                             }
                             parseIvm();
@@ -530,7 +528,7 @@ class IonBinaryLexerBase {
             }
             event = Event.NEEDS_DATA;
 
-            if (buffer.limit >= valueMarker.endIndex || buffer.fillAt(peekIndex, valueMarker.endIndex - valueMarker.startIndex)) {
+            if (limit >= valueMarker.endIndex || fillAt(peekIndex, valueMarker.endIndex - valueMarker.startIndex)) {
                 event = handleFill();
             }
         }
@@ -567,7 +565,7 @@ class IonBinaryLexerBase {
             // consumed at the previous depth from the remaining bytes needed at the current depth.
             event = Event.NEEDS_DATA;
             // Seek past any remaining bytes from the previous value.
-            if (!buffer.seekTo(containerInfo.endIndex)) {
+            if (!seekTo(containerInfo.endIndex)) {
                 return;
             }
             peekIndex = containerInfo.endIndex;
@@ -592,7 +590,7 @@ class IonBinaryLexerBase {
                 valueLength = valueTid.length;
             }
             setValueMarker(valueLength, false);
-            if (valueMarker.endIndex > buffer.limit) {
+            if (valueMarker.endIndex > limit) {
                 return true;
             }
             int annotationsLength = (int) readVarUInt();
@@ -621,7 +619,7 @@ class IonBinaryLexerBase {
                     );
                 }
                 long destination = peekIndex + valueLength;
-                if (destination > buffer.limit) {
+                if (destination > limit) {
                     throw new IonException("Invalid NOP pad.");
                 }
                 peekIndex += valueLength;
@@ -631,7 +629,7 @@ class IonBinaryLexerBase {
                 event = Event.START_SCALAR;
             }
             setValueMarker(valueLength, isAnnotated);
-            if (valueMarker.endIndex > buffer.limit) {
+            if (valueMarker.endIndex > limit) {
                 event = Event.NEEDS_DATA;
                 return true;
             }
@@ -697,7 +695,7 @@ class IonBinaryLexerBase {
                 if (checkContainerEnd()) {
                     return;
                 }
-                if (peekIndex >= buffer.limit) {
+                if (peekIndex >= limit) {
                     checkpoint = peekIndex;
                     return;
                 }
@@ -763,7 +761,7 @@ class IonBinaryLexerBase {
     private final MakeBufferReadyFunction carefulMakeBufferReadyFunction = new MakeBufferReadyFunction() {
         @Override
         public boolean makeBufferReady() throws IOException {
-            if (!buffer.makeReady()) {
+            if (!makeReady()) {
                 event = Event.NEEDS_DATA;
                 return false;
             }
@@ -864,8 +862,8 @@ class IonBinaryLexerBase {
     IonType peekType() {
         IonType type = getType();
         // TODO verify this complexity is warranted
-        if (type == null && buffer.isReady() && buffer.available() > 0) {
-            IonTypeID valueTid = IonTypeID.TYPE_IDS[buffer.peek(checkpoint)];
+        if (type == null && isReady() && available() > 0) {
+            IonTypeID valueTid = IonTypeID.TYPE_IDS[peek(checkpoint)];
             if (valueTid.type != IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {
                 type = valueTid.type;
             }
@@ -877,11 +875,12 @@ class IonBinaryLexerBase {
         return containerStack.isEmpty();
     }
 
+    @Override
     boolean isAwaitingMoreData() {
-        return !buffer.isTerminated()
+        return !isTerminated()
             && (peekIndex > checkpoint
                 || checkpointLocation.ordinal() > CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID.ordinal()
-                || buffer.isAwaitingMoreData());
+                || super.isAwaitingMoreData());
     }
 
     //@Override
