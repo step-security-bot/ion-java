@@ -3,6 +3,9 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.IonCursor.Event;
 
 import com.amazon.ion.BufferConfiguration;
+import com.amazon.ion.IonCursor;
+import com.amazon.ion.IonException;
+import com.amazon.ion.IonType;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -55,8 +58,14 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
 
     private int individualBytesSkippedWithoutBuffering = 0;
 
+    private final IonCursor careful = new Careful();
+
+    private final IonCursor quick = new Quick();
+
+    private IonCursor current;
+
     IonBinaryLexerRefillable(final BufferConfiguration<?> configuration) {
-        super(0, false, configuration.getDataHandler());
+        super(0, configuration.getDataHandler());
         if (configuration.getInitialBufferSize() < 1) {
             throw new IllegalArgumentException("Initial buffer size must be at least 1.");
         }
@@ -83,6 +92,7 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
             }
         };
         pageSize = configuration.getInitialBufferSize();
+        current = careful;
     }
 
     abstract void refill(long numberOfBytesToFill) throws IOException;
@@ -113,7 +123,7 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
     @Override
     public Event next() throws IOException {
         while (true) {
-            Event event = super.next();
+            Event event = current.nextValue();
             if (isSkippingCurrentValue) {
                 handleOversizedValue();
                 // The user has requested a value. Continue to the next one.
@@ -127,11 +137,21 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
 
     @Override
     public Event fillValue() throws IOException {
-        Event event = super.fillValue();
+        Event event = current.fillValue();
         if (isSkippingCurrentValue) {
             handleOversizedValue();
         }
         return event;
+    }
+
+    @Override
+    Event stepIn() throws IOException {
+        return current.stepIntoContainer();
+    }
+
+    @Override
+    Event stepOut() throws IOException {
+        return current.stepOutOfContainer();
     }
 
     @Override
@@ -229,6 +249,7 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
         return capacity - index;
     }
 
+    // TODO remove. Only used within Careful, so there should only be one implementation
     private interface ReadByteFunction {
         int readByte() throws IOException;
     }
@@ -265,7 +286,6 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
         return b;
     }
 
-
     protected int carefulReadByte() throws IOException {
         int b;
         if (isSkippingCurrentValue) {
@@ -285,16 +305,6 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
         return b;
     }
 
-    /**
-     * Reads one byte, if possible.
-     * @return the byte, or -1 if none was available.
-     * @throws IOException if an IOException is thrown by the underlying InputStream.
-     */
-    @Override
-    protected int readByte() throws IOException {
-        return currentReadByteFunction.readByte();
-    }
-
     @Override
     protected void setValueMarker(long valueLength, boolean isAnnotated) {
         if (isSkippingCurrentValue) {
@@ -305,22 +315,440 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
         super.setValueMarker(valueLength, isAnnotated);
     }
 
-    @Override
-    protected Event handleFill() {
-        if (isSkippingCurrentValue) {
-            return Event.NEEDS_INSTRUCTION;
+    private interface MakeBufferReadyFunction {
+        boolean makeBufferReady() throws IOException;
+    }
+
+    private final MakeBufferReadyFunction carefulMakeBufferReadyFunction = new MakeBufferReadyFunction() {
+        @Override
+        public boolean makeBufferReady() throws IOException {
+            if (!makeReady()) {
+                event = Event.NEEDS_DATA;
+                return false;
+            }
+            return true;
         }
-        return super.handleFill();
+    };
+
+    private static final MakeBufferReadyFunction QUICK_MAKE_BUFFER_READY_FUNCTION = new MakeBufferReadyFunction() {
+        @Override
+        public boolean makeBufferReady() {
+            return true;
+        }
+    };
+
+
+    // TODO remove. Only used in Careful mode
+    private MakeBufferReadyFunction currentMakeBufferReadyFunction = carefulMakeBufferReadyFunction;
+
+
+    protected boolean makeBufferReady() throws IOException {
+        return currentMakeBufferReadyFunction.makeBufferReady();
     }
 
     protected void enterQuickMode() {
-        super.enterQuickMode();
+        quick();
+        currentMakeBufferReadyFunction = QUICK_MAKE_BUFFER_READY_FUNCTION;
         currentReadByteFunction = quickReadByteFunction;
+        //current = quick;
     }
 
     protected void exitQuickMode() {
-        super.exitQuickMode();
+        careful();
+        currentMakeBufferReadyFunction = carefulMakeBufferReadyFunction;
         currentReadByteFunction = carefulReadByteFunction;
+        //current = careful;
+    }
+
+    private final class Quick implements IonCursor {
+
+        @Override
+        public Event nextValue() throws IOException {
+            return IonBinaryLexerRefillable.super.next();
+        }
+
+        @Override
+        public Event stepIntoContainer() throws IOException {
+            return IonBinaryLexerRefillable.super.stepIn();
+        }
+
+        @Override
+        public Event stepOutOfContainer() throws IOException {
+            return IonBinaryLexerRefillable.super.stepOut();
+        }
+
+        @Override
+        public Event fillValue() throws IOException {
+            return IonBinaryLexerRefillable.super.fillValue();
+        }
+
+        @Override
+        public Event getCurrentEvent() {
+            throw new IllegalStateException();
+        }
+
+        @Override
+        public void close() throws IOException {
+            throw new IllegalStateException();
+        }
+    }
+
+    private final class Careful implements IonCursor {
+
+        private int fillDepth = 0;
+
+        private Event handleFill() {
+            if (isSkippingCurrentValue) {
+                return Event.NEEDS_INSTRUCTION;
+            }
+            if (checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER) {
+                // This container is buffered in its entirety. There is no need to fill the buffer again until stepping
+                // out of the fill depth.
+                fillDepth = getDepth() + 1;
+                // TODO could go into quick mode now, but it would need to be reset if this container is skipped
+            }
+            return Event.VALUE_READY;
+        }
+
+        private void setCheckpoint(CheckpointLocation location) {
+            if (location == CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID) {
+                reset();
+                quickSeekTo(peekIndex);
+            }
+            reportConsumedData(peekIndex - checkpoint);
+            checkpointLocation = location;
+            checkpoint = peekIndex;
+        }
+
+        private boolean skipRemainingValueBytes() throws IOException {
+            if (limit >= valueMarker.endIndex) {
+                quickSeekTo(valueMarker.endIndex);
+            } else if (!seekTo(valueMarker.endIndex)) {
+                return true;
+            }
+            peekIndex = getOffset();
+
+            if (peekIndex < valueMarker.endIndex) {
+                shiftContainerEnds(valueMarker.endIndex - peekIndex);
+            }
+            setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
+            return false;
+        }
+
+        public boolean parseAnnotationWrapperHeader(IonTypeID valueTid) throws IOException {
+            long valueLength;
+            int minimumAdditionalBytesNeeded;
+            if (valueTid.variableLength) {
+                // At this point the value must be at least 4 more bytes: 1 for the smallest-possible wrapper length, 1
+                // for the smallest-possible annotations length, one for the smallest-possible annotation, and 1 for the
+                // smallest-possible value representation.
+                minimumAdditionalBytesNeeded = 4;
+                if (!fillAt(peekIndex, minimumAdditionalBytesNeeded)) {
+                    return true;
+                }
+                valueLength = readVarUInt(minimumAdditionalBytesNeeded);
+                if (valueLength < 0) {
+                    return true;
+                }
+            } else {
+                // At this point the value must be at least 3 more bytes: 1 for the smallest-possible annotations
+                // length, 1 for the smallest-possible annotation, and 1 for the smallest-possible value representation.
+                minimumAdditionalBytesNeeded = 3;
+                if (!fillAt(peekIndex, minimumAdditionalBytesNeeded)) {
+                    return true;
+                }
+                valueLength = valueTid.length;
+            }
+            // Record the post-length index in a value that will be shifted in the even the buffer needs to refill.
+
+            setValueMarker(valueLength, false);
+            int annotationsLength = (int) readVarUInt(minimumAdditionalBytesNeeded);
+            if (annotationsLength < 0) {
+                return true;
+            }
+            if (!fillAt(peekIndex, annotationsLength)) {
+                return true;
+            }
+            annotationSidsMarker.startIndex = peekIndex;
+            annotationSidsMarker.endIndex = annotationSidsMarker.startIndex + annotationsLength;
+            peekIndex = annotationSidsMarker.endIndex;
+            if (peekIndex >= valueMarker.endIndex) {
+                throw new IonException("Annotation wrapper must wrap a value.");
+            }
+            setCheckpoint(CheckpointLocation.BEFORE_ANNOTATED_TYPE_ID);
+            return false;
+        }
+
+        public boolean parseValueHeader(IonTypeID valueTid, boolean isAnnotated) throws IOException {
+            long valueLength;
+            if (valueTid.variableLength) {
+                // At this point the value must be at least 2 more bytes: 1 for the smallest-possible value length
+                // and 1 for the smallest-possible value representation.
+                if (!fillAt(peekIndex, 2)) {
+                    return true;
+                }
+                valueLength = readVarUInt(2);
+                if (valueLength < 0) {
+                    return true;
+                }
+            } else {
+                valueLength = valueTid.length;
+            }
+            if (IonType.isContainer(valueTid.type)) {
+                setCheckpoint(CheckpointLocation.AFTER_CONTAINER_HEADER);
+                event = Event.START_CONTAINER;
+            } else if (valueTid.isNopPad) {
+                if (isAnnotated) {
+                    throw new IonException(
+                        "Invalid annotation wrapper: NOP pad may not occur inside an annotation wrapper."
+                    );
+                }
+                if (!seekTo(peekIndex + valueLength)) {
+                    event = Event.NEEDS_DATA;
+                    return true;
+                }
+                peekIndex = getOffset();
+                valueLength = 0;
+                setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
+                checkContainerEnd();
+            } else {
+                setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER);
+                event = Event.START_SCALAR;
+            }
+            setValueMarker(valueLength, isAnnotated);
+            return false;
+        }
+
+        /**
+         * Reads the type ID byte.
+         *
+         * @param isAnnotated true if this type ID is on a value within an annotation wrapper; false if it is not.
+         * @throws IOException if thrown by the underlying InputStream.
+         */
+        public boolean parseTypeID(final int typeIdByte, final boolean isAnnotated) throws IOException {
+            IonTypeID valueTid = IonTypeID.TYPE_IDS[typeIdByte];
+            if (!valueTid.isValid) {
+                throw new IonException("Invalid type ID.");
+            } else if (valueTid.type == IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {
+                // Annotation.
+                if (isAnnotated) {
+                    throw new IonException("Nested annotation wrappers are invalid.");
+                }
+                if (parseAnnotationWrapperHeader(valueTid)) {
+                    return true;
+                }
+            } else {
+                if (parseValueHeader(valueTid, isAnnotated)) {
+                    return true;
+                }
+            }
+            IonBinaryLexerRefillable.this.valueTid = valueTid;
+            if (checkpointLocation == CheckpointLocation.AFTER_SCALAR_HEADER) {
+                return true;
+            }
+            if (checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER) {
+                prohibitEmptyOrderedStruct();
+                return true;
+            }
+            return false;
+        }
+
+
+        /**
+         * Reads one byte, if possible.
+         * @return the byte, or -1 if none was available.
+         * @throws IOException if an IOException is thrown by the underlying InputStream.
+         */
+        private int readByte() throws IOException {
+            /*
+            if (peekIndex >= limit) { // TODO any way to avoid?
+                return -1;
+            }
+            return peek(peekIndex++);
+
+             */
+            return currentReadByteFunction.readByte();
+        }
+
+        /**
+         * Reads a VarUInt. NOTE: the VarUInt must fit in a `long`. This is not a true limitation, as IonJava requires
+         * VarUInts to fit in an `int`.
+         *
+         * @param knownAvailable the number of bytes starting at 'peekIndex' known to be available in the buffer.
+         */
+        public long readVarUInt(int knownAvailable) throws IOException {
+            int currentByte;
+            int numberOfBytesRead = 0;
+            long value = 0;
+            while (numberOfBytesRead < knownAvailable) {
+                currentByte = peekByte();
+                numberOfBytesRead++;
+                value = (value << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
+                if ((currentByte & HIGHEST_BIT_BITMASK) != 0) {
+                    return value;
+                }
+            }
+            while (numberOfBytesRead < MAXIMUM_SUPPORTED_VAR_UINT_BYTES) {
+                currentByte = readByte();
+                if (currentByte < 0) {
+                    return -1;
+                }
+                numberOfBytesRead++;
+                value = (value << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
+                if ((currentByte & HIGHEST_BIT_BITMASK) != 0) {
+                    return value;
+                }
+            }
+            throw new IonException("Found a VarUInt that was too large to fit in a `long`");
+        }
+
+        public boolean readFieldSid() throws IOException {
+            // The value must have at least 2 more bytes: 1 for the smallest-possible field SID and 1 for
+            // the smallest-possible representation.
+            if (!fillAt(peekIndex, 2)) {
+                return true;
+            }
+            fieldSid = (int) readVarUInt(2); // TODO type alignment
+            return fieldSid < 0;
+        }
+
+        private void nextValueHelper() throws IOException {
+            peekIndex = checkpoint;
+            event = Event.NEEDS_DATA;
+            valueTid = null;
+            while (true) {
+                if (!makeBufferReady() || checkContainerEnd()) {
+                    return;
+                }
+                switch (checkpointLocation) {
+                    case BEFORE_UNANNOTATED_TYPE_ID:
+                        fieldSid = -1;
+                        if (isInStruct() && readFieldSid()) {
+                            return;
+                        }
+                        int b = readByte();
+                        if (b < 0) {
+                            return;
+                        }
+                        if (b == IVM_START_BYTE && containerStack.isEmpty()) {
+                            if (!fillAt(peekIndex, IVM_REMAINING_LENGTH)) {
+                                return;
+                            }
+                            parseIvm();
+                            setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
+                            continue;
+                        }
+                        if (parseTypeID(b, false)) {
+                            return;
+                        }
+                        // Either a NOP has been skipped, or an annotation wrapper has been consumed.
+                        continue;
+                    case BEFORE_ANNOTATED_TYPE_ID:
+                        b = readByte();
+                        if (b < 0) {
+                            return;
+                        }
+                        parseTypeID(b, true);
+                        // If already within an annotation wrapper, neither an IVM nor a NOP is possible, so the lexer
+                        // must be positioned after the header for the wrapped value.
+                        return;
+                    case AFTER_SCALAR_HEADER:
+                    case AFTER_CONTAINER_HEADER: // TODO can we unify these two states?
+                        if (skipRemainingValueBytes()) {
+                            return;
+                        }
+                        // The previous value's bytes have now been skipped; continue.
+                }
+            }
+        }
+
+        @Override
+        public Event nextValue() throws IOException {
+            nextValueHelper();
+            return event;
+        }
+
+
+        /**
+         * @return a marker for the buffered value, or null if the value is not yet completely buffered.
+         * @throws Exception
+         */
+        @Override
+        public Event fillValue() throws IOException {
+            if (!makeBufferReady()) {
+                return event;
+            }
+            // Must be positioned on a scalar.
+            if (checkpointLocation != CheckpointLocation.AFTER_SCALAR_HEADER && checkpointLocation != CheckpointLocation.AFTER_CONTAINER_HEADER) {
+                throw new IllegalStateException();
+            }
+            event = Event.NEEDS_DATA;
+
+            if (limit >= valueMarker.endIndex || fillAt(peekIndex, valueMarker.endIndex - valueMarker.startIndex)) {
+                event = handleFill();
+            }
+            return event;
+        }
+
+        @Override
+        public Event getCurrentEvent() {
+            throw new IllegalStateException();
+        }
+
+        @Override
+        public Event stepIntoContainer() throws IOException {
+            if (!makeBufferReady()) {
+                return event;
+            }
+            // Must be positioned on a container.
+            if (checkpointLocation != CheckpointLocation.AFTER_CONTAINER_HEADER) {
+                throw new IonException("Must be positioned on a container to step in.");
+            }
+            // Push the remaining length onto the stack, seek past the container's header, and increase the depth.
+            ContainerInfo containerInfo = containerStack.push();
+            if (getDepth() == fillDepth) {
+                enterQuickMode();
+            }
+            containerInfo.set(valueTid.type, valueMarker.endIndex);
+            setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
+            valueTid = null;
+            event = Event.NEEDS_INSTRUCTION;
+            return event;
+        }
+
+        @Override
+        public Event stepOutOfContainer() throws IOException {
+            ContainerInfo containerInfo = containerStack.peek();
+            if (containerInfo == null) {
+                // Note: this is IllegalStateException for consistency with the other binary IonReader implementation.
+                throw new IllegalStateException("Cannot step out at top level.");
+            }
+            if (!makeBufferReady()) {
+                return event;
+            }
+            // Seek past the remaining bytes at this depth, pop from the stack, and subtract the number of bytes
+            // consumed at the previous depth from the remaining bytes needed at the current depth.
+            event = Event.NEEDS_DATA;
+            // Seek past any remaining bytes from the previous value.
+            if (!seekTo(containerInfo.endIndex)) {
+                return event;
+            }
+            peekIndex = containerInfo.endIndex;
+            setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
+            containerStack.pop();
+            if (getDepth() < fillDepth) {
+                fillDepth = 0;
+                exitQuickMode();
+            }
+            event = Event.NEEDS_INSTRUCTION;
+            valueTid = null;
+            return event;
+        }
+
+        @Override
+        public void close() throws IOException {
+            throw new IllegalStateException();
+        }
     }
 
     private long amountToShift = 0;
@@ -338,13 +766,6 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
         amountToShift = shiftAmount; // TODO ugly
         containerStack.forEach(shiftContainerIndex);
         amountToShift = 0;
-    }
-
-    @Override
-    protected void handleSkip() {
-        if (peekIndex < valueMarker.endIndex) {
-            shiftContainerEnds(valueMarker.endIndex - peekIndex);
-        }
     }
 
     /**
@@ -368,10 +789,5 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
 
     BufferConfiguration<?> getConfiguration() {
         return configuration;
-    }
-
-    @Override
-    public void close() throws IOException {
-        super.close();
     }
 }

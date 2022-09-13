@@ -10,7 +10,7 @@ final class IonBinaryLexerFixedFromByteArray extends IonBinaryLexerBase {
     private final byte[] buffer;
 
     IonBinaryLexerFixedFromByteArray(BufferConfiguration<?> configuration, byte[] buffer, int offset, int length) {
-        super(offset, true, configuration == null ? null : configuration.getDataHandler());
+        super(offset, configuration == null ? null : configuration.getDataHandler());
         this.buffer = buffer;
         this.offset = offset;
         this.limit = offset + length;

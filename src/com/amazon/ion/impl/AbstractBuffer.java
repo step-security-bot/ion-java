@@ -4,6 +4,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+// TODO get rid of this, move logic to LexerBase
 abstract class AbstractBuffer implements Closeable {
 
     protected enum State {
