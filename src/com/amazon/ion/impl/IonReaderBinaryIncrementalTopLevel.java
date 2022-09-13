@@ -253,7 +253,7 @@ public final class IonReaderBinaryIncrementalTopLevel implements IonReader, _Pri
 
     @Override
     public <T> T asFacet(Class<T> facetType) {
-        return reader.asFacet(facetType);
+        return null;
     }
 
     public void requireCompleteValue() {

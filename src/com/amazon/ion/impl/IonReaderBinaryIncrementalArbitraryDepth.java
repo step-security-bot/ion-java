@@ -60,7 +60,7 @@ import java.util.Map;
  * To enable this implementation, use {@code IonReaderBuilder.withIncrementalReadingEnabled(true)}.
  * </p>
  */
-final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentrantApplication {
+final class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantApplication {
 
     // Symbol IDs for symbols contained in the system symbol table.
     private static class SystemSymbolIDs {
@@ -93,9 +93,6 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
     // The imports for Ion 1.0 data with no shared user imports.
     private static final LocalSymbolTableImports ION_1_0_IMPORTS
         = new LocalSymbolTableImports(SharedSymbolTable.getSystemSymbolTable(1));
-
-    // The raw reader responsible for parsing Ion structure and values.
-    private final IonReaderBinaryIncrementalArbitraryDepthRaw raw;
 
     // True if the annotation iterator will be reused across values; otherwise, false.
     private final boolean isAnnotationIteratorReuseEnabled;
@@ -144,6 +141,12 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
      * @param buffer the buffer that provides binary Ion data.
      */
     IonReaderBinaryIncrementalArbitraryDepth(IonReaderBuilder builder, FixedBufferFromByteArray buffer) {
+        super(
+            new IonBinaryLexerBase(
+                buffer,
+                builder.getBufferConfiguration() == null ? null : builder.getBufferConfiguration().getDataHandler()
+            )
+        );
         this.catalog = builder.getCatalog() == null ? EMPTY_CATALOG : builder.getCatalog();
         if (builder.isAnnotationIteratorReuseEnabled()) {
             isAnnotationIteratorReuseEnabled = true;
@@ -155,17 +158,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
         symbols = new ArrayList<String>(SYMBOLS_LIST_INITIAL_CAPACITY);
         symbolTableReader = new SymbolTableReader();
         resetImports();
-        BufferConfiguration.DataHandler dataHandler = null;
-        if (builder.getBufferConfiguration() != null) {
-            dataHandler = builder.getBufferConfiguration().getDataHandler();
-        }
-        raw = new IonReaderBinaryIncrementalArbitraryDepthRaw(
-            new IonBinaryLexerBase(
-                buffer,
-                dataHandler,
-                ivmNotificationConsumer
-            )
-        );
+        lexer.registerIvmNotificationConsumer(ivmNotificationConsumer);
     }
 
     /**
@@ -174,6 +167,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
      * @param buffer the buffer that provides binary Ion data.
      */
     IonReaderBinaryIncrementalArbitraryDepth(IonReaderBuilder builder, RefillableBuffer buffer) {
+        super(new IonBinaryLexerRefillable(buffer));
         this.catalog = builder.getCatalog() == null ? EMPTY_CATALOG : builder.getCatalog();
         if (builder.isAnnotationIteratorReuseEnabled()) {
             isAnnotationIteratorReuseEnabled = true;
@@ -186,27 +180,20 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
         symbolTableReader = new SymbolTableReader();
         resetImports();
         final IonBufferConfiguration configuration = (IonBufferConfiguration) buffer.getConfiguration();
-        raw = new IonReaderBinaryIncrementalArbitraryDepthRaw(
-            new IonBinaryLexerRefillable(
-                new BufferConfiguration.OversizedValueHandler() {
-                    @Override
-                    public void onOversizedValue() {
-                        if (isReadingSymbolTable() || isPositionedOnSymbolTable()) {
-                            configuration.getOversizedSymbolTableHandler().onOversizedSymbolTable();
-                            terminate();
-                        } else {
-                            configuration.getOversizedValueHandler().onOversizedValue();
-                        }
+        lexer.registerIvmNotificationConsumer(ivmNotificationConsumer);
+        ((IonBinaryLexerRefillable) lexer).registerOversizedValueHandler(
+            new BufferConfiguration.OversizedValueHandler() {
+                @Override
+                public void onOversizedValue() {
+                    if (isReadingSymbolTable() || isPositionedOnSymbolTable()) {
+                        configuration.getOversizedSymbolTableHandler().onOversizedSymbolTable();
+                        terminate();
+                    } else {
+                        configuration.getOversizedValueHandler().onOversizedValue();
                     }
-                },
-                ivmNotificationConsumer,
-                buffer
-            )
+                }
+            }
         );
-    }
-
-    private void terminate() {
-        raw.terminate();
     }
 
     /**
@@ -240,7 +227,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
          * Prepare the iterator to iterate over the annotations on the current value.
          */
         void ready() {
-            sidIterator = raw.iterateAnnotationSids();
+            sidIterator = iterateAnnotationSids();
             sidIterator.ready();
         }
 
@@ -267,7 +254,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
         private int index = 0;
 
         SingleUseAnnotationIterator() {
-            annotationSids = new IntList(raw.getAnnotationSids());
+            annotationSids = new IntList(getAnnotationSids());
         }
 
         @Override
@@ -369,7 +356,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
         // Note: Ion 1.1 currently proposes changes to the system symbol table. If this is finalized, then
         // 'majorVersion' cannot be used to look up the system symbol table; both 'majorVersion' and 'minorVersion'
         // will need to be used.
-        return SharedSymbolTable.getSystemSymbolTable(raw.ionMajorVersion());
+        return SharedSymbolTable.getSystemSymbolTable(ionMajorVersion());
     }
 
     /**
@@ -737,12 +724,12 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
         }
 
         private boolean valueUnavailable() throws IOException {
-            Event event = raw.fillValue();
+            Event event = fillValue();
             return event == Event.NEEDS_DATA || event == Event.NEEDS_INSTRUCTION;
         }
 
         private void finishReadingSymbolTableStruct() throws IOException {
-            raw.stepOut();
+            stepOut();
             if (!hasSeenImports) {
                 resetSymbolTable();
                 resetImports();
@@ -754,7 +741,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
         }
 
         private void readSymbolTableStructField() {
-            int fieldId = raw.getFieldId();
+            int fieldId = getFieldId();
             if (fieldId == SystemSymbolIDs.SYMBOLS_ID) {
                 state = State.ON_SYMBOL_TABLE_SYMBOLS;
                 if (hasSeenSymbols) {
@@ -779,7 +766,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
         }
 
         private void preparePossibleAppend() {
-            if (raw.symbolValueId() == SystemSymbolIDs.ION_SYMBOL_TABLE_ID) {
+            if (symbolValueId() == SystemSymbolIDs.ION_SYMBOL_TABLE_ID) {
                 isAppend = true;
             } else {
                 resetSymbolTable();
@@ -788,7 +775,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
         }
 
         private void finishReadingImportsList() throws IOException {
-            raw.stepOut();
+            stepOut();
             imports = new LocalSymbolTableImports(newImports);
             state = State.ON_SYMBOL_TABLE_FIELD;
         }
@@ -799,7 +786,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
         }
 
         private void startReadingSymbol() {
-            if (raw.getType() == IonType.STRING) {
+            if (getType() == IonType.STRING) {
                 state = State.READING_SYMBOL_TABLE_SYMBOL;
             } else {
                 newSymbols.add(null);
@@ -807,31 +794,31 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
         }
 
         private void finishReadingSymbol() {
-            newSymbols.add(raw.stringValue());
+            newSymbols.add(stringValue());
             state = State.READING_SYMBOL_TABLE_SYMBOLS_LIST;
         }
 
         private void finishReadingSymbolsList() throws IOException {
-            raw.stepOut();
+            stepOut();
             state = State.ON_SYMBOL_TABLE_FIELD;
         }
 
         private void startReadingImportStruct() throws IOException {
             resetImportInfo();
-            if (raw.getType() == IonType.STRUCT) {
-                raw.stepIn();
+            if (getType() == IonType.STRUCT) {
+                stepIn();
                 state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
             }
         }
 
         private void finishReadingImportStruct() throws IOException {
-            raw.stepOut();
+            stepOut();
             newImports.add(createImport(name, version, maxId));
             state = State.READING_SYMBOL_TABLE_IMPORTS_LIST;
         }
 
         private void startReadingImportStructField() {
-            int fieldId = raw.getFieldId();
+            int fieldId = getFieldId();
             if (fieldId == SystemSymbolIDs.NAME_ID) {
                 state = State.READING_SYMBOL_TABLE_IMPORT_NAME;
             } else if (fieldId == SystemSymbolIDs.VERSION_ID) {
@@ -842,22 +829,22 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
         }
 
         private void readImportName() {
-            if (raw.getType() == IonType.STRING) {
-                name = raw.stringValue();
+            if (getType() == IonType.STRING) {
+                name = stringValue();
             }
             state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
         }
 
         private void readImportVersion() {
-            if (raw.getType() == IonType.INT) {
-                version = raw.intValue();
+            if (getType() == IonType.INT) {
+                version = intValue();
             }
             state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
         }
 
         private void readImportMaxId() {
-            if (raw.getType() == IonType.INT) {
-                maxId = raw.intValue();
+            if (getType() == IonType.INT) {
+                maxId = intValue();
             }
             state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
         }
@@ -867,13 +854,13 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
             while (true) {
                 switch (state) {
                     case ON_SYMBOL_TABLE_STRUCT:
-                        if (Event.NEEDS_DATA == raw.stepIn()) {
+                        if (Event.NEEDS_DATA == stepIn()) {
                             return;
                         }
                         state = State.ON_SYMBOL_TABLE_FIELD;
                         break;
                     case ON_SYMBOL_TABLE_FIELD:
-                        event = raw.next();
+                        event = IonReaderBinaryIncrementalArbitraryDepth.super.next();
                         if (Event.NEEDS_DATA == event) {
                             return;
                         }
@@ -884,8 +871,8 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
                         readSymbolTableStructField();
                         break;
                     case ON_SYMBOL_TABLE_SYMBOLS:
-                        if (raw.getType() == IonType.LIST) {
-                            if (Event.NEEDS_DATA == raw.stepIn()) {
+                        if (getType() == IonType.LIST) {
+                            if (Event.NEEDS_DATA == stepIn()) {
                                 return;
                             }
                             startReadingSymbolsList();
@@ -894,12 +881,12 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
                         }
                         break;
                     case ON_SYMBOL_TABLE_IMPORTS:
-                        if (raw.getType() == IonType.LIST) {
-                            if (Event.NEEDS_DATA == raw.stepIn()) {
+                        if (getType() == IonType.LIST) {
+                            if (Event.NEEDS_DATA == stepIn()) {
                                 return;
                             }
                             startReadingImportsList();
-                        } else if (raw.getType() == IonType.SYMBOL) {
+                        } else if (getType() == IonType.SYMBOL) {
                             if (valueUnavailable()) {
                                 return;
                             }
@@ -909,7 +896,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
                         }
                         break;
                     case READING_SYMBOL_TABLE_SYMBOLS_LIST:
-                        event = raw.next();
+                        event = IonReaderBinaryIncrementalArbitraryDepth.super.next();
                         if (event == Event.NEEDS_DATA) {
                             return;
                         }
@@ -926,7 +913,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
                         finishReadingSymbol();
                         break;
                     case READING_SYMBOL_TABLE_IMPORTS_LIST:
-                        event = raw.next();
+                        event = IonReaderBinaryIncrementalArbitraryDepth.super.next();
                         if (event == Event.NEEDS_DATA) {
                             return;
                         }
@@ -937,7 +924,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
                         startReadingImportStruct();
                         break;
                     case READING_SYMBOL_TABLE_IMPORT_STRUCT:
-                        event = raw.next();
+                        event = IonReaderBinaryIncrementalArbitraryDepth.super.next();
                         if (event == Event.NEEDS_DATA) {
                             return;
                         }
@@ -994,16 +981,16 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
     }
 
     private boolean isPositionedOnSymbolTable() {
-        return raw.isTopLevel() &&
-            raw.hasAnnotations() &&
-            raw.peekType() == IonType.STRUCT &&
-            raw.iterateAnnotationSids().next() == SystemSymbolIDs.ION_SYMBOL_TABLE_ID;
+        return isTopLevel() &&
+            hasAnnotations() &&
+            peekType() == IonType.STRUCT &&
+            iterateAnnotationSids().next() == SystemSymbolIDs.ION_SYMBOL_TABLE_ID;
     }
 
     @Override
     public Event next() throws IOException {
         Event event;
-        if (raw.isTopLevel() || isReadingSymbolTable()) {
+        if (isTopLevel() || isReadingSymbolTable()) {
             while (true) {
                 if (isReadingSymbolTable()) {
                     symbolTableReader.readSymbolTable();
@@ -1012,7 +999,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
                         break;
                     }
                 }
-                event = raw.next();
+                event = super.next();
                 if (isPositionedOnSymbolTable()) {
                     cachedReadOnlySymbolTable = null;
                     symbolTableReader.resetState();
@@ -1022,39 +1009,10 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
                 break;
             }
         } else {
-            event = raw.next();
+            event = super.next();
         }
         resetAnnotations();
         return event;
-    }
-
-    @Override
-    public Event stepIn() throws IOException {
-        return raw.stepIn();
-    }
-
-    @Override
-    public Event stepOut() throws IOException {
-        return raw.stepOut();
-    }
-
-    @Override
-    public Event fillValue() throws IOException {
-        return raw.fillValue();
-    }
-
-    @Override
-    public Event getCurrentEvent() {
-        return raw.getCurrentEvent();
-    }
-
-    boolean isTopLevel() {
-        return raw.isTopLevel();
-    }
-
-    @Override
-    public int getDepth() {
-        return raw.getDepth();
     }
 
     @Override
@@ -1081,23 +1039,13 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
     }
 
     @Override
-    public IonType getType() {
-        return raw.getType();
-    }
-
-    @Override
-    public IntegerSize getIntegerSize() {
-        return raw.getIntegerSize();
-    }
-
-    @Override
     public String stringValue() {
         String value;
         IonType type = getType();
         if (type == IonType.STRING) {
-            value = raw.stringValue();
+            value = super.stringValue();
         } else if (type == IonType.SYMBOL) {
-            int sid = raw.symbolValueId();
+            int sid = symbolValueId();
             if (sid < 0) {
                 // The raw reader uses this to denote null.symbol.
                 return null;
@@ -1114,7 +1062,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
 
     @Override
     public SymbolToken symbolValue() {
-        int sid = raw.symbolValueId();
+        int sid = symbolValueId();
         if (sid < 0) {
             // The raw reader uses this to denote null.symbol.
             return null;
@@ -1123,24 +1071,9 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
     }
 
     @Override
-    public int byteSize() {
-        return raw.byteSize();
-    }
-
-    @Override
-    public byte[] newBytes() {
-        return raw.newBytes();
-    }
-
-    @Override
-    public int getBytes(byte[] buffer, int offset, int len) {
-        return raw.getBytes(buffer, offset, len);
-    }
-
-    @Override
     public String[] getTypeAnnotations() {
-        if (raw.hasAnnotations()) {
-            IntList annotationSids = raw.getAnnotationSids();
+        if (hasAnnotations()) {
+            IntList annotationSids = getAnnotationSids();
             String[] annotationArray = new String[annotationSids.size()];
             for (int i = 0; i < annotationArray.length; i++) {
                 String symbol = getSymbol(annotationSids.get(i));
@@ -1156,8 +1089,8 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
 
     @Override
     public SymbolToken[] getTypeAnnotationSymbols() {
-        if (raw.hasAnnotations()) {
-            IntList annotationSids = raw.getAnnotationSids();
+        if (hasAnnotations()) {
+            IntList annotationSids = getAnnotationSids();
             SymbolToken[] annotationArray = new SymbolToken[annotationSids.size()];
             for (int i = 0; i < annotationArray.length; i++) {
                 annotationArray[i] = getSymbolToken(annotationSids.get(i));
@@ -1187,7 +1120,7 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
 
     @Override
     public Iterator<String> iterateTypeAnnotations() {
-        if (raw.hasAnnotations()) {
+        if (hasAnnotations()) {
             if (isAnnotationIteratorReuseEnabled) {
                 annotationIterator.ready();
                 return annotationIterator;
@@ -1196,11 +1129,6 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
             }
         }
         return EMPTY_ITERATOR;
-    }
-
-    @Override
-    public int getFieldId() {
-        return raw.getFieldId();
     }
 
     @Override
@@ -1223,75 +1151,6 @@ final class IonReaderBinaryIncrementalArbitraryDepth implements IonReaderReentra
             return null;
         }
         return getSymbolToken(fieldNameSid);
-    }
-
-    @Override
-    public boolean isNullValue() {
-        return raw.isNullValue();
-    }
-
-    @Override
-    public boolean isInStruct() {
-        return raw.isInStruct();
-    }
-
-    @Override
-    public boolean booleanValue() {
-        return raw.booleanValue();
-    }
-
-    @Override
-    public int intValue() {
-        return raw.intValue();
-    }
-
-    @Override
-    public long longValue() {
-        return raw.longValue();
-    }
-
-    @Override
-    public BigInteger bigIntegerValue() {
-        return raw.bigIntegerValue();
-    }
-
-    @Override
-    public double doubleValue() {
-        return raw.doubleValue();
-    }
-
-    @Override
-    public BigDecimal bigDecimalValue() {
-        return raw.bigDecimalValue();
-    }
-
-    @Override
-    public Decimal decimalValue() {
-        return raw.decimalValue();
-    }
-
-    @Override
-    public Date dateValue() {
-        return raw.dateValue();
-    }
-
-    @Override
-    public Timestamp timestampValue() {
-        return raw.timestampValue();
-    }
-
-    public <T> T asFacet(Class<T> facetType) {
-        return null;
-    }
-
-    @Override
-    public void requireCompleteValue() {
-        raw.requireCompleteValue();
-    }
-
-    @Override
-    public void close() throws IOException {
-        raw.close();
     }
 
 }

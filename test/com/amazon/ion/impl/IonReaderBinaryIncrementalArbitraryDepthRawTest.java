@@ -40,10 +40,12 @@ public class IonReaderBinaryIncrementalArbitraryDepthRawTest {
         // TODO parameterize to try both InputStream and bytes
         reader = new IonReaderBinaryIncrementalArbitraryDepthRaw(
             new IonBinaryLexerRefillable(
-                STANDARD_BUFFER_CONFIGURATION.getOversizedValueHandler(),
-                countingIvmConsumer,
                 new RefillableBufferFromInputStream(new ByteArrayInputStream(bytes), STANDARD_BUFFER_CONFIGURATION)
             )
+        );
+        reader.lexer.registerIvmNotificationConsumer(countingIvmConsumer);
+        ((IonBinaryLexerRefillable) reader.lexer).registerOversizedValueHandler(
+            STANDARD_BUFFER_CONFIGURATION.getOversizedValueHandler()
         );
     }
 

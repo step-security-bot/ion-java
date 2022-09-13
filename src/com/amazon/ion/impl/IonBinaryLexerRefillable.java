@@ -9,7 +9,7 @@ import java.io.IOException;
 final class IonBinaryLexerRefillable extends IonBinaryLexerBase {
 
 
-    private final BufferConfiguration.OversizedValueHandler oversizedValueHandler;
+    private BufferConfiguration.OversizedValueHandler oversizedValueHandler;
 
     /**
      * The number of bytes to attempt to buffer each time more bytes are required.
@@ -20,12 +20,8 @@ final class IonBinaryLexerRefillable extends IonBinaryLexerBase {
 
     private int individualBytesSkippedWithoutBuffering = 0;
 
-    IonBinaryLexerRefillable(
-        final BufferConfiguration.OversizedValueHandler oversizedValueHandler,
-        final IvmNotificationConsumer ivmConsumer,
-        final RefillableBuffer buffer
-    ) {
-        super(buffer, buffer.getConfiguration().getDataHandler(), ivmConsumer);
+    IonBinaryLexerRefillable(final RefillableBuffer buffer) {
+        super(buffer, buffer.getConfiguration().getDataHandler());
         buffer.registerNotificationConsumer(
             new RefillableBuffer.NotificationConsumer() {
                 @Override
@@ -41,8 +37,11 @@ final class IonBinaryLexerRefillable extends IonBinaryLexerBase {
                 }
             }
         );
-        this.oversizedValueHandler = oversizedValueHandler;
         pageSize = buffer.getConfiguration().getInitialBufferSize();
+    }
+
+    void registerOversizedValueHandler(BufferConfiguration.OversizedValueHandler oversizedValueHandler) {
+        this.oversizedValueHandler = oversizedValueHandler;
     }
 
     private void handleOversizedValue() throws IOException {

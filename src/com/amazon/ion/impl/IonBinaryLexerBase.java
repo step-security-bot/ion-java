@@ -119,7 +119,7 @@ class IonBinaryLexerBase {
 
     protected final Marker valueMarker = new IonBinaryLexerRefillable.Marker(-1, 0);
 
-    private final IvmNotificationConsumer ivmConsumer;
+    private IvmNotificationConsumer ivmConsumer;
 
     private IonCursor.Event event = IonCursor.Event.NEEDS_DATA;
 
@@ -150,12 +150,10 @@ class IonBinaryLexerBase {
 
     IonBinaryLexerBase(
         final AbstractBuffer buffer,
-        final BufferConfiguration.DataHandler dataHandler,
-        final IvmNotificationConsumer ivmConsumer
+        final BufferConfiguration.DataHandler dataHandler
     ) {
         this.buffer = buffer;
         this.dataHandler = dataHandler == null ? NO_OP_DATA_HANDLER : dataHandler;
-        this.ivmConsumer = ivmConsumer;
         containerStack = new _Private_RecyclingStack<ContainerInfo>(
             CONTAINER_STACK_INITIAL_CAPACITY,
             CONTAINER_INFO_FACTORY
@@ -163,6 +161,10 @@ class IonBinaryLexerBase {
         peekIndex = buffer.getOffset();
         checkpoint = peekIndex;
         current = (buffer instanceof RefillableBuffer) ? careful : quick;
+    }
+
+    void registerIvmNotificationConsumer(IvmNotificationConsumer ivmConsumer) {
+        this.ivmConsumer = ivmConsumer;
     }
 
     protected int readByte() throws IOException {

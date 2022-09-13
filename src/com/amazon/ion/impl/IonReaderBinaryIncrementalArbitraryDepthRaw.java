@@ -20,7 +20,7 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Date;
 
-final class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantCore {
+class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantCore {
 
     // Isolates the highest bit in a byte.
     private static final int HIGHEST_BIT_BITMASK = 0x80;
@@ -66,7 +66,7 @@ final class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReen
     // Java `long` via `IonReader.longValue()`.
     private final _Private_ScalarConversions.ValueVariant scalarConverter;
 
-    private final IonBinaryLexerBase lexer;
+    final IonBinaryLexerBase lexer;
 
     private final Utf8StringDecoder utf8Decoder = Utf8StringDecoderPool.getInstance().getOrCreate();
 

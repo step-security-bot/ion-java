@@ -50,13 +50,13 @@ public class IonReaderLookaheadBufferArbitraryDepthTest {
 
     private void initializeBuffer(byte[] bytes) {
         buffer = new IonBinaryLexerRefillable(
-            STANDARD_BUFFER_CONFIGURATION.getOversizedValueHandler(),
-            countingIvmConsumer,
             new RefillableBufferFromInputStream( // TODO try with both inputStream and bytes
                 new ByteArrayInputStream(bytes),
                 STANDARD_BUFFER_CONFIGURATION
             )
         );
+        buffer.registerIvmNotificationConsumer(countingIvmConsumer);
+        buffer.registerOversizedValueHandler(STANDARD_BUFFER_CONFIGURATION.getOversizedValueHandler());
     }
 
     @Test
