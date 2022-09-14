@@ -10,7 +10,7 @@ import com.amazon.ion.IonType;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
+abstract class IonBinaryLexerRefillable extends IonBinaryLexerFromByteArray {
 
     /**
      * Handler of notifications provided by the ResizingPipedInputStream.
@@ -59,8 +59,6 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
 
     protected NotificationConsumer notificationConsumer;
 
-    protected byte[] buffer;
-
     private BufferConfiguration.OversizedValueHandler oversizedValueHandler;
 
     /**
@@ -82,23 +80,29 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
 
     protected State state = State.READY;
 
-
     protected long bytesRequested = 0;
 
-    IonBinaryLexerRefillable(final BufferConfiguration<?> configuration) {
-        super(0, configuration.getDataHandler());
+    private static BufferConfiguration<?> validate(BufferConfiguration<?> configuration) {
         if (configuration.getInitialBufferSize() < 1) {
             throw new IllegalArgumentException("Initial buffer size must be at least 1.");
         }
         if (configuration.getMaximumBufferSize() < configuration.getInitialBufferSize()) {
             throw new IllegalArgumentException("Maximum buffer size cannot be less than the initial buffer size.");
         }
+        return configuration;
+    }
+
+    IonBinaryLexerRefillable(final BufferConfiguration<?> configuration) {
+        super(
+            validate(configuration),
+            new byte[configuration.getInitialBufferSize()],
+            0,
+            configuration.getInitialBufferSize()
+        );
+        limit = 0;
         this.configuration = configuration;
         this.initialBufferSize = configuration.getInitialBufferSize();
         this.maximumBufferSize = configuration.getMaximumBufferSize();
-        this.capacity = initialBufferSize;
-        buffer = new byte[initialBufferSize];
-        byteBuffer = ByteBuffer.wrap(buffer, 0, initialBufferSize);
         notificationConsumer = new NotificationConsumer() {
             @Override
             public void bytesConsolidatedToStartOfBuffer(int leftShiftAmount) {
@@ -173,16 +177,6 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
     @Override
     Event stepOut() throws IOException {
         return current.stepOutOfContainer();
-    }
-
-    @Override
-    int peek(long index) {
-        return buffer[(int) index] & SINGLE_BYTE_MASK;
-    }
-
-    @Override
-    void copyBytes(long position, byte[] destination, int destinationOffset, int length) {
-        System.arraycopy(buffer, (int) position, destination, destinationOffset, length);
     }
 
     /**

@@ -27,7 +27,7 @@ public final class IonReaderBinaryIncrementalTopLevel extends IonReaderBinaryInc
     IonReaderBinaryIncrementalTopLevel(IonReaderBuilder builder, byte[] data, int offset, int length) {
         super(
             builder,
-            new IonBinaryLexerFixedFromByteArray(builder.getBufferConfiguration(), data, offset, length)
+            new IonBinaryLexerFromByteArray(builder.getBufferConfiguration(), data, offset, length)
         );
         isFixed = true;
     }

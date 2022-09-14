@@ -6,7 +6,6 @@ import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
-import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.system.IonReaderBuilder;
@@ -16,7 +15,6 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
-import java.util.Iterator;
 
 import static com.amazon.ion.IonCursor.Event.NEEDS_DATA;
 import static com.amazon.ion.util.IonStreamUtils.throwAsIonException;
@@ -36,7 +34,7 @@ final class IonReaderBinaryNonReentrantApplication
     IonReaderBinaryNonReentrantApplication(IonReaderBuilder builder, byte[] data, int offset, int length) {
         super(
             builder,
-            new IonBinaryLexerFixedFromByteArray(builder.getBufferConfiguration(), data, offset, length)
+            new IonBinaryLexerFromByteArray(builder.getBufferConfiguration(), data, offset, length)
         );
     }
 

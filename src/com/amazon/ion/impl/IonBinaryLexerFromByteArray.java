@@ -6,11 +6,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 // TODO try making LexerRefillable extend this? Performance experiment.
-final class IonBinaryLexerFixedFromByteArray extends IonBinaryLexerBase {
+class IonBinaryLexerFromByteArray extends IonBinaryLexerBase {
 
-    private final byte[] buffer;
+    protected byte[] buffer;
 
-    IonBinaryLexerFixedFromByteArray(BufferConfiguration<?> configuration, byte[] buffer, int offset, int length) {
+    IonBinaryLexerFromByteArray(BufferConfiguration<?> configuration, byte[] buffer, int offset, int length) {
         super(offset, configuration == null ? null : configuration.getDataHandler());
         this.buffer = buffer;
         this.offset = offset;
