@@ -82,6 +82,9 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
 
     protected State state = State.READY;
 
+
+    protected long bytesRequested = 0;
+
     IonBinaryLexerRefillable(final BufferConfiguration<?> configuration) {
         super(0, configuration.getDataHandler());
         if (configuration.getInitialBufferSize() < 1) {
@@ -217,7 +220,6 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
         return true;
     }
 
-    @Override
     protected boolean carefulFillAt(long index, long numberOfBytes) throws IOException {
         long shortfall = numberOfBytes - availableAt(index);
         if (shortfall > 0) {
@@ -272,22 +274,6 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
         int readByte() throws IOException;
     }
 
-    private final ReadByteFunction carefulReadByteFunction = new ReadByteFunction() {
-        @Override
-        public int readByte() throws IOException {
-            return carefulReadByte();
-        }
-    };
-
-    private final ReadByteFunction quickReadByteFunction = new ReadByteFunction() {
-        @Override
-        public int readByte() throws IOException {
-            return peekByte();
-        }
-    };
-
-    private ReadByteFunction currentReadByteFunction = carefulReadByteFunction;
-
     @Override
     protected int peekByte() throws IOException {
         int b;
@@ -334,15 +320,20 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
     }
 
     protected void enterQuickMode() {
-        quick();
-        currentReadByteFunction = quickReadByteFunction;
-        //current = quick;
+        //current = quick; // TODO figure out how to activate
     }
 
     protected void exitQuickMode() {
-        careful();
-        currentReadByteFunction = carefulReadByteFunction;
         //current = careful;
+    }
+
+    // TODO inside Careful?
+    final boolean fill(long numberOfBytes) throws IOException {
+        return fillAt(offset, numberOfBytes);
+    }
+
+    final boolean fillAt(long index, long numberOfBytes) throws IOException {
+        return carefulFillAt(index, numberOfBytes);
     }
 
     private final class Quick implements IonCursor {
@@ -562,21 +553,12 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
             return false;
         }
 
+        void quickSeekTo(long index) {
+            offset = index;
+        }
 
-        /**
-         * Reads one byte, if possible.
-         * @return the byte, or -1 if none was available.
-         * @throws IOException if an IOException is thrown by the underlying InputStream.
-         */
-        private int readByte() throws IOException {
-            /*
-            if (peekIndex >= limit) { // TODO any way to avoid?
-                return -1;
-            }
-            return peek(peekIndex++);
-
-             */
-            return currentReadByteFunction.readByte();
+        boolean seekTo(long index) throws IOException {
+            return seek(index - offset);
         }
 
         /**
@@ -598,7 +580,7 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
                 }
             }
             while (numberOfBytesRead < MAXIMUM_SUPPORTED_VAR_UINT_BYTES) {
-                currentByte = readByte();
+                currentByte = carefulReadByte();
                 if (currentByte < 0) {
                     return -1;
                 }
@@ -635,7 +617,7 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
                         if (isInStruct() && readFieldSid()) {
                             return;
                         }
-                        int b = readByte();
+                        int b = carefulReadByte();
                         if (b < 0) {
                             return;
                         }
@@ -653,7 +635,7 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
                         // Either a NOP has been skipped, or an annotation wrapper has been consumed.
                         continue;
                     case BEFORE_ANNOTATED_TYPE_ID:
-                        b = readByte();
+                        b = carefulReadByte();
                         if (b < 0) {
                             return;
                         }
@@ -760,6 +742,8 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
         }
     }
 
+    abstract boolean seek(long numberOfBytes) throws IOException;
+
     @Override
     protected boolean isReady() {
         return state == State.READY;
@@ -818,6 +802,7 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
         return !isTerminated()
             && (checkpointLocation.ordinal() > CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID.ordinal()
             || state == State.SEEK
+            || bytesRequested > 1
             || super.isAwaitingMoreData());
     }
 }

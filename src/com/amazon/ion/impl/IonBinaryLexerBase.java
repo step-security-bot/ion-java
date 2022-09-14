@@ -8,9 +8,10 @@ import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonType;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 // TODO removed 'implements IonCursor' as a performance experiment. Try adding back.
-abstract class IonBinaryLexerBase extends AbstractBuffer {
+abstract class IonBinaryLexerBase {
 
     protected static final int LOWER_SEVEN_BITS_BITMASK = 0x7F;
     protected static final int HIGHEST_BIT_BITMASK = 0x80;
@@ -20,6 +21,11 @@ abstract class IonBinaryLexerBase extends AbstractBuffer {
     protected static final int IVM_START_BYTE = 0xE0;
     protected static final int IVM_FINAL_BYTE = 0xEA;
     protected static final int IVM_REMAINING_LENGTH = 3; // Length of the IVM after the first byte.
+
+    /**
+     * Mask to isolate a single byte.
+     */
+    static final int SINGLE_BYTE_MASK = 0xFF;
 
     private static final BufferConfiguration.DataHandler NO_OP_DATA_HANDLER = new BufferConfiguration.DataHandler() {
         @Override
@@ -95,6 +101,20 @@ abstract class IonBinaryLexerBase extends AbstractBuffer {
      * Stack to hold container info. Stepping into a container results in a push; stepping out results in a pop.
      */
     protected final _Private_RecyclingStack<ContainerInfo> containerStack;
+
+    /**
+     * The index of the next byte in the buffer that is available to be read. Always less than or equal to `limit`.
+     */
+    long offset = 0;
+
+    /**
+     * The index at which the next byte received will be written. Always greater than or equal to `offset`.
+     */
+    long limit = 0;
+
+    long capacity;
+
+    ByteBuffer byteBuffer;
 
     /**
      * The handler that will be notified when data is processed.
@@ -441,6 +461,32 @@ abstract class IonBinaryLexerBase extends AbstractBuffer {
         return valueTid == null ? null : valueTid.type;
     }
 
+    // TODO abstraction?
+    ByteBuffer getByteBuffer(long startIndex, long endIndex) {
+        // Setting the limit to the capacity first is required because setting the position will fail if the new
+        // position is outside the limit.
+        byteBuffer.limit((int) capacity);
+        byteBuffer.position((int) startIndex);
+        byteBuffer.limit((int) endIndex);
+        return byteBuffer;
+    }
+
+    final long available() {
+        return availableAt(offset);
+    }
+
+    final long availableAt(long index) {
+        return limit - index;
+    }
+
+    abstract int peek(long index);
+
+    abstract void copyBytes(long position, byte[] destination, int destinationOffset, int length);
+
+    protected boolean isReady() {
+        return true;
+    }
+
     IonType peekType() {
         IonType type = getType();
         // TODO verify this complexity is warranted
@@ -457,9 +503,8 @@ abstract class IonBinaryLexerBase extends AbstractBuffer {
         return containerStack.isEmpty();
     }
 
-    @Override
     boolean isAwaitingMoreData() {
-        return peekIndex > checkpoint || super.isAwaitingMoreData();
+        return peekIndex > checkpoint;
     }
 
     //@Override

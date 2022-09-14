@@ -30,25 +30,6 @@ final class IonBinaryLexerFixedFromByteArray extends IonBinaryLexerBase {
     }
 
     @Override
-    protected boolean carefulFillAt(long index, long numberOfBytes) {
-        if (numberOfBytes > availableAt(index)) {
-            // TODO? throw or notify user?
-            return false;
-        }
-        return true;
-    }
-
-    @Override
-    protected boolean seek(long numberOfBytes) {
-        if (numberOfBytes > available()) {
-            offset = limit;
-            return false;
-        }
-        offset += numberOfBytes;
-        return true;
-    }
-
-    @Override
     public void close() throws IOException {
         // Nothing to do.
     }
