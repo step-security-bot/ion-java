@@ -5,7 +5,6 @@ import com.amazon.ion.BufferConfiguration;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-// TODO try making LexerRefillable extend this? Performance experiment.
 class IonBinaryLexerFromByteArray extends IonBinaryLexerBase {
 
     protected byte[] buffer;

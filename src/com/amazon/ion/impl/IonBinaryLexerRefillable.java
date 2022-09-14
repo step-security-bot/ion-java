@@ -263,11 +263,6 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerFromByteArray {
         return capacity - index;
     }
 
-    // TODO remove. Only used within Careful, so there should only be one implementation
-    private interface ReadByteFunction {
-        int readByte() throws IOException;
-    }
-
     @Override
     protected int peekByte() throws IOException {
         int b;
