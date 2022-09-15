@@ -28,6 +28,8 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
     // Isolates the lowest seven bits in a byte.
     private static final int LOWER_SEVEN_BITS_BITMASK = 0x7F;
 
+    private static final int SINGLE_BYTE_MASK = 0xFF;
+
     // Isolates the lowest six bits in a byte.
     private static final int LOWER_SIX_BITS_BITMASK = 0x3F;
 
@@ -83,6 +85,10 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
     // The symbol IDs for the annotations on the current value.
     private final IntList annotationSids;
 
+    private byte[] buffer;
+
+    private ByteBuffer byteBuffer;
+
     IonReaderBinaryIncrementalArbitraryDepthRaw(IonBinaryLexerBase lexer) {
         scalarConverter = new _Private_ScalarConversions.ValueVariant();
         // Note: implementing Ion 1.1 support may require handling of Ion version changes in this class, rather
@@ -90,6 +96,19 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
         this.lexer = lexer;
         annotationSids = new IntList(ANNOTATIONS_LIST_INITIAL_CAPACITY);
         annotationIterator = new AnnotationIterator(); // TODO only if reusable is enabled?
+        buffer = lexer.buffer; // TODO getter
+        byteBuffer = lexer.byteBuffer;
+        if (lexer instanceof IonBinaryLexerRefillable) {
+            ((IonBinaryLexerRefillable) lexer).registerBufferChangeSubscriber(
+                new IonBinaryLexerRefillable.BufferChangeSubscriber() {
+                    @Override
+                    public void bufferChanged(byte[] newBuffer, ByteBuffer newByteBuffer) {
+                        buffer = newBuffer;
+                        byteBuffer = newByteBuffer;
+                    }
+                }
+            );
+        }
     }
 
     @Override
@@ -118,6 +137,15 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
         return lexer.getCurrentEvent();
     }
 
+    ByteBuffer prepareByteBuffer(long startIndex, long endIndex) {
+        // Setting the limit to the capacity first is required because setting the position will fail if the new
+        // position is outside the limit.
+        byteBuffer.limit(buffer.length);
+        byteBuffer.position((int) startIndex);
+        byteBuffer.limit((int) endIndex);
+        return byteBuffer;
+    }
+
     /**
      * Reads a VarUInt.
      * @return the value.
@@ -126,7 +154,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
         int currentByte = 0;
         int result = 0;
         while ((currentByte & HIGHEST_BIT_BITMASK) == 0) {
-            currentByte = lexer.peek(peekIndex++);
+            currentByte = buffer[(int)(peekIndex++)];
             result = (result << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
         }
         return result;
@@ -140,7 +168,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
     private long readUInt(long startIndex, long limit) {
         long result = 0;
         for (long i = startIndex; i < limit; i++) {
-            result = (result << VALUE_BITS_PER_UINT_BYTE) | lexer.peek(i);
+            result = (result << VALUE_BITS_PER_UINT_BYTE) | buffer[(int) i] & SINGLE_BYTE_MASK;
         }
         return result;
     }
@@ -155,7 +183,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
         int sign = (currentByte & VAR_INT_SIGN_BITMASK) == 0 ? 1 : -1;
         int result = currentByte & LOWER_SIX_BITS_BITMASK;
         while ((currentByte & HIGHEST_BIT_BITMASK) == 0) {
-            currentByte = lexer.peek(peekIndex++);
+            currentByte = buffer[(int)(peekIndex++)];
             result = (result << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
         }
         return result * sign;
@@ -166,7 +194,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
      * @return the value.
      */
     private int readVarInt() {
-        return readVarInt(lexer.peek(peekIndex++));
+        return readVarInt(buffer[(int)(peekIndex++)]);
     }
 
     // Scratch space for various byte sizes. Only for use while computing a single value.
@@ -204,7 +232,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
         }
         // The correct number of bytes will be requested from the buffer, so the limit is set at the capacity to
         // avoid having to calculate a limit.
-        lexer.copyBytes(startIndex, bytes, 0, bytes.length);
+        System.arraycopy(buffer, (int) startIndex, bytes, 0, bytes.length);
         return bytes;
     }
 
@@ -296,20 +324,20 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
             // which 8-byte integers can fit in a long.
             if (valueTid.isNegativeInt) {
                 // The smallest negative 8-byte integer that can fit in a long is -0x80_00_00_00_00_00_00_00.
-                int firstByte = lexer.peek(scalarMarker.startIndex);
+                int firstByte = buffer[(int)(scalarMarker.startIndex)] & SINGLE_BYTE_MASK;
                 if (firstByte < MOST_SIGNIFICANT_BYTE_OF_MIN_LONG) {
                     return IntegerSize.LONG;
                 } else if (firstByte > MOST_SIGNIFICANT_BYTE_OF_MIN_LONG) {
                     return IntegerSize.BIG_INTEGER;
                 }
                 for (long i = scalarMarker.startIndex + 1; i < scalarMarker.endIndex; i++) {
-                    if (0x00 != lexer.peek(i)) {
+                    if (0x00 != buffer[(int)(i)]) {
                         return IntegerSize.BIG_INTEGER;
                     }
                 }
             } else {
                 // The largest positive 8-byte integer that can fit in a long is 0x7F_FF_FF_FF_FF_FF_FF_FF.
-                if (lexer.peek(scalarMarker.startIndex) > MOST_SIGNIFICANT_BYTE_OF_MAX_LONG) {
+                if ((buffer[(int)(scalarMarker.startIndex)] & SINGLE_BYTE_MASK) > MOST_SIGNIFICANT_BYTE_OF_MAX_LONG) {
                     return IntegerSize.BIG_INTEGER;
                 }
             }
@@ -345,7 +373,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
         byte[] bytes = new byte[byteSize()];
         // The correct number of bytes will be requested from the buffer, so the limit is set at the capacity to
         // avoid having to calculate a limit.
-        lexer.copyBytes(scalarMarker.startIndex, bytes, 0, bytes.length);
+        System.arraycopy(buffer, (int) scalarMarker.startIndex, bytes, 0, bytes.length);
         return bytes;
     }
 
@@ -354,7 +382,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
         int length = Math.min(len, byteSize() - lobBytesRead);
         // The correct number of bytes will be requested from the buffer, so the limit is set at the capacity to
         // avoid having to calculate a limit.
-        lexer.copyBytes(scalarMarker.startIndex + lobBytesRead, bytes, offset, length);
+        System.arraycopy(buffer, (int) (scalarMarker.startIndex + lobBytesRead), bytes, offset, length);
         lobBytesRead += length;
         return length;
     }
@@ -375,12 +403,12 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
             long coefficient = 0;
             int sign = 1;
             if (peekIndex < scalarMarker.endIndex) {
-                int firstByte = lexer.peek(peekIndex++);
+                int firstByte = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
                 sign = (firstByte & HIGHEST_BIT_BITMASK) == 0 ? 1 : -1;
                 coefficient = firstByte & LOWER_SEVEN_BITS_BITMASK;
             }
             while (peekIndex < scalarMarker.endIndex) {
-                coefficient = (coefficient << VALUE_BITS_PER_UINT_BYTE) | lexer.peek(peekIndex++);
+                coefficient = (coefficient << VALUE_BITS_PER_UINT_BYTE) | buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
             }
             value = BigDecimal.valueOf(coefficient * sign, scale);
         } else {
@@ -533,7 +561,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
             if (length == 0) {
                 return 0.0d;
             }
-            ByteBuffer bytes = lexer.getByteBuffer(scalarMarker.startIndex, scalarMarker.endIndex);
+            ByteBuffer bytes = prepareByteBuffer(scalarMarker.startIndex, scalarMarker.endIndex);
             if (length == FLOAT_32_BYTE_LENGTH) {
                 value = bytes.getFloat();
             } else {
@@ -559,7 +587,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
         if (isNullValueHelper()) {
             return null;
         }
-        int firstByte = lexer.peek(peekIndex++);
+        int firstByte = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
         Integer offset = null;
         if (firstByte != VAR_INT_NEGATIVE_ZERO) {
             offset = readVarInt(firstByte);
@@ -638,7 +666,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
      * @return the value.
      */
     private String readString(long valueStart, long valueEnd) {
-        ByteBuffer utf8InputBuffer = lexer.getByteBuffer(valueStart, valueEnd);
+        ByteBuffer utf8InputBuffer = prepareByteBuffer(valueStart, valueEnd);
         int numberOfBytes = (int) (valueEnd - valueStart);
         return utf8Decoder.decode(utf8InputBuffer, numberOfBytes);
     }

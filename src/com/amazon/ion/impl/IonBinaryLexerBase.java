@@ -221,19 +221,15 @@ class IonBinaryLexerBase {
     }
 
     protected void parseIvm() {
-        majorVersion = peek(peekIndex++);
-        minorVersion = peek(peekIndex++);
-        if (peek(peekIndex++) != IVM_FINAL_BYTE) {
+        majorVersion = buffer[(int) (peekIndex++)];
+        minorVersion = buffer[(int) (peekIndex++)];
+        if ((buffer[(int) (peekIndex++)] & SINGLE_BYTE_MASK) != IVM_FINAL_BYTE) {
             throw new IonException("Invalid Ion version marker.");
         }
         if (majorVersion != 1 || minorVersion != 0) {
             throw new IonException(String.format("Unsupported Ion version: %d.%d", majorVersion, minorVersion));
         }
         ivmConsumer.ivmEncountered(majorVersion, minorVersion);
-    }
-
-    protected int peekByte() throws IOException {
-        return peek(peekIndex++);
     }
 
     protected void prohibitEmptyOrderedStruct() {
@@ -245,7 +241,7 @@ class IonBinaryLexerBase {
         }
     }
 
-    private boolean parseAnnotationWrapperHeader(IonTypeID valueTid) throws IOException {
+    private boolean parseAnnotationWrapperHeader(IonTypeID valueTid) {
         long valueLength;
         if (valueTid.variableLength) {
             valueLength = readVarUInt();
@@ -266,7 +262,7 @@ class IonBinaryLexerBase {
         return false;
     }
 
-    private boolean parseValueHeader(IonTypeID valueTid, boolean isAnnotated) throws IOException {
+    private boolean parseValueHeader(IonTypeID valueTid, boolean isAnnotated) {
         long valueLength;
         if (valueTid.variableLength) {
             valueLength = readVarUInt();
@@ -303,9 +299,8 @@ class IonBinaryLexerBase {
      * Reads the type ID byte.
      *
      * @param isAnnotated true if this type ID is on a value within an annotation wrapper; false if it is not.
-     * @throws IOException if thrown by the underlying InputStream.
      */
-    private boolean parseTypeID(final int typeIdByte, final boolean isAnnotated) throws IOException {
+    private boolean parseTypeID(final int typeIdByte, final boolean isAnnotated) {
         IonTypeID valueTid = IonTypeID.TYPE_IDS[typeIdByte];
         if (!valueTid.isValid) {
             throw new IonException("Invalid type ID.");
@@ -317,7 +312,7 @@ class IonBinaryLexerBase {
             if (parseAnnotationWrapperHeader(valueTid)) {
                 return true;
             }
-            return parseTypeID(peekByte(), true);
+            return parseTypeID(buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK, true);
         } else {
             if (parseValueHeader(valueTid, isAnnotated)) {
                 return true;
@@ -337,11 +332,11 @@ class IonBinaryLexerBase {
      * VarUInts to fit in an `int`.
      *
      */
-    private long readVarUInt() throws IOException {
+    private long readVarUInt() {
         int currentByte = 0;
         long result = 0;
         while ((currentByte & HIGHEST_BIT_BITMASK) == 0) {
-            currentByte = peekByte();
+            currentByte = buffer[(int) (peekIndex++)];
             result = (result << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
         }
         return result;
@@ -393,16 +388,16 @@ class IonBinaryLexerBase {
             int b;
             ContainerInfo parent = containerStack.peek();
             if (parent == null) { // Depth 0
-                b = peekByte();
+                b = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
                 if (b == IVM_START_BYTE) {
                     parseIvm();
                     continue;
                 }
             } else if (parent.type == IonType.STRUCT) {
                 fieldSid = (int) readVarUInt(); // TODO type alignment
-                b = peekByte();
+                b = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
             } else {
-                b = peekByte();
+                b = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
             }
             if (parseTypeID(b, false)) {
                 break;
@@ -473,30 +468,12 @@ class IonBinaryLexerBase {
         return valueTid == null ? null : valueTid.type;
     }
 
-    // TODO abstraction?
-    ByteBuffer getByteBuffer(long startIndex, long endIndex) {
-        // Setting the limit to the capacity first is required because setting the position will fail if the new
-        // position is outside the limit.
-        byteBuffer.limit((int) capacity);
-        byteBuffer.position((int) startIndex);
-        byteBuffer.limit((int) endIndex);
-        return byteBuffer;
-    }
-
     final long available() {
         return availableAt(offset);
     }
 
     final long availableAt(long index) {
         return limit - index;
-    }
-
-    int peek(long index) {
-        return buffer[(int) index] & SINGLE_BYTE_MASK;
-    }
-
-    void copyBytes(long position, byte[] destination, int destinationOffset, int length) {
-        System.arraycopy(buffer, (int) position, destination, destinationOffset, length);
     }
 
     protected boolean isReady() {
@@ -507,7 +484,7 @@ class IonBinaryLexerBase {
         IonType type = getType();
         // TODO verify this complexity is warranted
         if (type == null && isReady() && available() > 0) {
-            IonTypeID valueTid = IonTypeID.TYPE_IDS[peek(checkpoint)];
+            IonTypeID valueTid = IonTypeID.TYPE_IDS[buffer[(int) (checkpoint)] & SINGLE_BYTE_MASK];
             if (valueTid.type != IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {
                 type = valueTid.type;
             }

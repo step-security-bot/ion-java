@@ -12,20 +12,8 @@ import java.nio.ByteBuffer;
 
 abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
 
-    /**
-     * Handler of notifications provided by the ResizingPipedInputStream.
-     */
-    interface NotificationConsumer {
-
-        /**
-         * Bytes have been shifted to the start of the buffer in order to make room for additional bytes
-         * to be buffered.
-         * @param leftShiftAmount the amount of the left shift (also: the pre-shift read index of the first shifted
-         *                        byte).
-         */
-        void bytesConsolidatedToStartOfBuffer(int leftShiftAmount);
-
-        void bufferOverflowDetected();
+    interface BufferChangeSubscriber {
+        void bufferChanged(byte[] newBuffer, ByteBuffer newByteBuffer);
     }
 
     private enum CheckpointLocation {
@@ -56,9 +44,6 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
      */
     protected final int maximumBufferSize;
 
-
-    protected NotificationConsumer notificationConsumer;
-
     private BufferConfiguration.OversizedValueHandler oversizedValueHandler;
 
     /**
@@ -77,6 +62,8 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
     private final IonCursor quick = new Quick();
 
     private IonCursor current;
+
+    private BufferChangeSubscriber bufferChangeSubscriber = null;
 
     protected State state = State.READY;
 
@@ -103,21 +90,12 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
         this.configuration = configuration;
         this.initialBufferSize = configuration.getInitialBufferSize();
         this.maximumBufferSize = configuration.getMaximumBufferSize();
-        notificationConsumer = new NotificationConsumer() {
-            @Override
-            public void bytesConsolidatedToStartOfBuffer(int leftShiftAmount) {
-                // The existing data in the buffer has been shifted to the start. Adjust the saved indexes
-                // accordingly. -1 indicates that all indices starting at 0 will be shifted.
-                shiftIndicesLeft(-1, leftShiftAmount);
-            }
-
-            @Override
-            public void bufferOverflowDetected() {
-                isSkippingCurrentValue = true;
-            }
-        };
         pageSize = configuration.getInitialBufferSize();
         current = careful;
+    }
+
+    void registerBufferChangeSubscriber(BufferChangeSubscriber subscriber) {
+        bufferChangeSubscriber = subscriber;
     }
 
     abstract void refill(long numberOfBytesToFill) throws IOException;
@@ -193,7 +171,7 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
             return true;
         }
         if (minimumNumberOfBytesRequired > maximumBufferSize) {
-            notificationConsumer.bufferOverflowDetected();
+            isSkippingCurrentValue = true;
             return false;
         }
         long shortfall = minimumNumberOfBytesRequired - capacity;
@@ -206,6 +184,7 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
             capacity = newSize;
             buffer = newBuffer;
             byteBuffer = ByteBuffer.wrap(buffer, (int) offset, (int) capacity);
+            bufferChangeSubscriber.bufferChanged(buffer, byteBuffer);
         } else {
             // The current capacity can accommodate the requested size; move the existing bytes to the beginning
             // to make room for the remaining requested bytes to be filled at the end.
@@ -249,7 +228,9 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
             System.arraycopy(buffer, (int) offset, destinationBuffer, 0, (int) size);
         }
         if (offset > 0) {
-            notificationConsumer.bytesConsolidatedToStartOfBuffer((int) offset);
+            // The existing data in the buffer has been shifted to the start. Adjust the saved indexes
+            // accordingly. -1 indicates that all indices starting at 0 will be shifted.
+            shiftIndicesLeft(-1, (int) offset);
         }
         offset = 0;
         //boundary = available;
@@ -263,7 +244,6 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
         return capacity - index;
     }
 
-    @Override
     protected int peekByte() throws IOException {
         int b;
         if (isSkippingCurrentValue) {
@@ -272,9 +252,7 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
                 individualBytesSkippedWithoutBuffering += 1;
             }
         } else {
-            b = peek(peekIndex);
-            //pipe.extendBoundary(1);
-            peekIndex++;
+            b = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
         }
         return b;
     }
