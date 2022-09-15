@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 // TODO removed 'implements IonCursor' as a performance experiment. Try adding back.
-abstract class IonBinaryLexerBase {
+class IonBinaryLexerBase {
 
     protected static final int LOWER_SEVEN_BITS_BITMASK = 0x7F;
     protected static final int HIGHEST_BIT_BITMASK = 0x80;
@@ -133,6 +133,8 @@ abstract class IonBinaryLexerBase {
 
     protected IonCursor.Event event = IonCursor.Event.NEEDS_DATA;
 
+    protected byte[] buffer;
+
     // The major version of the Ion encoding currently being read.
     private int majorVersion = -1;
 
@@ -151,16 +153,26 @@ abstract class IonBinaryLexerBase {
     protected long peekIndex;
 
     IonBinaryLexerBase(
-        final long offset,
-        final BufferConfiguration.DataHandler dataHandler
+        final BufferConfiguration<?> configuration,
+        byte[] buffer,
+        int offset,
+        int length
     ) {
-        this.dataHandler = dataHandler == null ? NO_OP_DATA_HANDLER : dataHandler;
+        this.dataHandler = (configuration == null || configuration.getDataHandler() == null)
+            ? NO_OP_DATA_HANDLER
+            : configuration.getDataHandler();
         containerStack = new _Private_RecyclingStack<ContainerInfo>(
             CONTAINER_STACK_INITIAL_CAPACITY,
             CONTAINER_INFO_FACTORY
         );
         peekIndex = offset;
         checkpoint = peekIndex;
+
+        this.buffer = buffer;
+        this.offset = offset;
+        this.limit = offset + length;
+        this.capacity = limit;
+        byteBuffer = ByteBuffer.wrap(buffer, offset, length);
     }
 
     void registerIvmNotificationConsumer(IvmNotificationConsumer ivmConsumer) {
@@ -479,9 +491,13 @@ abstract class IonBinaryLexerBase {
         return limit - index;
     }
 
-    abstract int peek(long index);
+    int peek(long index) {
+        return buffer[(int) index] & SINGLE_BYTE_MASK;
+    }
 
-    abstract void copyBytes(long position, byte[] destination, int destinationOffset, int length);
+    void copyBytes(long position, byte[] destination, int destinationOffset, int length) {
+        System.arraycopy(buffer, (int) position, destination, destinationOffset, length);
+    }
 
     protected boolean isReady() {
         return true;

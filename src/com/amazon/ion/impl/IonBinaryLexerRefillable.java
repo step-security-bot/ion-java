@@ -10,7 +10,7 @@ import com.amazon.ion.IonType;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-abstract class IonBinaryLexerRefillable extends IonBinaryLexerFromByteArray {
+abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
 
     /**
      * Handler of notifications provided by the ResizingPipedInputStream.

@@ -133,7 +133,7 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
      * @param builder the builder containing the configuration for the new reader.
      * @param buffer the buffer that provides binary Ion data.
      */
-    IonReaderBinaryIncrementalArbitraryDepth(IonReaderBuilder builder, IonBinaryLexerFromByteArray lexer) {
+    IonReaderBinaryIncrementalArbitraryDepth(IonReaderBuilder builder, IonBinaryLexerBase lexer) {
         super(lexer);
         this.catalog = builder.getCatalog() == null ? EMPTY_CATALOG : builder.getCatalog();
         if (builder.isAnnotationIteratorReuseEnabled()) {
