@@ -347,7 +347,7 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
             if (checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER) {
                 // This container is buffered in its entirety. There is no need to fill the buffer again until stepping
                 // out of the fill depth.
-                fillDepth = getDepth() + 1;
+                fillDepth = containerStack.size() + 1;
                 // TODO could go into quick mode now, but it would need to be reset if this container is skipped
             }
             return Event.VALUE_READY;
@@ -664,7 +664,7 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
             }
             // Push the remaining length onto the stack, seek past the container's header, and increase the depth.
             ContainerInfo containerInfo = containerStack.push();
-            if (getDepth() == fillDepth) {
+            if (containerStack.size() == fillDepth) {
                 enterQuickMode();
             }
             containerInfo.set(valueTid.type, valueMarker.endIndex);
@@ -694,7 +694,7 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
             peekIndex = containerInfo.endIndex;
             setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
             containerStack.pop();
-            if (getDepth() < fillDepth) {
+            if (containerStack.size() < fillDepth) {
                 fillDepth = 0;
                 exitQuickMode();
             }

@@ -71,8 +71,13 @@ public final class IonReaderBinaryIncrementalTopLevel extends IonReaderBinaryInc
 
     @Override
     public IonType next() {
-        if (isFixed || isNonReentrant || !isTopLevel()) {
-            IonCursor.Event event = nextValueHelper();
+        if (isFixed || isNonReentrant || !containerStack.isEmpty()) {
+            IonCursor.Event event = Event.NEEDS_DATA;
+            try {
+                event = super.nextValue();
+            } catch (IOException e) {
+                throwAsIonException(e);
+            }
             if (event == IonCursor.Event.NEEDS_DATA) {
                 if (isNonReentrant) {
                     requireCompleteValue();

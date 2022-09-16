@@ -77,7 +77,9 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
 
     private long peekIndex = -1;
 
-    IonBinaryLexerBase.Marker scalarMarker = null;
+    private final IonBinaryLexerBase.Marker scalarMarker;
+
+    private final IonBinaryLexerBase.Marker annotationsMarker;
 
     // The number of bytes of a lob value that the user has consumed, allowing for piecewise reads.
     private int lobBytesRead = 0;
@@ -89,6 +91,8 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
 
     private ByteBuffer byteBuffer;
 
+    protected final _Private_RecyclingStack<IonBinaryLexerBase.ContainerInfo> containerStack;
+
     IonReaderBinaryIncrementalArbitraryDepthRaw(IonBinaryLexerBase lexer) {
         scalarConverter = new _Private_ScalarConversions.ValueVariant();
         // Note: implementing Ion 1.1 support may require handling of Ion version changes in this class, rather
@@ -98,6 +102,9 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
         annotationIterator = new AnnotationIterator(); // TODO only if reusable is enabled?
         buffer = lexer.buffer; // TODO getter
         byteBuffer = lexer.byteBuffer;
+        containerStack = lexer.getContainerStack();
+        scalarMarker = lexer.getValueMarker();
+        annotationsMarker = lexer.getAnnotationSidsMarker();
         if (lexer instanceof IonBinaryLexerRefillable) {
             ((IonBinaryLexerRefillable) lexer).registerBufferChangeSubscriber(
                 new IonBinaryLexerRefillable.BufferChangeSubscriber() {
@@ -134,7 +141,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
 
     @Override
     public Event getCurrentEvent() {
-        return lexer.getCurrentEvent();
+        return lexer.event;
     }
 
     ByteBuffer prepareByteBuffer(long startIndex, long endIndex) {
@@ -287,18 +294,17 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
     }
 
     private IonTypeID prepareScalar() {
-        scalarMarker = lexer.getValueMarker();
         if (scalarMarker.startIndex < 0) {
             throw new IonException("No scalar has been loaded.");
         }
         peekIndex = scalarMarker.startIndex;
-        return lexer.getValueTid();
+        return lexer.valueTid;
     }
 
     // This exists so that it may be used in this class even if isNullValue is overridden by subclasses.
+    // TODO why do subclasses need to override?
     private boolean isNullValueHelper() {
-        IonTypeID valueTid = lexer.getValueTid();
-        return valueTid != null && valueTid.isNull;
+        return lexer.valueTid != null && lexer.valueTid.isNull;
     }
 
     @Override
@@ -351,10 +357,10 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
      * @param required the required type of current value.
      */
     private void requireType(IonType required) {
-        if (required != lexer.getType()) {
+        if (lexer.valueTid == null || required != lexer.valueTid.type) {
             // Note: this is IllegalStateException to match the behavior of the other binary IonReader implementation.
             throw new IllegalStateException(
-                String.format("Invalid type. Required %s but found %s.", required, lexer.getType())
+                String.format("Invalid type. Required %s but found %s.", required, lexer.valueTid == null ? null : lexer.valueTid.type)
             );
         }
     }
@@ -362,7 +368,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
     @Override
     public int byteSize() {
         prepareScalar();
-        if (!IonType.isLob(lexer.getType()) && !isNullValueHelper()) {
+        if (lexer.valueTid == null || (!IonType.isLob(lexer.valueTid.type) && !isNullValueHelper())) {
             throw new IonException("Reader must be positioned on a blob or clob.");
         }
         return (int) (scalarMarker.endIndex - scalarMarker.startIndex);
@@ -656,7 +662,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
     @Override
     public boolean booleanValue() {
         requireType(IonType.BOOL);
-        return lexer.getValueTid().lowerNibble == 1;
+        return lexer.valueTid.lowerNibble == 1;
     }
 
     /**
@@ -701,7 +707,6 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
     IntList getAnnotationSids() {
         annotationSids.clear();
         long savedPeekIndex = peekIndex;
-        IonBinaryLexerRefillable.Marker annotationsMarker = lexer.getAnnotationSidsMarker();
         peekIndex = annotationsMarker.startIndex;
         while (peekIndex < annotationsMarker.endIndex) {
             annotationSids.add(readVarUInt());
@@ -714,8 +719,6 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
      * Reusable iterator over the annotations on the current value.
      */
     class AnnotationIterator {
-
-        private final IonBinaryLexerRefillable.Marker annotationsMarker = lexer.getAnnotationSidsMarker();
 
         // The byte position of the annotation to return from the next call to next().
         private long nextAnnotationPeekIndex;
@@ -761,25 +764,21 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
 
     @Override
     public boolean isInStruct() {
-        return lexer.isInStruct();
+        return !containerStack.isEmpty() && containerStack.peek().type == IonType.STRUCT;
     }
 
     @Override
     public IonType getType() {
-        return lexer.getType();
+        return lexer.valueTid == null ? null : lexer.valueTid.type;
     }
 
     IonType peekType() {
         return lexer.peekType();
     }
 
-    boolean isTopLevel() {
-        return lexer.isTopLevel();
-    }
-
     @Override
     public int getDepth() {
-        return lexer.getDepth();
+        return containerStack.size();
     }
 
     int ionMajorVersion() {
@@ -791,7 +790,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
     }
 
     boolean hasAnnotations() {
-        return lexer.hasAnnotations();
+        return annotationsMarker.startIndex >= 0;
     }
 
     @Override

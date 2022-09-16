@@ -969,7 +969,7 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
     }
 
     private boolean isPositionedOnSymbolTable() {
-        return isTopLevel() &&
+        return containerStack.isEmpty() &&
             hasAnnotations() &&
             peekType() == IonType.STRUCT &&
             iterateAnnotationSids().next() == SystemSymbolIDs.ION_SYMBOL_TABLE_ID;
@@ -978,7 +978,7 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
     @Override
     public Event nextValue() throws IOException {
         Event event;
-        if (isTopLevel() || isReadingSymbolTable()) {
+        if (containerStack.isEmpty() || isReadingSymbolTable()) {
             while (true) {
                 if (isReadingSymbolTable()) {
                     symbolTableReader.readSymbolTable();

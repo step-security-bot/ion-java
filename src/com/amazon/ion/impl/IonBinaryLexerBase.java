@@ -70,7 +70,7 @@ class IonBinaryLexerBase {
         /**
          * The container's type.
          */
-        private IonType type;
+        IonType type;
 
         /**
          * The byte position of the end of the container.
@@ -125,9 +125,9 @@ class IonBinaryLexerBase {
      * Marker for the sequence of annotation symbol IDs on the current value. If there are no annotations on the
      * current value, the startIndex will be negative.
      */
-    protected final Marker annotationSidsMarker = new IonBinaryLexerRefillable.Marker(-1, 0);
+    protected final Marker annotationSidsMarker = new Marker(-1, 0);
 
-    protected final Marker valueMarker = new IonBinaryLexerRefillable.Marker(-1, 0);
+    protected final Marker valueMarker = new Marker(-1, 0);
 
     private IvmNotificationConsumer ivmConsumer;
 
@@ -173,6 +173,10 @@ class IonBinaryLexerBase {
         this.limit = offset + length;
         this.capacity = limit;
         byteBuffer = ByteBuffer.wrap(buffer, offset, length);
+    }
+
+    _Private_RecyclingStack<ContainerInfo> getContainerStack() {
+        return containerStack;
     }
 
     void registerIvmNotificationConsumer(IvmNotificationConsumer ivmConsumer) {
@@ -343,7 +347,7 @@ class IonBinaryLexerBase {
     }
 
     Event stepIn() throws IOException {
-        if (!IonType.isContainer(getType())) {
+        if (valueTid == null || !IonType.isContainer(valueTid.type)) {
             throw new IOException("Must be positioned on a container to step in.");
         }
         // Push the remaining length onto the stack, seek past the container's header, and increase the depth.
@@ -425,19 +429,6 @@ class IonBinaryLexerBase {
     }
 
     /**
-     * @return the type ID of the current value.
-     */
-    IonTypeID getValueTid() {
-        return valueTid;
-    }
-
-    /**
-     * @return true if the current value has annotations; otherwise, false.
-     */
-    boolean hasAnnotations() {
-        return annotationSidsMarker.startIndex >= 0;
-    }
-    /**
      * Returns the marker for the sequence of annotation symbol IDs on the current value. The startIndex of the
      * returned marker is the index of the first byte of the first annotation symbol ID in the sequence. The endIndex
      * of the returned marker is the index of the type ID byte of the value to which the annotations are applied.
@@ -460,19 +451,11 @@ class IonBinaryLexerBase {
         return valueTid == null ? -1 : fieldSid;
     }
 
-    public int getDepth() {
-        return containerStack.size();
-    }
-
-    public IonType getType() {
-        return valueTid == null ? null : valueTid.type;
-    }
-
-    final long available() {
+    protected final long available() {
         return availableAt(offset);
     }
 
-    final long availableAt(long index) {
+    protected final long availableAt(long index) {
         return limit - index;
     }
 
@@ -481,19 +464,15 @@ class IonBinaryLexerBase {
     }
 
     IonType peekType() {
-        IonType type = getType();
         // TODO verify this complexity is warranted
+        IonType type = valueTid == null ? null : valueTid.type;
         if (type == null && isReady() && available() > 0) {
             IonTypeID valueTid = IonTypeID.TYPE_IDS[buffer[(int) (checkpoint)] & SINGLE_BYTE_MASK];
             if (valueTid.type != IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {
-                type = valueTid.type;
+                return valueTid.type;
             }
         }
         return type;
-    }
-
-    boolean isTopLevel() {
-        return containerStack.isEmpty();
     }
 
     boolean isAwaitingMoreData() {
