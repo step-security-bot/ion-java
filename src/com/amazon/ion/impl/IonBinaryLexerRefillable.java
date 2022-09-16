@@ -580,7 +580,6 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
                 }
                 switch (checkpointLocation) {
                     case BEFORE_UNANNOTATED_TYPE_ID:
-                        fieldSid = -1;
                         if (isInStruct() && readFieldSid()) {
                             return;
                         }

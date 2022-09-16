@@ -146,7 +146,7 @@ class IonBinaryLexerBase {
      */
     protected IonTypeID valueTid;
 
-    protected int fieldSid;
+    protected int fieldSid = -1;
     
     protected long checkpoint;
 
@@ -206,6 +206,7 @@ class IonBinaryLexerBase {
         if (parent.endIndex == peekIndex) {
             event = Event.END_CONTAINER;
             valueTid = null;
+            fieldSid = -1;
             return true;
         }
         throw new IonException("Contained values overflowed the parent container length.");
@@ -439,11 +440,6 @@ class IonBinaryLexerBase {
 
     public boolean isInStruct() {
         return !containerStack.isEmpty() && containerStack.peek().type == IonType.STRUCT;
-    }
-
-    int getFieldId() {
-        // TODO see if it's possible to simplify this
-        return valueTid == null ? -1 : fieldSid;
     }
 
     protected final long available() {

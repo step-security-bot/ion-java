@@ -759,7 +759,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
 
     @Override
     public int getFieldId() {
-        return lexer.getFieldId();
+        return lexer.fieldSid;
     }
 
     @Override
