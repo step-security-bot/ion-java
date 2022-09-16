@@ -772,10 +772,6 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
         return lexer.valueTid == null ? null : lexer.valueTid.type;
     }
 
-    IonType peekType() {
-        return lexer.peekType();
-    }
-
     @Override
     public int getDepth() {
         return containerStack.size();

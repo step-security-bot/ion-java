@@ -133,7 +133,6 @@ public final class IonReaderBinaryIncrementalTopLevel extends IonReaderBinaryInc
     @Override
     public IonType getType() {
         return type;
-        //return reader.getType();
     }
 
     private void prepareScalar() {

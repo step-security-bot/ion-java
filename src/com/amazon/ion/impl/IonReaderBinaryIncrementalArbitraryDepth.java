@@ -971,7 +971,7 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
     private boolean isPositionedOnSymbolTable() {
         return containerStack.isEmpty() &&
             hasAnnotations() &&
-            peekType() == IonType.STRUCT &&
+            super.getType() == IonType.STRUCT &&
             iterateAnnotationSids().next() == SystemSymbolIDs.ION_SYMBOL_TABLE_ID;
     }
 

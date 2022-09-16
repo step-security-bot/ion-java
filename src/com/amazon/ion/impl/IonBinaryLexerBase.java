@@ -415,11 +415,6 @@ class IonBinaryLexerBase {
         return event;
     }
 
-    //@Override
-    public Event getCurrentEvent() {
-        return event;
-    }
-
     int ionMajorVersion() {
         return majorVersion;
     }
@@ -457,22 +452,6 @@ class IonBinaryLexerBase {
 
     protected final long availableAt(long index) {
         return limit - index;
-    }
-
-    protected boolean isReady() {
-        return true;
-    }
-
-    IonType peekType() {
-        // TODO verify this complexity is warranted
-        IonType type = valueTid == null ? null : valueTid.type;
-        if (type == null && isReady() && available() > 0) {
-            IonTypeID valueTid = IonTypeID.TYPE_IDS[buffer[(int) (checkpoint)] & SINGLE_BYTE_MASK];
-            if (valueTid.type != IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {
-                return valueTid.type;
-            }
-        }
-        return type;
     }
 
     boolean isAwaitingMoreData() {

@@ -711,11 +711,6 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
 
     abstract boolean seek(long numberOfBytes) throws IOException;
 
-    @Override
-    protected boolean isReady() {
-        return state == State.READY;
-    }
-
     private long amountToShift = 0;
 
     private final _Private_RecyclingStack.Consumer<ContainerInfo> shiftContainerIndex =
