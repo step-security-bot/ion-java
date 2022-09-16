@@ -297,16 +297,6 @@ public final class _Private_IonReaderFactory
         return new IonReaderBinaryIncrementalTopLevel(builder, buffer, off, len);
     }
 
-    public static final IonReader makeNonReentrantReader(IonReaderBuilder builder, InputStream is)
-    {
-        return new IonReaderBinaryNonReentrantApplication(builder, is);
-    }
-
-    public static final IonReader makeNonReentrantReader(IonReaderBuilder builder, byte[] buffer, int off, int len)
-    {
-        return new IonReaderBinaryNonReentrantApplication(builder, buffer, off, len);
-    }
-
 
     //=========================================================================
 

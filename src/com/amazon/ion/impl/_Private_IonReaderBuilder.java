@@ -18,7 +18,6 @@ import java.util.zip.GZIPInputStream;
 
 import static com.amazon.ion.impl.LocalSymbolTable.DEFAULT_LST_FACTORY;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeIncrementalReader;
-import static com.amazon.ion.impl._Private_IonReaderFactory.makeNonReentrantReader;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeTextReader;
 
@@ -99,11 +98,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
             return build(new ByteArrayInputStream(ionData, offset, length));
         }
         if (IonStreamUtils.isIonBinary(ionData, offset, length)) {
-            if (isIncrementalReadingEnabled()) {
-                return makeIncrementalReader(this, ionData, offset, length);
-            } else {
-                return makeNonReentrantReader(this, ionData, offset, length);
-            }
+            return makeIncrementalReader(this, ionData, offset, length);
         }
         return makeTextReader(validateCatalog(), ionData, offset, length, lstFactory);
     }
@@ -166,11 +161,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         // or it's a binary stream (in which case the correct reader was created) or it's a growing text stream
         // (which has always been unsupported).
         if (startsWithIvm(possibleIVM, bytesRead)) {
-            if (isIncrementalReadingEnabled()) {
-                return makeIncrementalReader(this, wrapper);
-            } else {
-                return makeNonReentrantReader(this, wrapper);
-            }
+            return makeIncrementalReader(this, wrapper);
         }
         return makeTextReader(validateCatalog(), wrapper, lstFactory);
     }

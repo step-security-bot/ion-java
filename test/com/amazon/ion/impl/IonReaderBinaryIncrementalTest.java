@@ -185,7 +185,7 @@ public class IonReaderBinaryIncrementalTest {
      * @return a new reader.
      */
     private static IonReader readerFor(IonReaderBuilder builder, InputStream input) {
-        return new IonReaderBinaryIncrementalTopLevel(builder, input);
+        return new IonReaderBinaryIncrementalTopLevel(builder.withIncrementalReadingEnabled(true), input);
     }
 
     @Test
