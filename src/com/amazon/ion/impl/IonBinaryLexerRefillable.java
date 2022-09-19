@@ -94,6 +94,14 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
         current = careful;
     }
 
+    protected final long available() {
+        return availableAt(offset);
+    }
+
+    protected final long availableAt(long index) {
+        return limit - index;
+    }
+
     void registerBufferChangeSubscriber(BufferChangeSubscriber subscriber) {
         bufferChangeSubscriber = subscriber;
     }
@@ -666,7 +674,8 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
             if (containerStack.size() == fillDepth) {
                 enterQuickMode();
             }
-            containerInfo.set(valueTid.type, valueMarker.endIndex);
+            containerInfo.type = valueTid.type;
+            containerInfo.endIndex = valueMarker.endIndex;
             setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
             valueTid = null;
             event = Event.NEEDS_INSTRUCTION;

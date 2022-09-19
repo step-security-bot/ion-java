@@ -76,11 +76,6 @@ class IonBinaryLexerBase {
          * The byte position of the end of the container.
          */
         long endIndex;
-
-        void set(IonType type, long endIndex) {
-            this.type = type;
-            this.endIndex = endIndex;
-        }
     }
 
     // Constructs ContainerInfo instances.
@@ -185,10 +180,9 @@ class IonBinaryLexerBase {
 
     protected void setValueMarker(long valueLength, boolean isAnnotated) {
         long endIndex = peekIndex + valueLength;
-        if (!containerStack.isEmpty()) {
-            if (endIndex > containerStack.peek().endIndex) {
-                throw new IonException("Value exceeds the length of its parent container.");
-            }
+        ContainerInfo parent = containerStack.peek();
+        if (parent != null && endIndex > parent.endIndex) {
+            throw new IonException("Value exceeds the length of its parent container.");
         }
         if (isAnnotated && endIndex != valueMarker.endIndex) {
             // valueMarker.endIndex refers to the end of the annotation wrapper.
@@ -353,7 +347,8 @@ class IonBinaryLexerBase {
         }
         // Push the remaining length onto the stack, seek past the container's header, and increase the depth.
         ContainerInfo containerInfo = containerStack.push();
-        containerInfo.set(valueTid.type, valueMarker.endIndex);
+        containerInfo.type = valueTid.type;
+        containerInfo.endIndex = valueMarker.endIndex;
         reset();
         valueTid = null;
         event = Event.NEEDS_INSTRUCTION;
@@ -361,7 +356,7 @@ class IonBinaryLexerBase {
     }
 
     Event stepOut() throws IOException {
-        ContainerInfo containerInfo = containerStack.peek();
+        ContainerInfo containerInfo = containerStack.pop();
         if (containerInfo == null) {
             // Note: this is IllegalStateException for consistency with the other binary IonReader implementation.
             throw new IllegalStateException("Cannot step out at top level.");
@@ -369,7 +364,6 @@ class IonBinaryLexerBase {
         // Seek past the remaining bytes at this depth and pop fro the stack.
         peekIndex = containerInfo.endIndex;
         reset();
-        containerStack.pop();
         event = Event.NEEDS_INSTRUCTION;
         valueTid = null;
         return event;
@@ -436,14 +430,6 @@ class IonBinaryLexerBase {
 
     Marker getValueMarker() {
         return valueMarker;
-    }
-
-    protected final long available() {
-        return availableAt(offset);
-    }
-
-    protected final long availableAt(long index) {
-        return limit - index;
     }
 
     boolean isAwaitingMoreData() {
