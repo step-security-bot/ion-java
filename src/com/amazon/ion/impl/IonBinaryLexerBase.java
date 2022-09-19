@@ -438,10 +438,6 @@ class IonBinaryLexerBase {
         return valueMarker;
     }
 
-    public boolean isInStruct() {
-        return !containerStack.isEmpty() && containerStack.peek().type == IonType.STRUCT;
-    }
-
     protected final long available() {
         return availableAt(offset);
     }
@@ -454,7 +450,6 @@ class IonBinaryLexerBase {
         return peekIndex > checkpoint;
     }
 
-    //@Override
     public void close() throws IOException {
         // Nothing to do.
     }

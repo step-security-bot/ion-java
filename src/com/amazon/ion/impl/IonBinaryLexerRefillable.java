@@ -110,7 +110,7 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
     private void handleOversizedValue() throws IOException {
         // The value was oversized.
         oversizedValueHandler.onOversizedValue();
-        if (!isTerminated()) { // TODO note: not required
+        if (state != State.TERMINATED) { // TODO note: not required
             // TODO reuse setCheckpoint
             seek(valueMarker.endIndex - offset - individualBytesSkippedWithoutBuffering);
             reportConsumedData(valueMarker.endIndex - checkpoint);
@@ -580,7 +580,7 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
                 }
                 switch (checkpointLocation) {
                     case BEFORE_UNANNOTATED_TYPE_ID:
-                        if (isInStruct() && readFieldSid()) {
+                        if (!containerStack.isEmpty() && containerStack.peek().type == IonType.STRUCT && readFieldSid()) {
                             return;
                         }
                         int b = carefulReadByte();
@@ -754,13 +754,9 @@ abstract class IonBinaryLexerRefillable extends IonBinaryLexerBase {
         state = State.TERMINATED;
     }
 
-    boolean isTerminated() {
-        return state == State.TERMINATED;
-    }
-
     @Override
     boolean isAwaitingMoreData() {
-        return !isTerminated()
+        return state != State.TERMINATED
             && (checkpointLocation.ordinal() > CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID.ordinal()
             || state == State.SEEK
             || bytesRequested > 1

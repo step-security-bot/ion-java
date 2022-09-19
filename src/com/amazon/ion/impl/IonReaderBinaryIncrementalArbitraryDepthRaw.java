@@ -791,7 +791,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
 
     @Override
     public void requireCompleteValue() {
-        if (getCurrentEvent() == Event.NEEDS_DATA && lexer.isAwaitingMoreData()) {
+        if (lexer.event == Event.NEEDS_DATA && lexer.isAwaitingMoreData()) {
             throw new IonException("Unexpected EOF.");
         }
     }

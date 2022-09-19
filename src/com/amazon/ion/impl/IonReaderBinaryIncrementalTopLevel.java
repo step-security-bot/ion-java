@@ -156,7 +156,7 @@ public final class IonReaderBinaryIncrementalTopLevel extends IonReaderBinaryInc
 
     @Override
     public IntegerSize getIntegerSize() {
-        if (getType() != IonType.INT) {
+        if (type != IonType.INT) {
             return null;
         }
         prepareScalar();
