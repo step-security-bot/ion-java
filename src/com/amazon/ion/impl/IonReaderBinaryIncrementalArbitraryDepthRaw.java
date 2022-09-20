@@ -250,14 +250,6 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
         return value;
     }
 
-    private IonTypeID prepareScalar() { // TODO no need to return valueTid
-        if (valueMarker.startIndex < 0) {
-            throw new IonException("No scalar has been loaded.");
-        }
-        peekIndex = valueMarker.startIndex;
-        return valueTid;
-    }
-
     @Override
     public boolean isNullValue() {
         return valueTid != null && valueTid.isNull;
@@ -265,7 +257,6 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
 
     @Override
     public IntegerSize getIntegerSize() {
-        IonTypeID valueTid = prepareScalar();
         if (valueTid.type != IonType.INT || isNullValue()) {
             return null;
         }
@@ -318,7 +309,6 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
 
     @Override
     public int byteSize() {
-        prepareScalar();
         if (valueTid == null || (!IonType.isLob(valueTid.type) && !isNullValue())) {
             throw new IonException("Reader must be positioned on a blob or clob.");
         }
@@ -410,27 +400,26 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
 
     @Override
     public BigDecimal bigDecimalValue() {
-        prepareScalar();
         requireType(IonType.DECIMAL);
         if (isNullValue()) {
             return null;
         }
+        peekIndex = valueMarker.startIndex;
         return readBigDecimal();
     }
 
     @Override
     public Decimal decimalValue() {
-        prepareScalar();
         requireType(IonType.DECIMAL);
         if (isNullValue()) {
             return null;
         }
+        peekIndex = valueMarker.startIndex;
         return readDecimal();
     }
 
     @Override
     public long longValue() {
-        IonTypeID valueTid = prepareScalar();
         long value;
         if (valueTid.type == IonType.INT) {
             if (valueTid.length == 0) {
@@ -463,7 +452,6 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
 
     @Override
     public BigInteger bigIntegerValue() {
-        IonTypeID valueTid = prepareScalar();
         BigInteger value;
         if (valueTid.type == IonType.INT) {
             if (isNullValue()) {
@@ -511,7 +499,6 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
 
     @Override
     public double doubleValue() {
-        IonTypeID valueTid = prepareScalar();
         double value;
         if (valueTid.type == IonType.FLOAT) {
             int length = (int) (valueMarker.endIndex - valueMarker.startIndex);
@@ -539,11 +526,11 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
 
     @Override
     public Timestamp timestampValue() {
-        prepareScalar();
         requireType(IonType.TIMESTAMP);
-        if (isNullValue()) {
+        if (isNullValue()) { // TODO the previous line verifies valueTid != null, so just check valueTid.isNull
             return null;
         }
+        peekIndex = valueMarker.startIndex;
         int firstByte = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
         Integer offset = null;
         if (firstByte != VAR_INT_NEGATIVE_ZERO) {
@@ -616,26 +603,14 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
         return valueTid.lowerNibble == 1;
     }
 
-    /**
-     * Decodes a string from the buffer into a String value.
-     * @param valueStart the position in the buffer of the first byte in the string.
-     * @param valueEnd the position in the buffer of the last byte in the string.
-     * @return the value.
-     */
-    private String readString(long valueStart, long valueEnd) {
-        ByteBuffer utf8InputBuffer = prepareByteBuffer(valueStart, valueEnd);
-        int numberOfBytes = (int) (valueEnd - valueStart);
-        return utf8Decoder.decode(utf8InputBuffer, numberOfBytes);
-    }
-
     @Override
     public String stringValue() {
-        prepareScalar();
         requireType(IonType.STRING);
         if (isNullValue()) {
             return null;
         }
-        return readString(valueMarker.startIndex, valueMarker.endIndex);
+        ByteBuffer utf8InputBuffer = prepareByteBuffer(valueMarker.startIndex, valueMarker.endIndex);
+        return utf8Decoder.decode(utf8InputBuffer, (int) (valueMarker.endIndex - valueMarker.startIndex));
     }
 
     /**
@@ -643,7 +618,6 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
      * @return -1 if the value is null
      */
     public int symbolValueId() {
-        prepareScalar();
         requireType(IonType.SYMBOL);
         if (isNullValue()) {
             return -1;
