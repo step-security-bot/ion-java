@@ -258,21 +258,15 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
         return valueTid;
     }
 
-    // This exists so that it may be used in this class even if isNullValue is overridden by subclasses.
-    // TODO why do subclasses need to override?
-    private boolean isNullValueHelper() {
-        return valueTid != null && valueTid.isNull;
-    }
-
     @Override
     public boolean isNullValue() {
-        return isNullValueHelper();
+        return valueTid != null && valueTid.isNull;
     }
 
     @Override
     public IntegerSize getIntegerSize() {
         IonTypeID valueTid = prepareScalar();
-        if (valueTid.type != IonType.INT || isNullValueHelper()) {
+        if (valueTid.type != IonType.INT || isNullValue()) {
             return null;
         }
         if (valueTid.length < INT_SIZE_IN_BYTES) {
@@ -325,7 +319,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
     @Override
     public int byteSize() {
         prepareScalar();
-        if (valueTid == null || (!IonType.isLob(valueTid.type) && !isNullValueHelper())) {
+        if (valueTid == null || (!IonType.isLob(valueTid.type) && !isNullValue())) {
             throw new IonException("Reader must be positioned on a blob or clob.");
         }
         return (int) (valueMarker.endIndex - valueMarker.startIndex);
@@ -418,7 +412,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
     public BigDecimal bigDecimalValue() {
         prepareScalar();
         requireType(IonType.DECIMAL);
-        if (isNullValueHelper()) {
+        if (isNullValue()) {
             return null;
         }
         return readBigDecimal();
@@ -428,7 +422,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
     public Decimal decimalValue() {
         prepareScalar();
         requireType(IonType.DECIMAL);
-        if (isNullValueHelper()) {
+        if (isNullValue()) {
             return null;
         }
         return readDecimal();
@@ -472,7 +466,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
         IonTypeID valueTid = prepareScalar();
         BigInteger value;
         if (valueTid.type == IonType.INT) {
-            if (isNullValueHelper()) {
+            if (isNullValue()) {
                 // NOTE: this mimics existing behavior, but should probably be undefined (as, e.g., longValue() is in this
                 //  case).
                 return null;
@@ -485,7 +479,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
                 throw new IonException("Int zero may not be negative.");
             }
         } else if (valueTid.type == IonType.FLOAT) {
-            if (isNullValueHelper()) {
+            if (isNullValue()) {
                 value = null;
             } else {
                 scalarConverter.addValue(doubleValue());
@@ -495,7 +489,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
                 scalarConverter.clear();
             }
         } else if (valueTid.type == IonType.DECIMAL) {
-            if (isNullValueHelper()) {
+            if (isNullValue()) {
                 value = null;
             } else {
                 scalarConverter.addValue(decimalValue());
@@ -547,7 +541,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
     public Timestamp timestampValue() {
         prepareScalar();
         requireType(IonType.TIMESTAMP);
-        if (isNullValueHelper()) {
+        if (isNullValue()) {
             return null;
         }
         int firstByte = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
@@ -638,7 +632,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
     public String stringValue() {
         prepareScalar();
         requireType(IonType.STRING);
-        if (isNullValueHelper()) {
+        if (isNullValue()) {
             return null;
         }
         return readString(valueMarker.startIndex, valueMarker.endIndex);
@@ -651,7 +645,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
     public int symbolValueId() {
         prepareScalar();
         requireType(IonType.SYMBOL);
-        if (isNullValueHelper()) {
+        if (isNullValue()) {
             return -1;
         }
         return (int) readUInt(valueMarker.startIndex, valueMarker.endIndex);

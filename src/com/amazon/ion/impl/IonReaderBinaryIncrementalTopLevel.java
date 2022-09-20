@@ -163,12 +163,6 @@ public final class IonReaderBinaryIncrementalTopLevel extends IonReaderBinaryInc
     }
 
     @Override
-    public boolean isNullValue() {
-        // TODO the type == NULL check should not be necessary and indicates a problem lower down. Fix.
-        return type == IonType.NULL || super.isNullValue();
-    }
-
-    @Override
     public boolean booleanValue() {
         if (isLoadRequired) {
             prepareScalar();
