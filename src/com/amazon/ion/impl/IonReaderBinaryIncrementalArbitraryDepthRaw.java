@@ -114,7 +114,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
      * Reads a VarUInt.
      * @return the value.
      */
-    private int readVarUInt() {
+    private int readVarUInt() { // TODO already in Lexer
         int currentByte = 0;
         int result = 0;
         while ((currentByte & HIGHEST_BIT_BITMASK) == 0) {
@@ -250,7 +250,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
         return value;
     }
 
-    private IonTypeID prepareScalar() {
+    private IonTypeID prepareScalar() { // TODO no need to return valueTid
         if (valueMarker.startIndex < 0) {
             throw new IonException("No scalar has been loaded.");
         }

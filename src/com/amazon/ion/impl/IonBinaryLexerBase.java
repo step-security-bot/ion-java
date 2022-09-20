@@ -128,6 +128,7 @@ class IonBinaryLexerBase implements IonCursor {
      * Marker for the sequence of annotation symbol IDs on the current value. If there are no annotations on the
      * current value, the startIndex will be negative.
      */
+    // TODO try storing the annotation and value marker indices separately and access them directly
     protected final Marker annotationSidsMarker = new Marker(-1, 0);
 
     protected final Marker valueMarker = new Marker(-1, 0);

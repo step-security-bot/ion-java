@@ -22,6 +22,7 @@ public final class IonReaderBinaryIncrementalTopLevel extends IonReaderBinaryInc
 
     private final boolean isFixed;
     private final boolean isNonReentrant;
+    private final boolean isLoadRequired;
     private boolean isLoadingValue = false;
     private IonType type = null; // TODO see if it's possible to remove this
 
@@ -29,6 +30,7 @@ public final class IonReaderBinaryIncrementalTopLevel extends IonReaderBinaryInc
         super(builder, inputStream);
         isFixed = false;
         isNonReentrant = !builder.isIncrementalReadingEnabled();
+        isLoadRequired = isNonReentrant;
     }
 
     IonReaderBinaryIncrementalTopLevel(IonReaderBuilder builder, byte[] data, int offset, int length) {
@@ -36,6 +38,7 @@ public final class IonReaderBinaryIncrementalTopLevel extends IonReaderBinaryInc
         isFixed = true;
         // TODO could just share the same non-reentrant unexpected EOF behavior since the buffer is fixed.
         isNonReentrant = !builder.isIncrementalReadingEnabled();
+        isLoadRequired = false;
     }
 
     @Override
@@ -130,7 +133,7 @@ public final class IonReaderBinaryIncrementalTopLevel extends IonReaderBinaryInc
     }
 
     private void prepareScalar() {
-        if (isFixed || !isNonReentrant || getCurrentEvent() == IonCursor.Event.VALUE_READY) {
+        if (getCurrentEvent() == IonCursor.Event.VALUE_READY) {
             return;
         }
         if (getCurrentEvent() != IonCursor.Event.START_SCALAR) {
@@ -153,7 +156,9 @@ public final class IonReaderBinaryIncrementalTopLevel extends IonReaderBinaryInc
         if (type != IonType.INT) {
             return null;
         }
-        prepareScalar();
+        if (isLoadRequired) {
+            prepareScalar();
+        }
         return super.getIntegerSize();
     }
 
@@ -165,85 +170,113 @@ public final class IonReaderBinaryIncrementalTopLevel extends IonReaderBinaryInc
 
     @Override
     public boolean booleanValue() {
-        prepareScalar();
+        if (isLoadRequired) {
+            prepareScalar();
+        }
         return super.booleanValue();
     }
 
     @Override
     public int intValue() {
-        prepareScalar();
+        if (isLoadRequired) {
+            prepareScalar();
+        }
         return super.intValue();
     }
 
     @Override
     public long longValue() {
-        prepareScalar();
+        if (isLoadRequired) {
+            prepareScalar();
+        }
         return super.longValue();
     }
 
     @Override
     public BigInteger bigIntegerValue() {
-        prepareScalar();
+        if (isLoadRequired) {
+            prepareScalar();
+        }
         return super.bigIntegerValue();
     }
 
     @Override
     public double doubleValue() {
-        prepareScalar();
+        if (isLoadRequired) {
+            prepareScalar();
+        }
         return super.doubleValue();
     }
 
     @Override
     public BigDecimal bigDecimalValue() {
-        prepareScalar();
+        if (isLoadRequired) {
+            prepareScalar();
+        }
         return super.bigDecimalValue();
     }
 
     @Override
     public Decimal decimalValue() {
-        prepareScalar();
+        if (isLoadRequired) {
+            prepareScalar();
+        }
         return super.decimalValue();
     }
 
     @Override
     public Date dateValue() {
-        prepareScalar();
+        if (isLoadRequired) {
+            prepareScalar();
+        }
         return super.dateValue();
     }
 
     @Override
     public Timestamp timestampValue() {
-        prepareScalar();
+        if (isLoadRequired) {
+            prepareScalar();
+        }
         return super.timestampValue();
     }
 
     @Override
     public String stringValue() {
-        prepareScalar();
+        if (isLoadRequired) {
+            prepareScalar();
+        }
         return super.stringValue();
     }
 
     @Override
     public SymbolToken symbolValue() {
-        prepareScalar();
+        if (isLoadRequired) {
+            prepareScalar();
+        }
         return super.symbolValue();
     }
 
     @Override
     public int byteSize() {
-        prepareScalar(); // TODO is it possible/necessary to try to avoid this?
+        if (isLoadRequired) {
+            prepareScalar(); // TODO is it possible/necessary to try to avoid this?
+        }
         return super.byteSize();
     }
 
     @Override
     public byte[] newBytes() {
-        prepareScalar();
+        if (isLoadRequired) {
+            prepareScalar();
+        }
         return super.newBytes();
     }
 
     @Override
     public int getBytes(byte[] buffer, int offset, int len) {
-        prepareScalar();
+        if (isLoadRequired) {
+            prepareScalar();
+        }
         return super.getBytes(buffer, offset, len);
     }
 
