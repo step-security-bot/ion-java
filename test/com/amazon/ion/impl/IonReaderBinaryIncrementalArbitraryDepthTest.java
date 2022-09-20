@@ -91,10 +91,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthTest {
     private IonReaderBinaryIncrementalArbitraryDepth readerFor(String ion) throws Exception {
         return new IonReaderBinaryIncrementalArbitraryDepth(
             readerBuilder,
-            new IonBinaryLexerRefillableFromInputStream(
-                new ByteArrayInputStream(toBinary(ion)),
-                readerBuilder.getBufferConfiguration()
-            )
+            new ByteArrayInputStream(toBinary(ion))
         );
     }
 
@@ -114,10 +111,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthTest {
         writer.close();
         return new IonReaderBinaryIncrementalArbitraryDepth(
             readerBuilder,
-            new IonBinaryLexerRefillableFromInputStream(
-                new ByteArrayInputStream(out.toByteArray()),
-                readerBuilder.getBufferConfiguration()
-            )
+            new ByteArrayInputStream(out.toByteArray())
         );
     }
 
@@ -134,10 +128,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthTest {
         writer.close();
         return new IonReaderBinaryIncrementalArbitraryDepth(
             readerBuilder,
-            new IonBinaryLexerRefillableFromInputStream(
-                new ByteArrayInputStream(out.toByteArray()),
-                readerBuilder.getBufferConfiguration()
-            )
+            new ByteArrayInputStream(out.toByteArray())
         );
     }
 
@@ -149,10 +140,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthTest {
     private IonReaderBinaryIncrementalArbitraryDepth readerFor(int... ion) throws Exception {
         return new IonReaderBinaryIncrementalArbitraryDepth(
             readerBuilder,
-            new IonBinaryLexerRefillableFromInputStream(
-                new ByteArrayInputStream(new TestUtils.BinaryIonAppender().append(ion).toByteArray()),
-                readerBuilder.getBufferConfiguration()
-            )
+            new ByteArrayInputStream(new TestUtils.BinaryIonAppender().append(ion).toByteArray())
         );
     }
 
@@ -355,7 +343,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthTest {
         ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
         IonReaderBinaryIncrementalArbitraryDepth reader = new IonReaderBinaryIncrementalArbitraryDepth(
             STANDARD_READER_BUILDER,
-            new IonBinaryLexerRefillableFromInputStream(pipe, STANDARD_READER_BUILDER.getBufferConfiguration())
+            pipe
         );
         byte[] bytes = toBinary("\"StringValueLong\"");
         boolean fillValue = false;
@@ -435,7 +423,7 @@ public class IonReaderBinaryIncrementalArbitraryDepthTest {
 
         IonReaderBinaryIncrementalArbitraryDepth reader = new IonReaderBinaryIncrementalArbitraryDepth(
             STANDARD_READER_BUILDER,
-            new IonBinaryLexerRefillableFromInputStream(pipe, STANDARD_READER_BUILDER.getBufferConfiguration())
+            pipe
         );
         byte[] bytes = symbolTable.toByteArray();
         for (byte b : bytes) {

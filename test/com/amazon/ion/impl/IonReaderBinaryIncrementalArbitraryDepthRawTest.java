@@ -21,8 +21,8 @@ public class IonReaderBinaryIncrementalArbitraryDepthRawTest {
     IonReaderBinaryIncrementalArbitraryDepthRaw reader = null;
     int numberOfIvmsEncountered = 0;
 
-    private final IonBinaryLexerRefillable.IvmNotificationConsumer countingIvmConsumer =
-        new IonBinaryLexerRefillable.IvmNotificationConsumer() {
+    private final IonBinaryLexerBase.IvmNotificationConsumer countingIvmConsumer =
+        new IonBinaryLexerBase.IvmNotificationConsumer() {
 
             @Override
             public void ivmEncountered(int majorVersion, int minorVersion) {
@@ -39,13 +39,11 @@ public class IonReaderBinaryIncrementalArbitraryDepthRawTest {
     private void initializeBuffer(byte[] bytes) {
         // TODO parameterize to try both InputStream and bytes
         reader = new IonReaderBinaryIncrementalArbitraryDepthRaw(
-            new IonBinaryLexerRefillableFromInputStream(
-                new ByteArrayInputStream(bytes),
-                STANDARD_BUFFER_CONFIGURATION
-            )
+            STANDARD_BUFFER_CONFIGURATION,
+            new ByteArrayInputStream(bytes)
         );
-        reader.lexer.registerIvmNotificationConsumer(countingIvmConsumer);
-        ((IonBinaryLexerRefillable) reader.lexer).registerOversizedValueHandler(
+        reader.registerIvmNotificationConsumer(countingIvmConsumer);
+        reader.registerOversizedValueHandler(
             STANDARD_BUFFER_CONFIGURATION.getOversizedValueHandler()
         );
     }

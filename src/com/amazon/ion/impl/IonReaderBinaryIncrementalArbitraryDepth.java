@@ -19,6 +19,7 @@ import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.SimpleCatalog;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -116,7 +117,7 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
     // The SymbolTable that was transferred via the last call to pop_passed_symbol_table.
     private SymbolTable symbolTableLastTransferred = null;
 
-    private final IonBinaryLexerBase.IvmNotificationConsumer ivmNotificationConsumer = new IonBinaryLexerRefillable.IvmNotificationConsumer() {
+    private final IvmNotificationConsumer ivmNotificationConsumer = new IvmNotificationConsumer() {
         @Override
         public void ivmEncountered(int majorVersion, int minorVersion) {
             // TODO use the versions to set the proper system symbol table and local symbol table processing
@@ -131,10 +132,9 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
     /**
      * Constructor.
      * @param builder the builder containing the configuration for the new reader.
-     * @param buffer the buffer that provides binary Ion data.
      */
-    IonReaderBinaryIncrementalArbitraryDepth(IonReaderBuilder builder, IonBinaryLexerBase lexer) {
-        super(lexer);
+    IonReaderBinaryIncrementalArbitraryDepth(IonReaderBuilder builder, byte[] bytes, int offset, int length) {
+        super(builder.getBufferConfiguration(), bytes, offset, length);
         this.catalog = builder.getCatalog() == null ? EMPTY_CATALOG : builder.getCatalog();
         if (builder.isAnnotationIteratorReuseEnabled()) {
             isAnnotationIteratorReuseEnabled = true;
@@ -146,16 +146,15 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
         symbols = new ArrayList<String>(SYMBOLS_LIST_INITIAL_CAPACITY);
         symbolTableReader = new SymbolTableReader();
         resetImports();
-        lexer.registerIvmNotificationConsumer(ivmNotificationConsumer);
+        registerIvmNotificationConsumer(ivmNotificationConsumer);
     }
 
     /**
      * Constructor.
      * @param builder the builder containing the configuration for the new reader.
-     * @param buffer the buffer that provides binary Ion data.
      */
-    IonReaderBinaryIncrementalArbitraryDepth(final IonReaderBuilder builder, final IonBinaryLexerRefillable lexer) {
-        super(lexer);
+    IonReaderBinaryIncrementalArbitraryDepth(final IonReaderBuilder builder, final InputStream inputStream) {
+        super(builder.getBufferConfiguration(), inputStream);
         this.catalog = builder.getCatalog() == null ? EMPTY_CATALOG : builder.getCatalog();
         if (builder.isAnnotationIteratorReuseEnabled()) {
             isAnnotationIteratorReuseEnabled = true;
@@ -167,15 +166,14 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
         symbols = new ArrayList<String>(SYMBOLS_LIST_INITIAL_CAPACITY);
         symbolTableReader = new SymbolTableReader();
         resetImports();
-        final IonBufferConfiguration configuration = (IonBufferConfiguration) lexer.getConfiguration();
-        lexer.registerIvmNotificationConsumer(ivmNotificationConsumer);
-        lexer.registerOversizedValueHandler(
+        registerIvmNotificationConsumer(ivmNotificationConsumer);
+        registerOversizedValueHandler(
             new BufferConfiguration.OversizedValueHandler() {
                 @Override
                 public void onOversizedValue() {
                     if (isReadingSymbolTable() || isPositionedOnSymbolTable()) {
                         configuration.getOversizedSymbolTableHandler().onOversizedSymbolTable();
-                        lexer.terminate();
+                        terminate();
                     } else {
                         configuration.getOversizedValueHandler().onOversizedValue();
                     }

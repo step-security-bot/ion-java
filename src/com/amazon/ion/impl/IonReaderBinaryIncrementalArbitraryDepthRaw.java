@@ -20,7 +20,7 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Date;
 
-class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantCore {
+class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase implements IonReaderReentrantCore {
 
     // Isolates the highest bit in a byte.
     private static final int HIGHEST_BIT_BITMASK = 0x80;
@@ -68,8 +68,6 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
     // Java `long` via `IonReader.longValue()`.
     private final _Private_ScalarConversions.ValueVariant scalarConverter;
 
-    final IonBinaryLexerBase lexer;
-
     private final Utf8StringDecoder utf8Decoder = Utf8StringDecoderPool.getInstance().getOrCreate();
 
     // Reusable iterator over the annotation SIDs on the current value.
@@ -77,71 +75,30 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
 
     private long peekIndex = -1;
 
-    private final IonBinaryLexerBase.Marker scalarMarker;
-
-    private final IonBinaryLexerBase.Marker annotationsMarker;
-
     // The number of bytes of a lob value that the user has consumed, allowing for piecewise reads.
     private int lobBytesRead = 0;
 
     // The symbol IDs for the annotations on the current value.
     private final IntList annotationSids;
 
-    private byte[] buffer;
-
-    private ByteBuffer byteBuffer;
-
-    protected final _Private_RecyclingStack<IonBinaryLexerBase.ContainerInfo> containerStack;
-
-    IonReaderBinaryIncrementalArbitraryDepthRaw(IonBinaryLexerBase lexer) {
+    IonReaderBinaryIncrementalArbitraryDepthRaw(IonBufferConfiguration configuration, byte[] bytes, int offset, int length) {
+        super(configuration, bytes, offset, length);
         scalarConverter = new _Private_ScalarConversions.ValueVariant();
-        // Note: implementing Ion 1.1 support may require handling of Ion version changes in this class, rather
-        // than simple upward delegation.
-        this.lexer = lexer;
         annotationSids = new IntList(ANNOTATIONS_LIST_INITIAL_CAPACITY);
         annotationIterator = new AnnotationIterator(); // TODO only if reusable is enabled?
-        buffer = lexer.buffer; // TODO getter
-        byteBuffer = lexer.byteBuffer;
-        containerStack = lexer.getContainerStack();
-        scalarMarker = lexer.getValueMarker();
-        annotationsMarker = lexer.getAnnotationSidsMarker();
-        if (lexer instanceof IonBinaryLexerRefillable) {
-            ((IonBinaryLexerRefillable) lexer).registerBufferChangeSubscriber(
-                new IonBinaryLexerRefillable.BufferChangeSubscriber() {
-                    @Override
-                    public void bufferChanged(byte[] newBuffer, ByteBuffer newByteBuffer) {
-                        buffer = newBuffer;
-                        byteBuffer = newByteBuffer;
-                    }
-                }
-            );
-        }
+    }
+
+    IonReaderBinaryIncrementalArbitraryDepthRaw(IonBufferConfiguration configuration, InputStream inputStream) {
+        super(configuration, inputStream);
+        scalarConverter = new _Private_ScalarConversions.ValueVariant();
+        annotationSids = new IntList(ANNOTATIONS_LIST_INITIAL_CAPACITY);
+        annotationIterator = new AnnotationIterator(); // TODO only if reusable is enabled?
     }
 
     @Override
     public Event nextValue() throws IOException {
         lobBytesRead = 0;
-        return lexer.next();
-    }
-
-    @Override
-    public Event stepIntoContainer() throws IOException {
-        return lexer.stepIn();
-    }
-
-    @Override
-    public Event stepOutOfContainer() throws IOException {
-        return lexer.stepOut();
-    }
-
-    @Override
-    public Event fillValue() throws IOException {
-        return lexer.fillValue();
-    }
-
-    @Override
-    public Event getCurrentEvent() {
-        return lexer.event;
+        return super.nextValue();
     }
 
     ByteBuffer prepareByteBuffer(long startIndex, long endIndex) {
@@ -249,11 +206,11 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
      * @return the value.
      */
     private BigInteger readUIntAsBigInteger(boolean isNegative) {
-        int length = (int) (scalarMarker.endIndex - scalarMarker.startIndex);
+        int length = (int) (valueMarker.endIndex - valueMarker.startIndex);
         // NOTE: unfortunately, there is no BigInteger(int signum, byte[] bits, int offset, int length) constructor
         // until JDK 9, so copying to scratch space is always required. Migrating to the new constructor will
         // lead to a significant performance improvement.
-        byte[] magnitude = copyBytesToScratch(scalarMarker.startIndex, length);
+        byte[] magnitude = copyBytesToScratch(valueMarker.startIndex, length);
         int signum = isNegative ? -1 : 1;
         return new BigInteger(signum, magnitude);
     }
@@ -294,17 +251,17 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
     }
 
     private IonTypeID prepareScalar() {
-        if (scalarMarker.startIndex < 0) {
+        if (valueMarker.startIndex < 0) {
             throw new IonException("No scalar has been loaded.");
         }
-        peekIndex = scalarMarker.startIndex;
-        return lexer.valueTid;
+        peekIndex = valueMarker.startIndex;
+        return valueTid;
     }
 
     // This exists so that it may be used in this class even if isNullValue is overridden by subclasses.
     // TODO why do subclasses need to override?
     private boolean isNullValueHelper() {
-        return lexer.valueTid != null && lexer.valueTid.isNull;
+        return valueTid != null && valueTid.isNull;
     }
 
     @Override
@@ -330,20 +287,20 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
             // which 8-byte integers can fit in a long.
             if (valueTid.isNegativeInt) {
                 // The smallest negative 8-byte integer that can fit in a long is -0x80_00_00_00_00_00_00_00.
-                int firstByte = buffer[(int)(scalarMarker.startIndex)] & SINGLE_BYTE_MASK;
+                int firstByte = buffer[(int)(valueMarker.startIndex)] & SINGLE_BYTE_MASK;
                 if (firstByte < MOST_SIGNIFICANT_BYTE_OF_MIN_LONG) {
                     return IntegerSize.LONG;
                 } else if (firstByte > MOST_SIGNIFICANT_BYTE_OF_MIN_LONG) {
                     return IntegerSize.BIG_INTEGER;
                 }
-                for (long i = scalarMarker.startIndex + 1; i < scalarMarker.endIndex; i++) {
+                for (long i = valueMarker.startIndex + 1; i < valueMarker.endIndex; i++) {
                     if (0x00 != buffer[(int)(i)]) {
                         return IntegerSize.BIG_INTEGER;
                     }
                 }
             } else {
                 // The largest positive 8-byte integer that can fit in a long is 0x7F_FF_FF_FF_FF_FF_FF_FF.
-                if ((buffer[(int)(scalarMarker.startIndex)] & SINGLE_BYTE_MASK) > MOST_SIGNIFICANT_BYTE_OF_MAX_LONG) {
+                if ((buffer[(int)(valueMarker.startIndex)] & SINGLE_BYTE_MASK) > MOST_SIGNIFICANT_BYTE_OF_MAX_LONG) {
                     return IntegerSize.BIG_INTEGER;
                 }
             }
@@ -357,10 +314,10 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
      * @param required the required type of current value.
      */
     private void requireType(IonType required) {
-        if (lexer.valueTid == null || required != lexer.valueTid.type) {
+        if (valueTid == null || required != valueTid.type) {
             // Note: this is IllegalStateException to match the behavior of the other binary IonReader implementation.
             throw new IllegalStateException(
-                String.format("Invalid type. Required %s but found %s.", required, lexer.valueTid == null ? null : lexer.valueTid.type)
+                String.format("Invalid type. Required %s but found %s.", required, valueTid == null ? null : valueTid.type)
             );
         }
     }
@@ -368,10 +325,10 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
     @Override
     public int byteSize() {
         prepareScalar();
-        if (lexer.valueTid == null || (!IonType.isLob(lexer.valueTid.type) && !isNullValueHelper())) {
+        if (valueTid == null || (!IonType.isLob(valueTid.type) && !isNullValueHelper())) {
             throw new IonException("Reader must be positioned on a blob or clob.");
         }
-        return (int) (scalarMarker.endIndex - scalarMarker.startIndex);
+        return (int) (valueMarker.endIndex - valueMarker.startIndex);
     }
 
     @Override
@@ -379,7 +336,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
         byte[] bytes = new byte[byteSize()];
         // The correct number of bytes will be requested from the buffer, so the limit is set at the capacity to
         // avoid having to calculate a limit.
-        System.arraycopy(buffer, (int) scalarMarker.startIndex, bytes, 0, bytes.length);
+        System.arraycopy(buffer, (int) valueMarker.startIndex, bytes, 0, bytes.length);
         return bytes;
     }
 
@@ -388,7 +345,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
         int length = Math.min(len, byteSize() - lobBytesRead);
         // The correct number of bytes will be requested from the buffer, so the limit is set at the capacity to
         // avoid having to calculate a limit.
-        System.arraycopy(buffer, (int) (scalarMarker.startIndex + lobBytesRead), bytes, offset, length);
+        System.arraycopy(buffer, (int) (valueMarker.startIndex + lobBytesRead), bytes, offset, length);
         lobBytesRead += length;
         return length;
     }
@@ -398,7 +355,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
      * @return the value.
      */
     private BigDecimal readBigDecimal() {
-        long length = (int) (scalarMarker.endIndex - peekIndex);
+        long length = (int) (valueMarker.endIndex - peekIndex);
         if (length == 0) {
             return BigDecimal.ZERO;
         }
@@ -408,18 +365,18 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
             // No need to allocate a BigInteger to hold the coefficient.
             long coefficient = 0;
             int sign = 1;
-            if (peekIndex < scalarMarker.endIndex) {
+            if (peekIndex < valueMarker.endIndex) {
                 int firstByte = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
                 sign = (firstByte & HIGHEST_BIT_BITMASK) == 0 ? 1 : -1;
                 coefficient = firstByte & LOWER_SEVEN_BITS_BITMASK;
             }
-            while (peekIndex < scalarMarker.endIndex) {
+            while (peekIndex < valueMarker.endIndex) {
                 coefficient = (coefficient << VALUE_BITS_PER_UINT_BYTE) | buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
             }
             value = BigDecimal.valueOf(coefficient * sign, scale);
         } else {
             // The coefficient may overflow a long, so a BigInteger is required.
-            value = new BigDecimal(readIntAsBigInteger(scalarMarker.endIndex), scale);
+            value = new BigDecimal(readIntAsBigInteger(valueMarker.endIndex), scale);
         }
         return value;
     }
@@ -429,13 +386,13 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
      * @return the value.
      */
     private Decimal readDecimal() {
-        int length = (int) (scalarMarker.endIndex - peekIndex);
+        int length = (int) (valueMarker.endIndex - peekIndex);
         if (length == 0) {
             return Decimal.ZERO;
         }
         int scale = -readVarInt();
         BigInteger coefficient;
-        length = (int) (scalarMarker.endIndex - peekIndex);
+        length = (int) (valueMarker.endIndex - peekIndex);
         if (length > 0) {
             // NOTE: unfortunately, there is no BigInteger(int signum, byte[] bits, int offset, int length) constructor,
             // so copying to scratch space is always required.
@@ -485,7 +442,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
             if (valueTid.length == 0) {
                 return 0;
             }
-            value = readUInt(scalarMarker.startIndex, scalarMarker.endIndex);
+            value = readUInt(valueMarker.startIndex, valueMarker.endIndex);
             if (valueTid.isNegativeInt) {
                 if (value == 0) {
                     throw new IonException("Int zero may not be negative.");
@@ -563,11 +520,11 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
         IonTypeID valueTid = prepareScalar();
         double value;
         if (valueTid.type == IonType.FLOAT) {
-            int length = (int) (scalarMarker.endIndex - scalarMarker.startIndex);
+            int length = (int) (valueMarker.endIndex - valueMarker.startIndex);
             if (length == 0) {
                 return 0.0d;
             }
-            ByteBuffer bytes = prepareByteBuffer(scalarMarker.startIndex, scalarMarker.endIndex);
+            ByteBuffer bytes = prepareByteBuffer(valueMarker.startIndex, valueMarker.endIndex);
             if (length == FLOAT_32_BYTE_LENGTH) {
                 value = bytes.getFloat();
             } else {
@@ -606,23 +563,23 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
         int second = 0;
         BigDecimal fractionalSecond = null;
         Timestamp.Precision precision = Timestamp.Precision.YEAR;
-        if (peekIndex < scalarMarker.endIndex) {
+        if (peekIndex < valueMarker.endIndex) {
             month = readVarUInt();
             precision = Timestamp.Precision.MONTH;
-            if (peekIndex < scalarMarker.endIndex) {
+            if (peekIndex < valueMarker.endIndex) {
                 day = readVarUInt();
                 precision = Timestamp.Precision.DAY;
-                if (peekIndex < scalarMarker.endIndex) {
+                if (peekIndex < valueMarker.endIndex) {
                     hour = readVarUInt();
-                    if (peekIndex >= scalarMarker.endIndex) {
+                    if (peekIndex >= valueMarker.endIndex) {
                         throw new IonException("Timestamps may not specify hour without specifying minute.");
                     }
                     minute = readVarUInt();
                     precision = Timestamp.Precision.MINUTE;
-                    if (peekIndex < scalarMarker.endIndex) {
+                    if (peekIndex < valueMarker.endIndex) {
                         second = readVarUInt();
                         precision = Timestamp.Precision.SECOND;
-                        if (peekIndex < scalarMarker.endIndex) {
+                        if (peekIndex < valueMarker.endIndex) {
                             fractionalSecond = readBigDecimal();
                             if (fractionalSecond.signum() < 0 || fractionalSecond.compareTo(BigDecimal.ONE) >= 0) {
                                 throw new IonException("The fractional seconds value in a timestamp must be greater" +
@@ -662,7 +619,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
     @Override
     public boolean booleanValue() {
         requireType(IonType.BOOL);
-        return lexer.valueTid.lowerNibble == 1;
+        return valueTid.lowerNibble == 1;
     }
 
     /**
@@ -684,7 +641,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
         if (isNullValueHelper()) {
             return null;
         }
-        return readString(scalarMarker.startIndex, scalarMarker.endIndex);
+        return readString(valueMarker.startIndex, valueMarker.endIndex);
     }
 
     /**
@@ -697,7 +654,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
         if (isNullValueHelper()) {
             return -1;
         }
-        return (int) readUInt(scalarMarker.startIndex, scalarMarker.endIndex);
+        return (int) readUInt(valueMarker.startIndex, valueMarker.endIndex);
     }
 
     /**
@@ -707,8 +664,8 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
     IntList getAnnotationSids() {
         annotationSids.clear();
         long savedPeekIndex = peekIndex;
-        peekIndex = annotationsMarker.startIndex;
-        while (peekIndex < annotationsMarker.endIndex) {
+        peekIndex = annotationSidsMarker.startIndex;
+        while (peekIndex < annotationSidsMarker.endIndex) {
             annotationSids.add(readVarUInt());
         }
         peekIndex = savedPeekIndex;
@@ -724,7 +681,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
         private long nextAnnotationPeekIndex;
 
         public boolean hasNext() {
-            return nextAnnotationPeekIndex < annotationsMarker.endIndex;
+            return nextAnnotationPeekIndex < annotationSidsMarker.endIndex;
         }
 
         public int next() {
@@ -740,7 +697,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
          * Prepare the iterator to iterate over the annotations on the current value.
          */
         void ready() {
-            nextAnnotationPeekIndex = annotationsMarker.startIndex;
+            nextAnnotationPeekIndex = annotationSidsMarker.startIndex;
         }
 
         /**
@@ -759,7 +716,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
 
     @Override
     public int getFieldId() {
-        return lexer.fieldSid;
+        return fieldSid;
     }
 
     @Override
@@ -769,7 +726,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
 
     @Override
     public IonType getType() {
-        return lexer.valueTid == null ? null : lexer.valueTid.type;
+        return valueTid == null ? null : valueTid.type;
     }
 
     @Override
@@ -777,21 +734,13 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
         return containerStack.size();
     }
 
-    int ionMajorVersion() {
-        return lexer.ionMajorVersion();
-    }
-
-    int ionMinorVersion() {
-        return lexer.ionMinorVersion();
-    }
-
     boolean hasAnnotations() {
-        return annotationsMarker.startIndex >= 0;
+        return annotationSidsMarker.startIndex >= 0;
     }
 
     @Override
     public void requireCompleteValue() {
-        if (lexer.event == Event.NEEDS_DATA && lexer.isAwaitingMoreData()) {
+        if (event == Event.NEEDS_DATA && isAwaitingMoreData()) {
             throw new IonException("Unexpected EOF.");
         }
     }
@@ -799,6 +748,6 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw implements IonReaderReentrantC
     @Override
     public void close() throws IOException {
         utf8Decoder.close();
-        lexer.close();
+        super.close();
     }
 }

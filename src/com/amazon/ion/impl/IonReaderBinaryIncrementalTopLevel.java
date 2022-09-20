@@ -26,19 +26,13 @@ public final class IonReaderBinaryIncrementalTopLevel extends IonReaderBinaryInc
     private IonType type = null; // TODO see if it's possible to remove this
 
     IonReaderBinaryIncrementalTopLevel(IonReaderBuilder builder, InputStream inputStream) {
-        super(
-            builder,
-            new IonBinaryLexerRefillableFromInputStream(inputStream, builder.getBufferConfiguration())
-        );
+        super(builder, inputStream);
         isFixed = false;
         isNonReentrant = !builder.isIncrementalReadingEnabled();
     }
 
     IonReaderBinaryIncrementalTopLevel(IonReaderBuilder builder, byte[] data, int offset, int length) {
-        super(
-            builder,
-            new IonBinaryLexerBase(builder.getBufferConfiguration(), data, offset, length)
-        );
+        super(builder, data, offset, length);
         isFixed = true;
         // TODO could just share the same non-reentrant unexpected EOF behavior since the buffer is fixed.
         isNonReentrant = !builder.isIncrementalReadingEnabled();
