@@ -17,19 +17,19 @@ import java.nio.ByteBuffer;
 // TODO removed 'implements IonCursor' as a performance experiment. Try adding back.
 class IonBinaryLexerBase implements IonCursor {
 
-    protected static final int LOWER_SEVEN_BITS_BITMASK = 0x7F;
-    protected static final int HIGHEST_BIT_BITMASK = 0x80;
-    protected static final int VALUE_BITS_PER_VARUINT_BYTE = 7;
+    private static final int LOWER_SEVEN_BITS_BITMASK = 0x7F;
+    private static final int HIGHEST_BIT_BITMASK = 0x80;
+    private static final int VALUE_BITS_PER_VARUINT_BYTE = 7;
     // Note: because long is a signed type, Long.MAX_VALUE is represented in Long.SIZE - 1 bits.
-    protected static final int MAXIMUM_SUPPORTED_VAR_UINT_BYTES = (Long.SIZE - 1) / VALUE_BITS_PER_VARUINT_BYTE;
-    protected static final int IVM_START_BYTE = 0xE0;
-    protected static final int IVM_FINAL_BYTE = 0xEA;
-    protected static final int IVM_REMAINING_LENGTH = 3; // Length of the IVM after the first byte.
+    private static final int MAXIMUM_SUPPORTED_VAR_UINT_BYTES = (Long.SIZE - 1) / VALUE_BITS_PER_VARUINT_BYTE;
+    private static final int IVM_START_BYTE = 0xE0;
+    private static final int IVM_FINAL_BYTE = 0xEA;
+    private static final int IVM_REMAINING_LENGTH = 3; // Length of the IVM after the first byte.
 
     /**
      * Mask to isolate a single byte.
      */
-    static final int SINGLE_BYTE_MASK = 0xFF;
+    private static final int SINGLE_BYTE_MASK = 0xFF;
 
     private static final BufferConfiguration.DataHandler NO_OP_DATA_HANDLER = new BufferConfiguration.DataHandler() {
         @Override
@@ -104,16 +104,16 @@ class IonBinaryLexerBase implements IonCursor {
     /**
      * The index of the next byte in the buffer that is available to be read. Always less than or equal to `limit`.
      */
-    long offset = 0;
+    private long offset = 0;
 
     /**
      * The index at which the next byte received will be written. Always greater than or equal to `offset`.
      */
-    long limit = 0;
+    private long limit;
 
-    long capacity;
+    private long capacity;
 
-    ByteBuffer byteBuffer;
+    protected ByteBuffer byteBuffer;
 
     private final InputStream inputStream;
 
@@ -152,9 +152,9 @@ class IonBinaryLexerBase implements IonCursor {
 
     protected int fieldSid = -1;
     
-    protected long checkpoint;
+    private long checkpoint;
 
-    protected long peekIndex;
+    private long peekIndex;
 
     IonBinaryLexerBase(
         final IonBufferConfiguration configuration,
@@ -237,12 +237,12 @@ class IonBinaryLexerBase implements IonCursor {
      * The initial size of the buffer and the number of bytes by which the size of the buffer will increase
      * each time it grows, unless it must grow by a smaller amount to fit within 'maximumBufferSize'.
      */
-    protected final int initialBufferSize;
+    private final int initialBufferSize;
 
     /**
      * The maximum size of the buffer. If the user attempts to buffer more bytes than this, an exception will be raised.
      */
-    protected final int maximumBufferSize;
+    private final int maximumBufferSize;
 
     private BufferConfiguration.OversizedValueHandler oversizedValueHandler;
 
@@ -263,9 +263,9 @@ class IonBinaryLexerBase implements IonCursor {
 
     private IonCursor current;
 
-    protected State state = State.READY;
+    private State state = State.READY;
 
-    protected long bytesRequested = 0;
+    private long bytesRequested = 0;
 
     IonBinaryLexerBase(
         IonBufferConfiguration configuration,
@@ -327,7 +327,7 @@ class IonBinaryLexerBase implements IonCursor {
         this.oversizedValueHandler = oversizedValueHandler;
     }
 
-    protected void setValueMarker(long valueLength, boolean isAnnotated) {
+    private void setValueMarker(long valueLength, boolean isAnnotated) {
         if (isSkippingCurrentValue) {
             // If the value is being skipped, not all of its bytes will be buffered, so start/end indexes will not
             // align to the expected values. This is fine, because the value will not be accessed.
@@ -346,7 +346,7 @@ class IonBinaryLexerBase implements IonCursor {
         valueMarker.endIndex = endIndex;
     }
 
-    protected boolean checkContainerEnd() {
+    private boolean checkContainerEnd() {
         ContainerInfo parent = containerStack.peek();
         if (parent == null || parent.endIndex > peekIndex) {
             return false;
@@ -360,7 +360,7 @@ class IonBinaryLexerBase implements IonCursor {
         throw new IonException("Contained values overflowed the parent container length.");
     }
 
-    protected void reset() {
+    private void reset() {
         valueMarker.startIndex = -1;
         valueMarker.endIndex = -1;
         annotationSidsMarker.startIndex = -1;
@@ -369,11 +369,11 @@ class IonBinaryLexerBase implements IonCursor {
     }
 
     // TODO test that this is called when necessary in quick/fixed mode
-    protected void reportConsumedData(long numberOfBytesToReport) {
+    private void reportConsumedData(long numberOfBytesToReport) {
         dataHandler.onData(numberOfBytesToReport);
     }
 
-    protected void parseIvm() {
+    private void parseIvm() {
         majorVersion = buffer[(int) (peekIndex++)];
         minorVersion = buffer[(int) (peekIndex++)];
         if ((buffer[(int) (peekIndex++)] & SINGLE_BYTE_MASK) != IVM_FINAL_BYTE) {
@@ -623,18 +623,18 @@ class IonBinaryLexerBase implements IonCursor {
         AFTER_CONTAINER_HEADER
     }
 
-    protected enum State {
+    private enum State {
         FILL,
         SEEK,
         READY,
         TERMINATED
     }
 
-    protected final long available() {
+    private long available() {
         return availableAt(offset);
     }
 
-    protected final long availableAt(long index) {
+    private long availableAt(long index) {
         return limit - index;
     }
 
@@ -654,7 +654,7 @@ class IonBinaryLexerBase implements IonCursor {
         individualBytesSkippedWithoutBuffering = 0;
     }
 
-    public Event nextRefillable() throws IOException {
+    private Event nextRefillable() throws IOException {
         while (true) {
             Event event = current.nextValue();
             if (isSkippingCurrentValue) {
@@ -668,7 +668,7 @@ class IonBinaryLexerBase implements IonCursor {
         }
     }
 
-    public Event fillValueRefillable() throws IOException {
+    private Event fillValueRefillable() throws IOException {
         Event event = current.fillValue();
         if (isSkippingCurrentValue) {
             handleOversizedValue();
@@ -676,11 +676,11 @@ class IonBinaryLexerBase implements IonCursor {
         return event;
     }
 
-    Event stepInRefillable() throws IOException {
+    private Event stepInRefillable() throws IOException {
         return current.stepIntoContainer(); // TODO performance experiment: compare to simple branching rather than delegation
     }
 
-    Event stepOutRefillable() throws IOException {
+    private Event stepOutRefillable() throws IOException {
         return current.stepOutOfContainer();
     }
 
@@ -692,7 +692,7 @@ class IonBinaryLexerBase implements IonCursor {
      * @param minimumNumberOfBytesRequired the minimum number of additional bytes to buffer.
      * @return true if the buffer has sufficient capacity; otherwise, false.
      */
-    boolean ensureCapacity(long minimumNumberOfBytesRequired) {
+    private boolean ensureCapacity(long minimumNumberOfBytesRequired) {
         if (freeSpaceAt(offset) >= minimumNumberOfBytesRequired) {
             // No need to shift any bytes or grow the buffer.
             return true;
@@ -719,7 +719,7 @@ class IonBinaryLexerBase implements IonCursor {
         return true;
     }
 
-    protected boolean carefulFillAt(long index, long numberOfBytes) throws IOException {
+    private boolean carefulFillAt(long index, long numberOfBytes) throws IOException {
         long shortfall = numberOfBytes - availableAt(index);
         if (shortfall > 0) {
             bytesRequested = numberOfBytes + (index - offset);
@@ -770,7 +770,7 @@ class IonBinaryLexerBase implements IonCursor {
         return capacity - index;
     }
 
-    protected int peekByte() throws IOException {
+    private int peekByte() throws IOException {
         int b;
         if (isSkippingCurrentValue) {
             b = readByteWithoutBuffering();
@@ -783,7 +783,7 @@ class IonBinaryLexerBase implements IonCursor {
         return b;
     }
 
-    protected int carefulReadByte() throws IOException {
+    private int carefulReadByte() throws IOException {
         int b;
         if (isSkippingCurrentValue) {
             // If the value is being skipped, the byte will not have been buffered.
@@ -802,20 +802,20 @@ class IonBinaryLexerBase implements IonCursor {
         return b;
     }
 
-    protected void enterQuickMode() {
+    private void enterQuickMode() {
         //current = quick; // TODO figure out how to activate
     }
 
-    protected void exitQuickMode() {
+    private void exitQuickMode() {
         //current = careful;
     }
 
     // TODO inside Careful?
-    final boolean fill(long numberOfBytes) throws IOException {
+    private boolean fill(long numberOfBytes) throws IOException {
         return fillAt(offset, numberOfBytes);
     }
 
-    final boolean fillAt(long index, long numberOfBytes) throws IOException {
+    private boolean fillAt(long index, long numberOfBytes) throws IOException {
         return carefulFillAt(index, numberOfBytes);
     }
 
@@ -918,7 +918,7 @@ class IonBinaryLexerBase implements IonCursor {
             return false;
         }
 
-        public boolean parseAnnotationWrapperHeader(IonTypeID valueTid) throws IOException {
+        private boolean parseAnnotationWrapperHeader(IonTypeID valueTid) throws IOException {
             long valueLength;
             int minimumAdditionalBytesNeeded;
             if (valueTid.variableLength) {
@@ -962,7 +962,7 @@ class IonBinaryLexerBase implements IonCursor {
             return false;
         }
 
-        public boolean parseValueHeader(IonTypeID valueTid, boolean isAnnotated) throws IOException {
+        private boolean parseValueHeader(IonTypeID valueTid, boolean isAnnotated) throws IOException {
             long valueLength;
             if (valueTid.variableLength) {
                 // At this point the value must be at least 2 more bytes: 1 for the smallest-possible value length
@@ -1008,7 +1008,7 @@ class IonBinaryLexerBase implements IonCursor {
          * @param isAnnotated true if this type ID is on a value within an annotation wrapper; false if it is not.
          * @throws IOException if thrown by the underlying InputStream.
          */
-        public boolean parseTypeID(final int typeIdByte, final boolean isAnnotated) throws IOException {
+        private boolean parseTypeID(final int typeIdByte, final boolean isAnnotated) throws IOException {
             IonTypeID valueTid = IonTypeID.TYPE_IDS[typeIdByte];
             if (!valueTid.isValid) {
                 throw new IonException("Invalid type ID.");
@@ -1036,11 +1036,11 @@ class IonBinaryLexerBase implements IonCursor {
             return false;
         }
 
-        void quickSeekTo(long index) {
+        private void quickSeekTo(long index) {
             offset = index;
         }
 
-        boolean seekTo(long index) throws IOException {
+        private boolean seekTo(long index) throws IOException {
             return seek(index - offset);
         }
 
@@ -1050,7 +1050,7 @@ class IonBinaryLexerBase implements IonCursor {
          *
          * @param knownAvailable the number of bytes starting at 'peekIndex' known to be available in the buffer.
          */
-        public long readVarUInt(int knownAvailable) throws IOException {
+        private long readVarUInt(int knownAvailable) throws IOException {
             int currentByte;
             int numberOfBytesRead = 0;
             long value = 0;
@@ -1076,7 +1076,7 @@ class IonBinaryLexerBase implements IonCursor {
             throw new IonException("Found a VarUInt that was too large to fit in a `long`");
         }
 
-        public boolean readFieldSid() throws IOException {
+        private boolean readFieldSid() throws IOException {
             // The value must have at least 2 more bytes: 1 for the smallest-possible field SID and 1 for
             // the smallest-possible representation.
             if (!fillAt(peekIndex, 2)) {
@@ -1275,7 +1275,7 @@ class IonBinaryLexerBase implements IonCursor {
 
     // Source: InputStream
 
-    void refill(long numberOfBytesToFill) throws IOException {
+    private void refill(long numberOfBytesToFill) throws IOException {
         int numberOfBytesFilled = inputStream.read(buffer, (int) limit, (int) numberOfBytesToFill);
         if (numberOfBytesFilled < 0) {
             return;
@@ -1283,7 +1283,7 @@ class IonBinaryLexerBase implements IonCursor {
         limit += numberOfBytesFilled;
     }
 
-    protected boolean seek(long numberOfBytes) throws IOException {
+    private boolean seek(long numberOfBytes) throws IOException {
         long size = available();
         long unbufferedBytesToSkip = numberOfBytes - size;
         if (unbufferedBytesToSkip <= 0) {
@@ -1306,17 +1306,16 @@ class IonBinaryLexerBase implements IonCursor {
             state = State.READY;
             return true;
         }
-        //remainingBytesRequested = shortfall;
-        //bytesRequested = numberOfBytes;
         bytesRequested = shortfall;
         state = State.SEEK;
         return false;
     }
 
-    int readByteWithoutBuffering() throws IOException {
+    private int readByteWithoutBuffering() throws IOException {
         return inputStream.read();
     }
 
+    @Override
     public void close() throws IOException {
         if (inputStream != null) {
             inputStream.close();
