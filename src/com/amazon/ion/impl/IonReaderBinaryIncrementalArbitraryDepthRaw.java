@@ -257,7 +257,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
 
     @Override
     public IntegerSize getIntegerSize() {
-        if (valueTid.type != IonType.INT || isNullValue()) {
+        if (valueTid.type != IonType.INT || valueTid.isNull) {
             return null;
         }
         if (valueTid.length < INT_SIZE_IN_BYTES) {
@@ -309,7 +309,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
 
     @Override
     public int byteSize() {
-        if (valueTid == null || (!IonType.isLob(valueTid.type) && !isNullValue())) {
+        if (valueTid == null || (!IonType.isLob(valueTid.type) && !valueTid.isNull)) {
             throw new IonException("Reader must be positioned on a blob or clob.");
         }
         return (int) (valueMarker.endIndex - valueMarker.startIndex);
@@ -401,7 +401,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
     @Override
     public BigDecimal bigDecimalValue() {
         requireType(IonType.DECIMAL);
-        if (isNullValue()) {
+        if (valueTid.isNull) {
             return null;
         }
         peekIndex = valueMarker.startIndex;
@@ -411,7 +411,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
     @Override
     public Decimal decimalValue() {
         requireType(IonType.DECIMAL);
-        if (isNullValue()) {
+        if (valueTid.isNull) {
             return null;
         }
         peekIndex = valueMarker.startIndex;
@@ -454,7 +454,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
     public BigInteger bigIntegerValue() {
         BigInteger value;
         if (valueTid.type == IonType.INT) {
-            if (isNullValue()) {
+            if (valueTid.isNull) {
                 // NOTE: this mimics existing behavior, but should probably be undefined (as, e.g., longValue() is in this
                 //  case).
                 return null;
@@ -467,7 +467,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
                 throw new IonException("Int zero may not be negative.");
             }
         } else if (valueTid.type == IonType.FLOAT) {
-            if (isNullValue()) {
+            if (valueTid.isNull) {
                 value = null;
             } else {
                 scalarConverter.addValue(doubleValue());
@@ -477,7 +477,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
                 scalarConverter.clear();
             }
         } else if (valueTid.type == IonType.DECIMAL) {
-            if (isNullValue()) {
+            if (valueTid.isNull) {
                 value = null;
             } else {
                 scalarConverter.addValue(decimalValue());
@@ -527,7 +527,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
     @Override
     public Timestamp timestampValue() {
         requireType(IonType.TIMESTAMP);
-        if (isNullValue()) { // TODO the previous line verifies valueTid != null, so just check valueTid.isNull
+        if (valueTid.isNull) { // TODO the previous line verifies valueTid != null, so just check valueTid.isNull
             return null;
         }
         peekIndex = valueMarker.startIndex;
@@ -606,7 +606,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
     @Override
     public String stringValue() {
         requireType(IonType.STRING);
-        if (isNullValue()) {
+        if (valueTid.isNull) {
             return null;
         }
         ByteBuffer utf8InputBuffer = prepareByteBuffer(valueMarker.startIndex, valueMarker.endIndex);
@@ -619,7 +619,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
      */
     public int symbolValueId() {
         requireType(IonType.SYMBOL);
-        if (isNullValue()) {
+        if (valueTid.isNull) {
             return -1;
         }
         return (int) readUInt(valueMarker.startIndex, valueMarker.endIndex);
