@@ -31,6 +31,8 @@ class IonBinaryLexerBase implements IonCursor {
      */
     private static final int SINGLE_BYTE_MASK = 0xFF;
 
+    private static final int LIST_TYPE_ORDINAL = IonType.LIST.ordinal();
+
     private static final BufferConfiguration.DataHandler NO_OP_DATA_HANDLER = new BufferConfiguration.DataHandler() {
         @Override
         public void onData(long numberOfBytes) {
@@ -422,7 +424,7 @@ class IonBinaryLexerBase implements IonCursor {
         } else {
             valueLength = valueTid.length;
         }
-        if (IonType.isContainer(valueTid.type)) {
+        if (valueTid.type != null && valueTid.type.ordinal() >= LIST_TYPE_ORDINAL) {
             event = Event.START_CONTAINER;
         } else if (valueTid.isNopPad) {
             if (isAnnotated) {
@@ -500,7 +502,7 @@ class IonBinaryLexerBase implements IonCursor {
         if (isRefillable) {
             return stepInRefillable();
         }
-        if (valueTid == null || !IonType.isContainer(valueTid.type)) {
+        if (valueTid == null || valueTid.type.ordinal() < LIST_TYPE_ORDINAL) {
             throw new IOException("Must be positioned on a container to step in.");
         }
         // Push the remaining length onto the stack, seek past the container's header, and increase the depth.
@@ -977,7 +979,7 @@ class IonBinaryLexerBase implements IonCursor {
             } else {
                 valueLength = valueTid.length;
             }
-            if (IonType.isContainer(valueTid.type)) {
+            if (valueTid.type != null && valueTid.type.ordinal() >= LIST_TYPE_ORDINAL) {
                 setCheckpoint(CheckpointLocation.AFTER_CONTAINER_HEADER);
                 event = Event.START_CONTAINER;
             } else if (valueTid.isNopPad) {
