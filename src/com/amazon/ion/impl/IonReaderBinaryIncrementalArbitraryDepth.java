@@ -625,23 +625,20 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
     }
 
     /**
-     * Calculates the symbol table's max ID.
-     * @return the max ID.
-     */
-    private int maxSymbolId() {
-        return symbols.size() + imports.getMaxId();
-    }
-
-    /**
      * Retrieves the String text for the given symbol ID.
      * @param sid a symbol ID.
      * @return a String.
      */
     private String getSymbol(int sid) {
-        if (sid > maxSymbolId()) {
+        int importMaxId = imports.getMaxId();
+        if (sid <= importMaxId) {
+            return imports.findKnownSymbol(sid);
+        }
+        int localSid = sid - (importMaxId + 1);
+        if (localSid >= symbols.size()) {
             throw new IonException("Symbol ID exceeds the max ID of the symbol table.");
         }
-        return getSymbolString(sid, imports, symbols);
+        return symbols.get(localSid);
     }
 
     /**
@@ -650,7 +647,7 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
      * @return a SymbolToken.
      */
     private SymbolToken getSymbolToken(int sid) {
-        int symbolTableSize = maxSymbolId() + 1;
+        int symbolTableSize = symbols.size() + imports.getMaxId() + 1;
         if (symbolTokensById == null) {
             symbolTokensById = new ArrayList<SymbolToken>(symbolTableSize);
         }
