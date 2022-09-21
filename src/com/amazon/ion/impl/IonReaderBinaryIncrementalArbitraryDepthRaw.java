@@ -294,17 +294,10 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
         return IntegerSize.BIG_INTEGER;
     }
 
-    /**
-     * Require that the given type matches the type of the current value.
-     * @param required the required type of current value.
-     */
-    private void requireType(IonType required) {
-        if (valueTid == null || required != valueTid.type) {
-            // Note: this is IllegalStateException to match the behavior of the other binary IonReader implementation.
-            throw new IllegalStateException(
-                String.format("Invalid type. Required %s but found %s.", required, valueTid == null ? null : valueTid.type)
-            );
-        }
+    private void throwDueToInvalidType(IonType type) {
+        throw new IllegalStateException(
+            String.format("Invalid type. Required %s but found %s.", type, valueTid == null ? null : valueTid.type)
+        );
     }
 
     @Override
@@ -400,7 +393,9 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
 
     @Override
     public BigDecimal bigDecimalValue() {
-        requireType(IonType.DECIMAL);
+        if (valueTid == null || IonType.DECIMAL != valueTid.type) {
+            throwDueToInvalidType(IonType.DECIMAL);
+        }
         if (valueTid.isNull) {
             return null;
         }
@@ -410,7 +405,9 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
 
     @Override
     public Decimal decimalValue() {
-        requireType(IonType.DECIMAL);
+        if (valueTid == null || IonType.DECIMAL != valueTid.type) {
+            throwDueToInvalidType(IonType.DECIMAL);
+        }
         if (valueTid.isNull) {
             return null;
         }
@@ -526,8 +523,10 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
 
     @Override
     public Timestamp timestampValue() {
-        requireType(IonType.TIMESTAMP);
-        if (valueTid.isNull) { // TODO the previous line verifies valueTid != null, so just check valueTid.isNull
+        if (valueTid == null || IonType.TIMESTAMP != valueTid.type) {
+            throwDueToInvalidType(IonType.TIMESTAMP);
+        }
+        if (valueTid.isNull) {
             return null;
         }
         peekIndex = valueMarker.startIndex;
@@ -599,13 +598,17 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
 
     @Override
     public boolean booleanValue() {
-        requireType(IonType.BOOL);
+        if (valueTid == null || IonType.BOOL != valueTid.type) {
+            throwDueToInvalidType(IonType.BOOL);
+        }
         return valueTid.lowerNibble == 1;
     }
 
     @Override
     public String stringValue() {
-        requireType(IonType.STRING);
+        if (valueTid == null || IonType.STRING != valueTid.type) {
+            throwDueToInvalidType(IonType.STRING);
+        }
         if (valueTid.isNull) {
             return null;
         }
@@ -618,7 +621,9 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
      * @return -1 if the value is null
      */
     public int symbolValueId() {
-        requireType(IonType.SYMBOL);
+        if (valueTid == null || IonType.SYMBOL != valueTid.type) {
+            throwDueToInvalidType(IonType.SYMBOL);
+        }
         if (valueTid.isNull) {
             return -1;
         }
