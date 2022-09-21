@@ -509,7 +509,11 @@ class IonBinaryLexerBase implements IonCursor {
         ContainerInfo containerInfo = containerStack.push();
         containerInfo.type = valueTid.type;
         containerInfo.endIndex = valueMarker.endIndex;
-        reset();
+        valueMarker.startIndex = -1;
+        valueMarker.endIndex = -1;
+        annotationSidsMarker.startIndex = -1;
+        annotationSidsMarker.endIndex = -1;
+        fieldSid = -1;
         valueTid = null;
         event = Event.NEEDS_INSTRUCTION;
         return event;
@@ -527,7 +531,11 @@ class IonBinaryLexerBase implements IonCursor {
         }
         // Seek past the remaining bytes at this depth and pop fro the stack.
         peekIndex = containerInfo.endIndex;
-        reset();
+        valueMarker.startIndex = -1;
+        valueMarker.endIndex = -1;
+        annotationSidsMarker.startIndex = -1;
+        annotationSidsMarker.endIndex = -1;
+        fieldSid = -1;
         event = Event.NEEDS_INSTRUCTION;
         valueTid = null;
         return event;
@@ -544,7 +552,11 @@ class IonBinaryLexerBase implements IonCursor {
             if (peekIndex < valueMarker.endIndex) {
                 peekIndex = valueMarker.endIndex;
             }
-            reset();
+            valueMarker.startIndex = -1;
+            valueMarker.endIndex = -1;
+            annotationSidsMarker.startIndex = -1;
+            annotationSidsMarker.endIndex = -1;
+            fieldSid = -1;
             if (checkContainerEnd()) {
                 break;
             }
