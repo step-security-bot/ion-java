@@ -557,9 +557,6 @@ class IonBinaryLexerBase implements IonCursor {
             annotationSidsMarker.startIndex = -1;
             annotationSidsMarker.endIndex = -1;
             fieldSid = -1;
-            if (checkContainerEnd()) {
-                break;
-            }
             if (peekIndex >= limit) {
                 checkpoint = peekIndex;
                 break;
@@ -572,10 +569,17 @@ class IonBinaryLexerBase implements IonCursor {
                     parseIvm();
                     continue;
                 }
-            } else if (parent.type == IonType.STRUCT) {
-                fieldSid = (int) readVarUInt(); // TODO type alignment
-                b = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
             } else {
+                if (parent.endIndex == peekIndex) {
+                    event = Event.END_CONTAINER;
+                    valueTid = null;
+                    break;
+                } else if (parent.endIndex < peekIndex) {
+                    throw new IonException("Contained values overflowed the parent container length.");
+                }
+                if (parent.type == IonType.STRUCT) {
+                    fieldSid = (int) readVarUInt(); // TODO type alignment
+                }
                 b = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
             }
             if (parseTypeID(b, false)) {
