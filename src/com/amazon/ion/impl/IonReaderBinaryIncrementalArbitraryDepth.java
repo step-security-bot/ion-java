@@ -21,6 +21,7 @@ import com.amazon.ion.system.SimpleCatalog;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -96,7 +97,9 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
 
     // The text representations of the symbol table that is currently in scope, indexed by symbol ID. If the element at
     // a particular index is null, that symbol has unknown text.
-    private final List<String> symbols;
+    private String[] symbols;
+
+    private int localSymbolMaxId = -1;
 
     // The catalog used by the reader to resolve shared symbol table imports.
     private final IonCatalog catalog;
@@ -143,7 +146,7 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
             isAnnotationIteratorReuseEnabled = false;
             annotationTextIterator = null;
         }
-        symbols = new ArrayList<String>(SYMBOLS_LIST_INITIAL_CAPACITY);
+        symbols = new String[SYMBOLS_LIST_INITIAL_CAPACITY];
         symbolTableReader = new SymbolTableReader();
         resetImports();
         registerIvmNotificationConsumer(ivmNotificationConsumer);
@@ -163,7 +166,7 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
             isAnnotationIteratorReuseEnabled = false;
             annotationTextIterator = null;
         }
-        symbols = new ArrayList<String>(SYMBOLS_LIST_INITIAL_CAPACITY);
+        symbols = new String[SYMBOLS_LIST_INITIAL_CAPACITY];
         symbolTableReader = new SymbolTableReader();
         resetImports();
         registerIvmNotificationConsumer(ivmNotificationConsumer);
@@ -344,22 +347,23 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
         final Map<String, Integer> mapView;
 
         // List representation of this symbol table, indexed by symbol ID.
-        final List<String> listView;
+        final String[] listView;
 
         private SymbolTableStructCache structCache = null;
 
         LocalSymbolTableSnapshot() {
             int importsMaxId = imports.getMaxId();
-            int numberOfLocalSymbols = symbols.size();
+            int numberOfLocalSymbols = localSymbolMaxId + 1;
             // Note: 'imports' is immutable, so a clone is not needed.
             importedTables = imports;
             maxId = importsMaxId + numberOfLocalSymbols;
             // Map with initial size the number of symbols and load factor 1, meaning it must be full before growing.
             // It is not expected to grow.
-            listView = new ArrayList<String>(symbols.subList(0, numberOfLocalSymbols));
+            listView = new String[numberOfLocalSymbols];
+            System.arraycopy(symbols, 0, listView, 0, numberOfLocalSymbols);
             mapView = new HashMap<String, Integer>((int) Math.ceil(numberOfLocalSymbols / 0.75), 0.75f);
             for (int i = 0; i < numberOfLocalSymbols; i++) {
-                String symbol = listView.get(i);
+                String symbol = listView[i];
                 if (symbol != null) {
                     mapView.put(symbol, i + importsMaxId + 1);
                 }
@@ -475,12 +479,12 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
 
                 @Override
                 public boolean hasNext() {
-                    return index < listView.size();
+                    return index < listView.length;
                 }
 
                 @Override
                 public String next() {
-                    String symbol = listView.get(index);
+                    String symbol = listView[index];
                     index++;
                     return symbol;
                 }
@@ -542,7 +546,10 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
     private void resetSymbolTable() {
         // Note: when there is a new version of Ion, check majorVersion and minorVersion here and set the appropriate
         // system symbol table.
-        symbols.clear();
+        // The following line is not required for correctness, but it frees the references to the old symbols,
+        // potentially allowing them to be garbage collected.
+        Arrays.fill(symbols, 0, localSymbolMaxId + 1, null);
+        localSymbolMaxId = -1;
         cachedReadOnlySymbolTable = null;
         if (symbolTokensById != null) {
             symbolTokensById.clear();
@@ -597,11 +604,11 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
      * @param localSymbols the symbol table's local symbols.
      * @return a String, which will be null if the requested symbol ID has undefined text.
      */
-    private String getSymbolString(int sid, LocalSymbolTableImports importedSymbols, List<String> localSymbols) {
+    private String getSymbolString(int sid, LocalSymbolTableImports importedSymbols, String[] localSymbols) {
         if (sid <= importedSymbols.getMaxId()) {
             return importedSymbols.findKnownSymbol(sid);
         }
-        return localSymbols.get(sid - (importedSymbols.getMaxId() + 1));
+        return localSymbols[sid - (importedSymbols.getMaxId() + 1)];
     }
 
     /**
@@ -615,10 +622,10 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
             return imports.findKnownSymbol(sid);
         }
         int localSid = sid - (importMaxId + 1);
-        if (localSid >= symbols.size()) {
+        if (localSid > localSymbolMaxId) {
             throw new IonException("Symbol ID exceeds the max ID of the symbol table.");
         }
-        return symbols.get(localSid);
+        return symbols[localSid];
     }
 
     /**
@@ -627,7 +634,7 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
      * @return a SymbolToken.
      */
     private SymbolToken getSymbolToken(int sid) {
-        int symbolTableSize = symbols.size() + imports.getMaxId() + 1;
+        int symbolTableSize = localSymbolMaxId + imports.getMaxId() + 2; // +2 because both max IDs are 0-indexed.
         if (symbolTokensById == null) {
             symbolTokensById = new ArrayList<SymbolToken>(symbolTableSize);
         }
@@ -656,6 +663,10 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
             symbolTokensById.set(sid, token);
         }
         return token;
+    }
+
+    private static int nextPowerOfTwo(int value) {
+        return (int) Math.pow(2, 32 - Integer.numberOfLeadingZeros(value == 0 ? 0 : value - 1));
     }
 
     private class SymbolTableReader {
@@ -691,6 +702,13 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
             return event == Event.NEEDS_DATA || event == Event.NEEDS_INSTRUCTION;
         }
 
+        private void growSymbolsArray(int shortfall) {
+            int newSize = nextPowerOfTwo(symbols.length + shortfall);
+            String[] resized = new String[newSize];
+            System.arraycopy(symbols, 0, resized, 0, localSymbolMaxId + 1);
+            symbols = resized;
+        }
+
         private void finishReadingSymbolTableStruct() throws IOException {
             stepOutOfContainer();
             if (!hasSeenImports) {
@@ -698,7 +716,17 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
                 resetImports();
             }
             if (newSymbols != null) {
-                symbols.addAll(newSymbols);
+                int numberOfNewSymbols = newSymbols.size();
+                int numberOfAvailableSlots = symbols.length - (localSymbolMaxId + 1);
+                int shortfall = numberOfNewSymbols - numberOfAvailableSlots;
+                if (shortfall > 0) {
+                    growSymbolsArray(shortfall);
+                }
+                int i = localSymbolMaxId;
+                for (String newSymbol : newSymbols) {
+                    symbols[++i] = newSymbol;
+                }
+                localSymbolMaxId += newSymbols.size();
             }
             state = State.READING_VALUE;
         }
@@ -981,7 +1009,7 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
     @Override
     public SymbolTable getSymbolTable() {
         if (cachedReadOnlySymbolTable == null) {
-            if (symbols.size() == 0 && imports == ION_1_0_IMPORTS) {
+            if (localSymbolMaxId < 0 && imports == ION_1_0_IMPORTS) {
                 cachedReadOnlySymbolTable = imports.getSystemSymbolTable();
             } else {
                 cachedReadOnlySymbolTable = new LocalSymbolTableSnapshot();
