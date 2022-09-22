@@ -694,7 +694,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
 
     @Override
     public boolean isInStruct() {
-        return !containerStack.isEmpty() && containerStack.peek().type == IonType.STRUCT;
+        return parent != null && parent.type == IonType.STRUCT;
     }
 
     @Override
@@ -704,7 +704,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
 
     @Override
     public int getDepth() {
-        return containerStack.size();
+        return containerIndex + 1;
     }
 
     boolean hasAnnotations() {

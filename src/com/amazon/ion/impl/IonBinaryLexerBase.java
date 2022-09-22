@@ -13,6 +13,8 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 // TODO removed 'implements IonCursor' as a performance experiment. Try adding back.
 class IonBinaryLexerBase implements IonCursor {
@@ -84,16 +86,6 @@ class IonBinaryLexerBase implements IonCursor {
         long endIndex;
     }
 
-    // Constructs ContainerInfo instances.
-    private static final _Private_RecyclingStack.ElementFactory<ContainerInfo> CONTAINER_INFO_FACTORY =
-        new _Private_RecyclingStack.ElementFactory<ContainerInfo>() {
-
-            @Override
-            public ContainerInfo newElement() {
-                return new ContainerInfo();
-            }
-        };
-
     // Initial capacity of the stack used to hold ContainerInfo. Each additional level of nesting in the data requires
     // a new ContainerInfo. Depths greater than 8 will be rare.
     private static final int CONTAINER_STACK_INITIAL_CAPACITY = 8;
@@ -101,7 +93,10 @@ class IonBinaryLexerBase implements IonCursor {
     /**
      * Stack to hold container info. Stepping into a container results in a push; stepping out results in a pop.
      */
-    protected final _Private_RecyclingStack<ContainerInfo> containerStack;
+    protected final List<ContainerInfo> containerStack = new ArrayList<ContainerInfo>(CONTAINER_STACK_INITIAL_CAPACITY);
+
+    protected int containerIndex = -1;
+    protected ContainerInfo parent = null;
 
     /**
      * The index of the next byte in the buffer that is available to be read. Always less than or equal to `limit`.
@@ -167,10 +162,6 @@ class IonBinaryLexerBase implements IonCursor {
         this.dataHandler = (configuration == null || configuration.getDataHandler() == null)
             ? NO_OP_DATA_HANDLER
             : configuration.getDataHandler();
-        containerStack = new _Private_RecyclingStack<ContainerInfo>(
-            CONTAINER_STACK_INITIAL_CAPACITY,
-            CONTAINER_INFO_FACTORY
-        );
         peekIndex = offset;
         checkpoint = peekIndex;
 
@@ -299,10 +290,6 @@ class IonBinaryLexerBase implements IonCursor {
             }
         }
         validate(configuration);
-        containerStack = new _Private_RecyclingStack<ContainerInfo>(
-            CONTAINER_STACK_INITIAL_CAPACITY,
-            CONTAINER_INFO_FACTORY
-        );
         peekIndex = offset;
         checkpoint = peekIndex;
 
@@ -336,7 +323,6 @@ class IonBinaryLexerBase implements IonCursor {
             return;
         }
         long endIndex = peekIndex + valueLength;
-        ContainerInfo parent = containerStack.peek();
         if (parent != null && endIndex > parent.endIndex) {
             throw new IonException("Value exceeds the length of its parent container.");
         }
@@ -349,7 +335,6 @@ class IonBinaryLexerBase implements IonCursor {
     }
 
     private boolean checkContainerEnd() {
-        ContainerInfo parent = containerStack.peek();
         if (parent == null || parent.endIndex > peekIndex) {
             return false;
         }
@@ -497,6 +482,16 @@ class IonBinaryLexerBase implements IonCursor {
         return result;
     }
 
+    private void pushContainer() {
+        containerIndex++;
+        if (containerIndex >= containerStack.size()) {
+            parent = new ContainerInfo();
+            containerStack.add(parent);
+        }  else {
+            parent = containerStack.get(containerIndex);
+        }
+    }
+
     @Override
     public Event stepIntoContainer() throws IOException {
         if (isRefillable) {
@@ -506,9 +501,9 @@ class IonBinaryLexerBase implements IonCursor {
             throw new IOException("Must be positioned on a container to step in.");
         }
         // Push the remaining length onto the stack, seek past the container's header, and increase the depth.
-        ContainerInfo containerInfo = containerStack.push();
-        containerInfo.type = valueTid.type;
-        containerInfo.endIndex = valueMarker.endIndex;
+        pushContainer();
+        parent.type = valueTid.type;
+        parent.endIndex = valueMarker.endIndex;
         valueMarker.startIndex = -1;
         valueMarker.endIndex = -1;
         annotationSidsMarker.startIndex = -1;
@@ -519,18 +514,28 @@ class IonBinaryLexerBase implements IonCursor {
         return event;
     }
 
+    void popContainer() {
+        containerIndex--;
+        if (containerIndex >= 0) {
+            parent = containerStack.get(containerIndex);
+        } else {
+            parent = null;
+            containerIndex = -1;
+        }
+    }
+
     @Override
     public Event stepOutOfContainer() throws IOException {
         if (isRefillable) {
             return stepOutRefillable();
         }
-        ContainerInfo containerInfo = containerStack.pop();
-        if (containerInfo == null) {
+        if (parent == null) {
             // Note: this is IllegalStateException for consistency with the other binary IonReader implementation.
             throw new IllegalStateException("Cannot step out at top level.");
         }
-        // Seek past the remaining bytes at this depth and pop fro the stack.
-        peekIndex = containerInfo.endIndex;
+        // Seek past the remaining bytes at this depth and pop from the stack.
+        peekIndex = parent.endIndex;
+        popContainer();
         valueMarker.startIndex = -1;
         valueMarker.endIndex = -1;
         annotationSidsMarker.startIndex = -1;
@@ -562,7 +567,6 @@ class IonBinaryLexerBase implements IonCursor {
                 break;
             }
             int b;
-            ContainerInfo parent = containerStack.peek();
             if (parent == null) { // Depth 0
                 b = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
                 if (b == IVM_START_BYTE) {
@@ -881,7 +885,7 @@ class IonBinaryLexerBase implements IonCursor {
             if (checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER) {
                 // This container is buffered in its entirety. There is no need to fill the buffer again until stepping
                 // out of the fill depth.
-                fillDepth = containerStack.size() + 1;
+                fillDepth = containerIndex + 2;
                 // TODO could go into quick mode now, but it would need to be reset if this container is skipped
             }
             return Event.VALUE_READY;
@@ -1114,14 +1118,14 @@ class IonBinaryLexerBase implements IonCursor {
                 }
                 switch (checkpointLocation) {
                     case BEFORE_UNANNOTATED_TYPE_ID:
-                        if (!containerStack.isEmpty() && containerStack.peek().type == IonType.STRUCT && readFieldSid()) {
+                        if (parent != null && parent.type == IonType.STRUCT && readFieldSid()) {
                             return;
                         }
                         int b = carefulReadByte();
                         if (b < 0) {
                             return;
                         }
-                        if (b == IVM_START_BYTE && containerStack.isEmpty()) {
+                        if (b == IVM_START_BYTE && parent == null) {
                             if (!fillAt(peekIndex, IVM_REMAINING_LENGTH)) {
                                 return;
                             }
@@ -1196,12 +1200,12 @@ class IonBinaryLexerBase implements IonCursor {
                 throw new IonException("Must be positioned on a container to step in.");
             }
             // Push the remaining length onto the stack, seek past the container's header, and increase the depth.
-            ContainerInfo containerInfo = containerStack.push();
-            if (containerStack.size() == fillDepth) {
+            pushContainer();
+            if (containerIndex + 1 == fillDepth) {
                 enterQuickMode();
             }
-            containerInfo.type = valueTid.type;
-            containerInfo.endIndex = valueMarker.endIndex;
+            parent.type = valueTid.type;
+            parent.endIndex = valueMarker.endIndex;
             setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
             valueTid = null;
             event = Event.NEEDS_INSTRUCTION;
@@ -1210,8 +1214,7 @@ class IonBinaryLexerBase implements IonCursor {
 
         @Override
         public Event stepOutOfContainer() throws IOException {
-            ContainerInfo containerInfo = containerStack.peek();
-            if (containerInfo == null) {
+            if (parent == null) {
                 // Note: this is IllegalStateException for consistency with the other binary IonReader implementation.
                 throw new IllegalStateException("Cannot step out at top level.");
             }
@@ -1222,13 +1225,13 @@ class IonBinaryLexerBase implements IonCursor {
             // consumed at the previous depth from the remaining bytes needed at the current depth.
             event = Event.NEEDS_DATA;
             // Seek past any remaining bytes from the previous value.
-            if (!seekTo(containerInfo.endIndex)) {
+            if (!seekTo(parent.endIndex)) {
                 return event;
             }
-            peekIndex = containerInfo.endIndex;
+            peekIndex = parent.endIndex;
             setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
-            containerStack.pop();
-            if (containerStack.size() < fillDepth) {
+            popContainer();
+            if (containerIndex <= fillDepth) {
                 fillDepth = 0;
                 exitQuickMode();
             }
@@ -1243,21 +1246,10 @@ class IonBinaryLexerBase implements IonCursor {
         }
     }
 
-    private long amountToShift = 0;
-
-    private final _Private_RecyclingStack.Consumer<ContainerInfo> shiftContainerIndex =
-        new _Private_RecyclingStack.Consumer<ContainerInfo>() {
-
-            @Override
-            public void accept(ContainerInfo element) {
-                element.endIndex -= amountToShift;
-            }
-        };
-
     private void shiftContainerEnds(long shiftAmount) {
-        amountToShift = shiftAmount; // TODO ugly
-        containerStack.forEach(shiftContainerIndex);
-        amountToShift = 0;
+        for (int i = containerIndex; i >= 0; i--) {
+            containerStack.get(i).endIndex -= shiftAmount;
+        }
     }
 
     /**
