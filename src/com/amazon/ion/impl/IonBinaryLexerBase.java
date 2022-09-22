@@ -93,7 +93,7 @@ class IonBinaryLexerBase implements IonCursor {
     /**
      * Stack to hold container info. Stepping into a container results in a push; stepping out results in a pop.
      */
-    protected final List<ContainerInfo> containerStack = new ArrayList<ContainerInfo>(CONTAINER_STACK_INITIAL_CAPACITY);
+    protected ContainerInfo[] containerStack = new ContainerInfo[CONTAINER_STACK_INITIAL_CAPACITY];
 
     protected int containerIndex = -1;
     protected ContainerInfo parent = null;
@@ -164,6 +164,10 @@ class IonBinaryLexerBase implements IonCursor {
             : configuration.getDataHandler();
         peekIndex = offset;
         checkpoint = peekIndex;
+
+        for (int i = 0; i < CONTAINER_STACK_INITIAL_CAPACITY; i++) {
+            containerStack[i] = new ContainerInfo();
+        }
 
         this.configuration = configuration;
         this.buffer = buffer;
@@ -292,6 +296,10 @@ class IonBinaryLexerBase implements IonCursor {
         validate(configuration);
         peekIndex = offset;
         checkpoint = peekIndex;
+
+        for (int i = 0; i < CONTAINER_STACK_INITIAL_CAPACITY; i++) {
+            containerStack[i] = new ContainerInfo();
+        }
 
         this.configuration = configuration;
         this.buffer = new byte[configuration.getInitialBufferSize()];
@@ -482,14 +490,21 @@ class IonBinaryLexerBase implements IonCursor {
         return result;
     }
 
+    private void growStack() {
+        ContainerInfo[] newStack = new ContainerInfo[containerStack.length * 2];
+        System.arraycopy(containerStack, 0, newStack, 0, containerStack.length);
+        for (int i = containerStack.length; i < newStack.length; i++) {
+            newStack[i] = new ContainerInfo();
+        }
+        containerStack = newStack;
+    }
+
     private void pushContainer() {
         containerIndex++;
-        if (containerIndex >= containerStack.size()) {
-            parent = new ContainerInfo();
-            containerStack.add(parent);
-        }  else {
-            parent = containerStack.get(containerIndex);
+        if (containerIndex >= containerStack.length) {
+            growStack();
         }
+        parent = containerStack[containerIndex];
     }
 
     @Override
@@ -517,7 +532,7 @@ class IonBinaryLexerBase implements IonCursor {
     void popContainer() {
         containerIndex--;
         if (containerIndex >= 0) {
-            parent = containerStack.get(containerIndex);
+            parent = containerStack[containerIndex];
         } else {
             parent = null;
             containerIndex = -1;
@@ -1248,7 +1263,7 @@ class IonBinaryLexerBase implements IonCursor {
 
     private void shiftContainerEnds(long shiftAmount) {
         for (int i = containerIndex; i >= 0; i--) {
-            containerStack.get(i).endIndex -= shiftAmount;
+            containerStack[i].endIndex -= shiftAmount;
         }
     }
 
