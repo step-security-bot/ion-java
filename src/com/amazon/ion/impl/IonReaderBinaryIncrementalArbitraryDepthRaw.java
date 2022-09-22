@@ -1,13 +1,11 @@
 package com.amazon.ion.impl;
 
-import com.amazon.ion.BufferConfiguration;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReaderReentrantCore;
 import com.amazon.ion.IonType;
-import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.bin.IntList;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoder;
@@ -71,7 +69,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
     private final Utf8StringDecoder utf8Decoder = Utf8StringDecoderPool.getInstance().getOrCreate();
 
     // Reusable iterator over the annotation SIDs on the current value.
-    private final AnnotationIterator annotationIterator;
+    final AnnotationIterator annotationSidIterator;
 
     private long peekIndex = -1;
 
@@ -85,14 +83,14 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
         super(configuration, bytes, offset, length);
         scalarConverter = new _Private_ScalarConversions.ValueVariant();
         annotationSids = new IntList(ANNOTATIONS_LIST_INITIAL_CAPACITY);
-        annotationIterator = new AnnotationIterator(); // TODO only if reusable is enabled?
+        annotationSidIterator = new AnnotationIterator(); // TODO only if reusable is enabled?
     }
 
     IonReaderBinaryIncrementalArbitraryDepthRaw(IonBufferConfiguration configuration, InputStream inputStream) {
         super(configuration, inputStream);
         scalarConverter = new _Private_ScalarConversions.ValueVariant();
         annotationSids = new IntList(ANNOTATIONS_LIST_INITIAL_CAPACITY);
-        annotationIterator = new AnnotationIterator(); // TODO only if reusable is enabled?
+        annotationSidIterator = new AnnotationIterator(); // TODO only if reusable is enabled?
     }
 
     @Override
@@ -651,7 +649,7 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
     class AnnotationIterator {
 
         // The byte position of the annotation to return from the next call to next().
-        private long nextAnnotationPeekIndex;
+        long nextAnnotationPeekIndex;
 
         public boolean hasNext() {
             return nextAnnotationPeekIndex < annotationSidsMarker.endIndex;
@@ -665,26 +663,11 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
             peekIndex = savedPeekIndex;
             return sid;
         }
-
-        /**
-         * Prepare the iterator to iterate over the annotations on the current value.
-         */
-        void ready() {
-            nextAnnotationPeekIndex = annotationSidsMarker.startIndex;
-        }
-
-        /**
-         * Invalidate the iterator so that all future calls to {@link #hasNext()} will return false until the
-         * next call to {@link #ready()}.
-         */
-        void invalidate() {
-            nextAnnotationPeekIndex = Integer.MAX_VALUE;
-        }
     }
 
     AnnotationIterator iterateAnnotationSids() {
-        annotationIterator.ready();
-        return annotationIterator;
+        annotationSidIterator.nextAnnotationPeekIndex = annotationSidsMarker.startIndex;
+        return annotationSidIterator;
     }
 
     @Override

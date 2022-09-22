@@ -92,7 +92,7 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
     private final boolean isAnnotationIteratorReuseEnabled;
 
     // Reusable iterator over the annotations on the current value.
-    private final AnnotationIterator annotationIterator;
+    private final AnnotationIterator annotationTextIterator;
 
     // The text representations of the symbol table that is currently in scope, indexed by symbol ID. If the element at
     // a particular index is null, that symbol has unknown text.
@@ -138,10 +138,10 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
         this.catalog = builder.getCatalog() == null ? EMPTY_CATALOG : builder.getCatalog();
         if (builder.isAnnotationIteratorReuseEnabled()) {
             isAnnotationIteratorReuseEnabled = true;
-            annotationIterator = new AnnotationIterator();
+            annotationTextIterator = new AnnotationIterator();
         } else {
             isAnnotationIteratorReuseEnabled = false;
-            annotationIterator = null;
+            annotationTextIterator = null;
         }
         symbols = new ArrayList<String>(SYMBOLS_LIST_INITIAL_CAPACITY);
         symbolTableReader = new SymbolTableReader();
@@ -158,10 +158,10 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
         this.catalog = builder.getCatalog() == null ? EMPTY_CATALOG : builder.getCatalog();
         if (builder.isAnnotationIteratorReuseEnabled()) {
             isAnnotationIteratorReuseEnabled = true;
-            annotationIterator = new AnnotationIterator();
+            annotationTextIterator = new AnnotationIterator();
         } else {
             isAnnotationIteratorReuseEnabled = false;
-            annotationIterator = null;
+            annotationTextIterator = null;
         }
         symbols = new ArrayList<String>(SYMBOLS_LIST_INITIAL_CAPACITY);
         symbolTableReader = new SymbolTableReader();
@@ -187,16 +187,14 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
      */
     private class AnnotationIterator implements Iterator<String> {
 
-        private IonReaderBinaryIncrementalArbitraryDepthRaw.AnnotationIterator sidIterator;
-
         @Override
         public boolean hasNext() {
-            return sidIterator.hasNext();
+            return annotationSidIterator.hasNext();
         }
 
         @Override
         public String next() {
-            int sid = sidIterator.next();
+            int sid = annotationSidIterator.next();
             String annotation = getSymbol(sid);
             if (annotation == null) {
                 throw new UnknownSymbolException(sid);
@@ -207,24 +205,6 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
         @Override
         public void remove() {
             throw new UnsupportedOperationException("This iterator does not support element removal.");
-        }
-
-        /**
-         * Prepare the iterator to iterate over the annotations on the current value.
-         */
-        void ready() {
-            sidIterator = iterateAnnotationSids();
-            sidIterator.ready();
-        }
-
-        /**
-         * Invalidate the iterator so that all future calls to {@link #hasNext()} will return false until the
-         * next call to {@link #ready()}.
-         */
-        void invalidate() {
-            if (sidIterator != null) {
-                sidIterator.invalidate();
-            }
         }
     }
 
@@ -574,7 +554,7 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
      */
     private void resetAnnotations() {
         if (isAnnotationIteratorReuseEnabled) {
-            annotationIterator.invalidate();
+            annotationSidIterator.nextAnnotationPeekIndex = Integer.MAX_VALUE;
         }
     }
 
@@ -1105,8 +1085,8 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
     public Iterator<String> iterateTypeAnnotations() {
         if (hasAnnotations()) {
             if (isAnnotationIteratorReuseEnabled) {
-                annotationIterator.ready();
-                return annotationIterator;
+                annotationSidIterator.nextAnnotationPeekIndex = annotationSidsMarker.startIndex;
+                return annotationTextIterator;
             } else {
                 return new SingleUseAnnotationIterator();
             }
