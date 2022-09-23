@@ -690,10 +690,6 @@ class IonReaderBinaryIncrementalArbitraryDepthRaw extends IonBinaryLexerBase imp
         return containerIndex + 1;
     }
 
-    boolean hasAnnotations() {
-        return annotationSidsMarker.startIndex >= 0;
-    }
-
     @Override
     public void requireCompleteValue() {
         if (event == Event.NEEDS_DATA && isAwaitingMoreData()) {

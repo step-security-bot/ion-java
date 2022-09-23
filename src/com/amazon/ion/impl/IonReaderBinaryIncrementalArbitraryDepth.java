@@ -973,7 +973,7 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
 
     private boolean isPositionedOnSymbolTable() {
         return parent == null &&
-            hasAnnotations() &&
+            annotationSidsMarker.startIndex >= 0 &&
             super.getType() == IonType.STRUCT &&
             iterateAnnotationSids().next() == SystemSymbolIDs.ION_SYMBOL_TABLE_ID;
     }
@@ -1063,7 +1063,7 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
 
     @Override
     public String[] getTypeAnnotations() {
-        if (hasAnnotations()) {
+        if (annotationSidsMarker.startIndex >= 0) {
             IntList annotationSids = getAnnotationSids();
             String[] annotationArray = new String[annotationSids.size()];
             for (int i = 0; i < annotationArray.length; i++) {
@@ -1080,7 +1080,7 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
 
     @Override
     public SymbolToken[] getTypeAnnotationSymbols() {
-        if (hasAnnotations()) {
+        if (annotationSidsMarker.startIndex >= 0) {
             IntList annotationSids = getAnnotationSids();
             SymbolToken[] annotationArray = new SymbolToken[annotationSids.size()];
             for (int i = 0; i < annotationArray.length; i++) {
@@ -1111,7 +1111,7 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
 
     @Override
     public Iterator<String> iterateTypeAnnotations() {
-        if (hasAnnotations()) {
+        if (annotationSidsMarker.startIndex >= 0) {
             if (isAnnotationIteratorReuseEnabled) {
                 annotationSidIterator.nextAnnotationPeekIndex = annotationSidsMarker.startIndex;
                 return annotationTextIterator;
