@@ -410,6 +410,20 @@ class IonBinaryLexerBase implements IonCursor {
         return false;
     }
 
+    private void handleNopPad(long valueLength, boolean isAnnotated) {
+        if (isAnnotated) {
+            throw new IonException(
+                "Invalid annotation wrapper: NOP pad may not occur inside an annotation wrapper."
+            );
+        }
+        long destination = peekIndex + valueLength;
+        if (destination > limit) {
+            throw new IonException("Invalid NOP pad.");
+        }
+        peekIndex += valueLength;
+        checkContainerEnd();
+    }
+
     private boolean parseValueHeader(IonTypeID valueTid, boolean isAnnotated) {
         long valueLength;
         if (valueTid.variableLength) {
@@ -420,18 +434,8 @@ class IonBinaryLexerBase implements IonCursor {
         if (valueTid.type != null && valueTid.type.ordinal() >= LIST_TYPE_ORDINAL) {
             event = Event.START_CONTAINER;
         } else if (valueTid.isNopPad) {
-            if (isAnnotated) {
-                throw new IonException(
-                    "Invalid annotation wrapper: NOP pad may not occur inside an annotation wrapper."
-                );
-            }
-            long destination = peekIndex + valueLength;
-            if (destination > limit) {
-                throw new IonException("Invalid NOP pad.");
-            }
-            peekIndex += valueLength;
+            handleNopPad(valueLength, isAnnotated);
             valueLength = 0;
-            checkContainerEnd();
         } else {
             event = Event.START_SCALAR;
         }
