@@ -419,7 +419,7 @@ class IonBinaryLexerBase implements IonCursor {
         checkContainerEnd();
     }
 
-    private boolean parseValueHeader(IonTypeID valueTid, boolean isAnnotated) {
+    private long calculateLength(IonTypeID valueTid, boolean isAnnotated) {
         long valueLength;
         if (valueTid.variableLength) {
             valueLength = readVarUInt();
@@ -434,7 +434,11 @@ class IonBinaryLexerBase implements IonCursor {
         } else {
             event = Event.START_SCALAR;
         }
-        long endIndex = peekIndex + valueLength;
+        return valueLength;
+    }
+
+    private boolean parseValueHeader(IonTypeID valueTid, boolean isAnnotated) {
+        long endIndex = calculateLength(valueTid, isAnnotated) + peekIndex;
         if (isAnnotated) {
             setValueMarker(endIndex);
         } else {
