@@ -1,7 +1,5 @@
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.IonCursor.Event;
-
 import com.amazon.ion.BufferConfiguration;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonException;
@@ -13,8 +11,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 
 // TODO removed 'implements IonCursor' as a performance experiment. Try adding back.
 class IonBinaryLexerBase implements IonCursor {
@@ -324,22 +320,20 @@ class IonBinaryLexerBase implements IonCursor {
         this.oversizedValueHandler = oversizedValueHandler;
     }
 
-    private void setValueMarker(long valueLength, boolean isAnnotated) {
-        if (isSkippingCurrentValue) {
-            // If the value is being skipped, not all of its bytes will be buffered, so start/end indexes will not
-            // align to the expected values. This is fine, because the value will not be accessed.
-            return;
-        }
-        long endIndex = peekIndex + valueLength;
+    private void setUnwrappedValueMarker(long endIndex) {
         if (parent != null && endIndex > parent.endIndex) {
             throw new IonException("Value exceeds the length of its parent container.");
         }
-        if (isAnnotated && endIndex != valueMarker.endIndex) {
+        valueMarker.startIndex = peekIndex;
+        valueMarker.endIndex = endIndex;
+    }
+
+    private void setValueMarker(long endIndex) {
+        if (endIndex != valueMarker.endIndex || (parent != null && endIndex > parent.endIndex)) {
             // valueMarker.endIndex refers to the end of the annotation wrapper.
             throw new IonException("Annotation wrapper length does not match the length of the wrapped value.");
         }
         valueMarker.startIndex = peekIndex;
-        valueMarker.endIndex = endIndex;
     }
 
     private boolean checkContainerEnd() {
@@ -396,15 +390,16 @@ class IonBinaryLexerBase implements IonCursor {
         } else {
             valueLength = valueTid.length;
         }
-        setValueMarker(valueLength, false);
-        if (valueMarker.endIndex > limit) {
+        long endIndex = peekIndex + valueLength;
+        setUnwrappedValueMarker(endIndex);
+        if (endIndex > limit) {
             return true;
         }
         int annotationsLength = (int) readVarUInt();
         annotationSidsMarker.startIndex = peekIndex;
         annotationSidsMarker.endIndex = annotationSidsMarker.startIndex + annotationsLength;
         peekIndex = annotationSidsMarker.endIndex;
-        if (peekIndex >= valueMarker.endIndex) {
+        if (peekIndex >= endIndex) {
             throw new IonException("Annotation wrapper must wrap a value.");
         }
         return false;
@@ -439,8 +434,13 @@ class IonBinaryLexerBase implements IonCursor {
         } else {
             event = Event.START_SCALAR;
         }
-        setValueMarker(valueLength, isAnnotated);
-        if (valueMarker.endIndex > limit) {
+        long endIndex = peekIndex + valueLength;
+        if (isAnnotated) {
+            setValueMarker(endIndex);
+        } else {
+            setUnwrappedValueMarker(endIndex);
+        }
+        if (endIndex > limit) {
             event = Event.NEEDS_DATA;
             return true;
         }
@@ -985,7 +985,11 @@ class IonBinaryLexerBase implements IonCursor {
             }
             // Record the post-length index in a value that will be shifted in the even the buffer needs to refill.
 
-            setValueMarker(valueLength, false);
+            if (!isSkippingCurrentValue) {
+                // If the value is being skipped, not all of its bytes will be buffered, so start/end indexes will not
+                // align to the expected values. This is fine, because the value will not be accessed.
+                setUnwrappedValueMarker(peekIndex + valueLength);
+            }
             int annotationsLength = (int) readVarUInt(minimumAdditionalBytesNeeded);
             if (annotationsLength < 0) {
                 return true;
@@ -1039,7 +1043,13 @@ class IonBinaryLexerBase implements IonCursor {
                 setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER);
                 event = Event.START_SCALAR;
             }
-            setValueMarker(valueLength, isAnnotated);
+            if (!isSkippingCurrentValue) {
+                if (isAnnotated) {
+                    setValueMarker(peekIndex + valueLength);
+                } else {
+                    setUnwrappedValueMarker(peekIndex + valueLength);
+                }
+            }
             return false;
         }
 
