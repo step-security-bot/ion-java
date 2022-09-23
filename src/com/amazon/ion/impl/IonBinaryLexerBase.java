@@ -384,13 +384,7 @@ class IonBinaryLexerBase implements IonCursor {
     }
 
     private boolean parseAnnotationWrapperHeader(IonTypeID valueTid) {
-        long valueLength;
-        if (valueTid.variableLength) {
-            valueLength = readVarUInt();
-        } else {
-            valueLength = valueTid.length;
-        }
-        long endIndex = peekIndex + valueLength;
+        long endIndex = (valueTid.variableLength ? readVarUInt() : valueTid.length) + peekIndex;
         setUnwrappedValueMarker(endIndex);
         if (endIndex > limit) {
             return true;
@@ -405,40 +399,33 @@ class IonBinaryLexerBase implements IonCursor {
         return false;
     }
 
-    private void handleNopPad(long valueLength, boolean isAnnotated) {
+    private void handleNopPad(long endIndex, boolean isAnnotated) {
         if (isAnnotated) {
             throw new IonException(
                 "Invalid annotation wrapper: NOP pad may not occur inside an annotation wrapper."
             );
         }
-        long destination = peekIndex + valueLength;
-        if (destination > limit) {
+        if (endIndex > limit) {
             throw new IonException("Invalid NOP pad.");
         }
-        peekIndex += valueLength;
+        peekIndex = endIndex;
         checkContainerEnd();
     }
 
-    private long calculateLength(IonTypeID valueTid, boolean isAnnotated) {
-        long valueLength;
-        if (valueTid.variableLength) {
-            valueLength = readVarUInt();
-        } else {
-            valueLength = valueTid.length;
-        }
+    private long calculateEndIndex(IonTypeID valueTid, boolean isAnnotated) {
+        long endIndex = (valueTid.variableLength ? readVarUInt() : valueTid.length) + peekIndex;
         if (valueTid.type != null && valueTid.type.ordinal() >= LIST_TYPE_ORDINAL) {
             event = Event.START_CONTAINER;
         } else if (valueTid.isNopPad) {
-            handleNopPad(valueLength, isAnnotated);
-            valueLength = 0;
+            handleNopPad(endIndex, isAnnotated);
         } else {
             event = Event.START_SCALAR;
         }
-        return valueLength;
+        return endIndex;
     }
 
     private boolean parseValueHeader(IonTypeID valueTid, boolean isAnnotated) {
-        long endIndex = calculateLength(valueTid, isAnnotated) + peekIndex;
+        long endIndex = calculateEndIndex(valueTid, isAnnotated);
         if (isAnnotated) {
             setValueMarker(endIndex);
         } else {
