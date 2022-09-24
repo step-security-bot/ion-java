@@ -174,7 +174,7 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
             new BufferConfiguration.OversizedValueHandler() {
                 @Override
                 public void onOversizedValue() {
-                    if (isReadingSymbolTable() || isPositionedOnSymbolTable()) {
+                    if (isReadingSymbolTable() || (parent == null && isPositionedOnSymbolTable())) {
                         configuration.getOversizedSymbolTableHandler().onOversizedSymbolTable();
                         terminate();
                     } else {
@@ -972,8 +972,7 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
     }
 
     private boolean isPositionedOnSymbolTable() {
-        return parent == null &&
-            annotationSidsMarker.startIndex >= 0 &&
+        return annotationSidsMarker.startIndex >= 0 &&
             super.getType() == IonType.STRUCT &&
             iterateAnnotationSids().next() == SystemSymbolIDs.ION_SYMBOL_TABLE_ID;
     }
@@ -991,7 +990,7 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
                     }
                 }
                 event = super.nextValue();
-                if (isPositionedOnSymbolTable()) {
+                if (parent == null && isPositionedOnSymbolTable()) {
                     cachedReadOnlySymbolTable = null;
                     symbolTableReader.resetState();
                     state = State.ON_SYMBOL_TABLE_STRUCT;
