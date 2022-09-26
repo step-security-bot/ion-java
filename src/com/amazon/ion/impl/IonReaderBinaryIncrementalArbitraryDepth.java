@@ -174,7 +174,7 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
             new BufferConfiguration.OversizedValueHandler() {
                 @Override
                 public void onOversizedValue() {
-                    if (isReadingSymbolTable() || (parent == null && isPositionedOnSymbolTable())) {
+                    if (state != State.READING_VALUE || (parent == null && isPositionedOnSymbolTable())) {
                         configuration.getOversizedSymbolTableHandler().onOversizedSymbolTable();
                         terminate();
                     } else {
@@ -967,10 +967,6 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
 
     private State state = State.READING_VALUE;
 
-    private boolean isReadingSymbolTable() {
-        return state != State.READING_VALUE;
-    }
-
     private boolean isPositionedOnSymbolTable() {
         return annotationSidsMarker.startIndex >= 0 &&
             super.getType() == IonType.STRUCT &&
@@ -980,9 +976,9 @@ class IonReaderBinaryIncrementalArbitraryDepth extends IonReaderBinaryIncrementa
     @Override
     public Event nextValue() throws IOException {
         Event event;
-        if (parent == null || isReadingSymbolTable()) {
+        if (parent == null || state != State.READING_VALUE) {
             while (true) {
-                if (isReadingSymbolTable()) {
+                if (state != State.READING_VALUE) {
                     symbolTableReader.readSymbolTable();
                     if (state != State.READING_VALUE) {
                         event = Event.NEEDS_DATA;
