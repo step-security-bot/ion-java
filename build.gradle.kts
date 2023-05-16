@@ -4,10 +4,13 @@ import java.util.Properties
 
 
 plugins {
+    kotlin("jvm") version "1.8.21"
     java
     `maven-publish`
     jacoco
     signing
+    id("com.github.johnrengelman.shadow") version "8.1.1"
+
     id("org.cyclonedx.bom") version "1.7.2"
     id("com.github.spotbugs") version "5.0.13"
     // TODO: more static analysis. E.g.:
@@ -16,15 +19,22 @@ plugins {
 
 repositories {
     mavenCentral()
+    google()
 }
 
+val r8 = configurations.create("r8")
+
 dependencies {
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.8.0")
+
     testImplementation("org.junit.jupiter:junit-jupiter:5.7.1")
     testCompileOnly("junit:junit:4.13")
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine")
     testImplementation("org.hamcrest:hamcrest:2.2")
     testImplementation("pl.pragmatists:JUnitParams:1.1.1")
     testImplementation("com.google.code.tempus-fugit:tempus-fugit:1.1")
+
+    r8("com.android.tools:r8:8.0.40")
 }
 
 group = "com.amazon.ion"
@@ -50,10 +60,45 @@ sourceSets {
     }
 }
 
+kotlin {
+    jvmToolchain(8)
+}
+
 tasks {
     withType<JavaCompile> {
         options.encoding = "UTF-8"
         // In Java 9+ we can use `release` but for now we're still building with JDK 8, 11
+    }
+
+    shadowJar {
+        relocate("kotlin", "com.amazon.ion_.shaded.kotlin")
+        minimize()
+    }
+
+    val minifiedJar by register<JavaExec>("r8Jar") {
+        val rules = file("config/r8/rules.txt")
+
+        inputs.file("build/libs/ion-java-$version-all.jar")
+        inputs.file(rules)
+        outputs.file("build/libs/ion-java-$version-r8.jar")
+
+        dependsOn(shadowJar)
+        dependsOn(configurations.runtimeClasspath)
+
+        classpath(r8)
+        mainClass.set("com.android.tools.r8.R8")
+        args = listOf(
+            "--release",
+            "--classfile",
+            "--output", "build/libs/ion-java-$version-minified.jar",
+            "--pg-conf", rules.toString(),
+            "--lib", System.getProperty("java.home").toString(),
+            "build/libs/ion-java-$version-all.jar",
+        )
+    }
+
+    build {
+        dependsOn(minifiedJar)
     }
 
     javadoc {
@@ -163,6 +208,16 @@ tasks {
         useJUnitPlatform()
         // report is always generated after tests run
         finalizedBy(jacocoTestReport)
+    }
+
+    val testMinified by register<Test>("testMinified") {
+        maxHeapSize = "1g" // When this line was added Xmx 512m was the default, and we saw OOMs
+        maxParallelForks = Math.max(1, Runtime.getRuntime().availableProcessors() / 2)
+        group = "verification"
+        testClassesDirs = project.sourceSets.test.get().output.classesDirs
+        classpath = project.sourceSets.test.get().runtimeClasspath + minifiedJar.outputs.files
+        dependsOn(minifiedJar)
+        useJUnitPlatform()
     }
 
     withType<Sign> {

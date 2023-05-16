@@ -1,0 +1,6 @@
+-keepattributes SourceFile, LineNumberTable
+
+-keep class com.amazon.ion.***
+-keep interface com.amazon.ion.***
+-keep enum com.amazon.ion.***
+-keeppackagenames ***

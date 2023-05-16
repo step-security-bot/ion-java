@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
@@ -12,33 +12,30 @@
  * express or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-
-package com.amazon.ion;
+package com.amazon.ion
 
 /**
- * Indicates the smallest-possible Java type of an Ion {@code int} value.
+ * Indicates the smallest-possible Java type for an Ion `int` value.
  */
-public enum IntegerSize
-{
+enum class IntegerSize {
     /**
-     * Fits in the Java {@code int} primitive (four bytes).
-     * The value can be retrieved through methods like {@link IonReader#intValue()}
-     * or {@link IonInt#intValue()} without data loss.
+     * Fits in the Java `int` primitive (four bytes).
+     * The value can be retrieved through methods like [IonReader.intValue]
+     * or [IonInt.intValue] without data loss.
      */
     INT,
 
     /**
-     * Fits in the Java {@code int} primitive (eight bytes).
-     * The value can be retrieved through methods like {@link IonReader#longValue()}
-     * or {@link IonInt#longValue()} without data loss.
+     * Fits in the Java `int` primitive (eight bytes).
+     * The value can be retrieved through methods like [IonReader.longValue]
+     * or [IonInt.longValue] without data loss.
      */
     LONG,
 
     /**
      * Larger than eight bytes. This value can be retrieved through methods like
-     * {@link IonReader#bigIntegerValue()} or {@link IonInt#bigIntegerValue()}
+     * [IonReader.bigIntegerValue] or [IonInt.bigIntegerValue]
      * without data loss.
      */
-    BIG_INTEGER,
-
+    BIG_INTEGER
 }
