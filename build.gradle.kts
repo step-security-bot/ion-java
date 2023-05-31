@@ -170,8 +170,9 @@ tasks {
     }
 
     cyclonedxBom {
-        setIncludeConfigs(listOf("runtimeClasspath"))
-        setSkipConfigs(listOf("compileClasspath", "testCompileClasspath"))
+        dependsOn(jar)
+        includeConfigs.set(listOf("runtimeClasspath"))
+        this.skipConfigs.set(listOf("ion-java-cli:implementation"))
     }
 }
 
