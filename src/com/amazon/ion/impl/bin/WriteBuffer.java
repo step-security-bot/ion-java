@@ -1035,6 +1035,97 @@ import java.util.List;
         return writeVarUIntSlow(value);
     }
 
+    public static int varUIntLength(final long value)
+    {
+        if (value < VAR_UINT_2_OCTET_MIN_VALUE)
+        {
+            return 1;
+        }
+        if (value < VAR_UINT_3_OCTET_MIN_VALUE)
+        {
+            return 2;
+        }
+        if (value < VAR_UINT_4_OCTET_MIN_VALUE)
+        {
+            return 3;
+        }
+        if (value < VAR_UINT_5_OCTET_MIN_VALUE)
+        {
+            return 4;
+        }
+        if (value < VAR_UINT_6_OCTET_MIN_VALUE)
+        {
+            return 5;
+        }
+        if (value < VAR_UINT_7_OCTET_MIN_VALUE)
+        {
+            return 6;
+        }
+        if (value < VAR_UINT_8_OCTET_MIN_VALUE)
+        {
+            return 7;
+        }
+        if (value < VAR_UINT_9_OCTET_MIN_VALUE)
+        {
+            return 8;
+        }
+        throw new IllegalStateException("ion-java failed to support your use case.");
+    }
+
+    public static void writeVarUIntTo(final OutputStream out, final long value) throws IOException
+    {
+        /*
+        switch (length) {
+            case 8:
+            case 7:
+            case 6:
+            case 5:
+            case 4:
+            case 3:
+            case 2:
+            case 1:
+
+                break;
+            default:
+                throw new IllegalStateException();
+        }
+        */
+        if (value >= VAR_UINT_9_OCTET_MIN_VALUE)
+        {
+            out.write((int) (((value >> VAR_UINT_9_OCTET_SHIFT) & VAR_INT_MASK) & 0xFF));
+        }
+        if (value >= VAR_UINT_8_OCTET_MIN_VALUE)
+        {
+            out.write((int) (((value >> VAR_UINT_8_OCTET_SHIFT) & VAR_INT_MASK) & 0xFF));
+        }
+        if (value >= VAR_UINT_7_OCTET_MIN_VALUE)
+        {
+            out.write((int) (((value >> VAR_UINT_7_OCTET_SHIFT) & VAR_INT_MASK) & 0xFF));
+        }
+        if (value >= VAR_UINT_6_OCTET_MIN_VALUE)
+        {
+            out.write((int) (((value >> VAR_UINT_6_OCTET_SHIFT) & VAR_INT_MASK) & 0xFF));
+        }
+        if (value >= VAR_UINT_5_OCTET_MIN_VALUE)
+        {
+            out.write((int) (((value >> VAR_UINT_5_OCTET_SHIFT) & VAR_INT_MASK) & 0xFF));
+        }
+        if (value >= VAR_UINT_4_OCTET_MIN_VALUE)
+        {
+            out.write((int) (((value >> VAR_UINT_4_OCTET_SHIFT) & VAR_INT_MASK) & 0xFF));
+        }
+        if (value >= VAR_UINT_3_OCTET_MIN_VALUE)
+        {
+            out.write((int) (((value >> VAR_UINT_3_OCTET_SHIFT) & VAR_INT_MASK) & 0xFF));
+        }
+        if (value >= VAR_UINT_2_OCTET_MIN_VALUE)
+        {
+            out.write((int) (((value >> VAR_UINT_2_OCTET_SHIFT) & VAR_INT_MASK) & 0xFF));
+        }
+        out.write((int) (((value & VAR_INT_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK) & 0xFF));
+    }
+
+
     private static final long VAR_INT_SIGNED_OCTET_MASK = 0x3F;
     private static final long VAR_INT_SIGNBIT_ON_MASK   = 0x40L;
     private static final long VAR_INT_SIGNBIT_OFF_MASK  = 0x00L;
