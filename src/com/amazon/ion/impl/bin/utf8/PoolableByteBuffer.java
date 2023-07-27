@@ -1,5 +1,8 @@
 package com.amazon.ion.impl.bin.utf8;
 
+import com.amazon.ion.pool.Pool;
+import com.amazon.ion.pool.Poolable;
+
 import java.nio.ByteBuffer;
 
 /**

@@ -1,5 +1,7 @@
 package com.amazon.ion.impl.bin.utf8;
 
+import com.amazon.ion.pool.Pool;
+
 /**
  * A thread-safe shared pool of {@link Utf8StringDecoder}s that can be used for UTF8 decoding.
  */

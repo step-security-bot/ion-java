@@ -1,16 +1,16 @@
-package com.amazon.ion.impl.bin.utf8;
+package com.amazon.ion.pool;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
-abstract class Pool<T extends Poolable<?>> {
+public abstract class Pool<T extends Poolable<?>> {
 
     /**
      * Allocates objects to be pooled.
      * @param <T> the type of object.
      */
-    interface Allocator<T extends Poolable<?>> {
+    protected interface Allocator<T extends Poolable<?>> {
 
         /**
          * Allocate a new object and link it to the given pool.
@@ -19,7 +19,6 @@ abstract class Pool<T extends Poolable<?>> {
          */
         T newInstance(Pool<T> pool);
     }
-
     // The maximum number of objects that can be waiting in the queue before new ones will be discarded.
     private static final int MAX_QUEUE_SIZE = 128;
 
@@ -33,7 +32,7 @@ abstract class Pool<T extends Poolable<?>> {
     // Allocator of objects to be pooled.
     private final Allocator<T> allocator;
 
-    Pool(Allocator<T> allocator) {
+    protected Pool(Allocator<T> allocator) {
         this.allocator = allocator;
         objectQueue = new ConcurrentLinkedQueue<T>();
         size = new AtomicInteger(0);

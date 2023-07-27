@@ -35,11 +35,14 @@ import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_IonValue;
 import com.amazon.ion.impl._Private_IonWriter;
 import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.pool.Pool;
+import com.amazon.ion.pool.Poolable;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayDeque;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.Iterator;
 
@@ -80,8 +83,6 @@ abstract class IonValueLite
     private   static final int ELEMENT_MASK       = 0xff;
     protected static final int ELEMENT_SHIFT      = 8; // low 8 bits is flag, upper 24 (or 48 is element id)
 
-    // This value was chosen somewhat arbitrarily; it can/should be changed if it is found to be insufficient.
-    private static final int CONTAINER_STACK_INITIAL_CAPACITY = 16;
 
     /**
      * Used by subclasses to retrieve metadata set by
@@ -989,48 +990,43 @@ abstract class IonValueLite
         writer.setTypeAnnotationSymbols(annotations);
     }
 
-    private void writeToIterative(IonWriter writer, SymbolTableProvider symbolTableProvider) throws IOException {
-        Deque<Iterator<IonValue>> iteratorStack = null;
-        Iterator<IonValue> currentIterator = null;
-        IonValueLite value = this;
-        do {
-            writeFieldNameAndAnnotations(writer, value, symbolTableProvider);
-            IonType type = value.getType();
-            if (value.isNullValue()) {
-                writer.writeNull(type);
-            } else if (IonType.isContainer(type)) {
-                if (currentIterator != null) {
-                    if (iteratorStack == null) {
-                        iteratorStack = new ArrayDeque<>(CONTAINER_STACK_INITIAL_CAPACITY);
-                    }
-                    iteratorStack.add(currentIterator);
-                }
-                currentIterator = ((IonContainer) value).iterator();
-                writer.stepIn(type);
-            } else {
-                value.writeBodyTo(writer, symbolTableProvider);
-            }
-            do {
-                if (currentIterator == null) {
-                    return;
-                }
-                value = currentIterator.hasNext() ? (IonValueLite) currentIterator.next() : null;
-                if (value == null) {
-                    writer.stepOut();
-                    currentIterator = iteratorStack == null ? null : iteratorStack.pollLast();
-                }
-            } while (value == null);
-        } while (true);
-    }
-
     final void writeTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
     {
-        try {
-            writeToIterative(writer, symbolTableProvider);
+        IonValueLite value = this;
+        IonType type = value.getType();
+
+        try (PooledDeque pooled = DequePool.INSTANCE.getOrCreate()) {
+
+            Deque<Iterator<IonValue>> stack = pooled.deque;
+            Iterator<IonValue> iterator = Collections.<IonValue>singleton(this).iterator();
+
+            do {
+                while (iterator.hasNext()) {
+                    value = (IonValueLite) iterator.next();
+                    type = value.getType();
+                    writeFieldNameAndAnnotations(writer, value, symbolTableProvider);
+
+                    if (value.isNullValue()) {
+                        writer.writeNull(type);
+                    } else if (!IonType.isContainer(type)) {
+                        value.writeBodyTo(writer, symbolTableProvider);
+                    } else { // IonType.isContainer(type)
+                        stack.push(iterator);
+                        iterator = ((IonContainer) value).iterator();
+                        writer.stepIn(type);
+                    }
+                }
+
+                if ((iterator = stack.pollFirst()) != null) {
+                    writer.stepOut();
+                }
+            } while (iterator != null);
+
         } catch (IOException e) {
             throw new IonException(e);
         }
     }
+
 
     /**
      * Writes a *scalar* value to the given writer. It is incorrect to call this method on a container value.
@@ -1120,6 +1116,30 @@ abstract class IonValueLite
     public String validate()
     {
         return null;
+    }
+
+    private static class DequePool extends Pool<PooledDeque> {
+        private static final DequePool INSTANCE = new DequePool(PooledDeque::in);
+        protected DequePool(Allocator<PooledDeque> allocator) {
+            super(allocator);
+        }
+    }
+
+    private static class PooledDeque extends Poolable<PooledDeque> {
+        // This value was chosen somewhat arbitrarily; it can/should be changed if it is found to be insufficient.
+        private static final int CONTAINER_STACK_INITIAL_CAPACITY = 16;
+        final Deque<Iterator<IonValue>> deque;
+        /**
+         * @param pool the pool to which the object will be returned upon {@link #close()}.
+         */
+        protected PooledDeque(Pool<PooledDeque> pool, Deque<Iterator<IonValue>> deque) {
+            super(pool);
+            this.deque = deque;
+        }
+
+        static PooledDeque in(Pool<PooledDeque> pool) {
+            return new PooledDeque(pool, new ArrayDeque<>(CONTAINER_STACK_INITIAL_CAPACITY));
+        }
     }
 }
 
