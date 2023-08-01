@@ -310,6 +310,7 @@ import java.util.NoSuchElementException;
         public final int oldLength;
         /** size of the container data or annotations.*/
         public final long length;
+        public PatchPoint next;
 
         public PatchPoint(final long oldPosition, final int oldLength, final long patchLength)
         {
@@ -331,17 +332,8 @@ import java.util.NoSuchElementException;
      */
     private static class PatchList implements Iterable<PatchPoint>
     {
-        private static class Node {
-            public final PatchPoint value;
-            public Node next;
-
-            public Node(final PatchPoint value)
-            {
-                this.value = value;
-            }
-        }
-        private Node head;
-        private Node tail;
+        private PatchPoint head;
+        private PatchPoint tail;
 
         public PatchList()
         {
@@ -362,17 +354,15 @@ import java.util.NoSuchElementException;
 
         public void append(final PatchPoint patch)
         {
-            final Node node = new Node(patch);
             if (head == null)
             {
-                head = node;
-                tail = node;
+                head = patch;
             }
             else
             {
-                tail.next = node;
-                tail = node;
+                tail.next = patch;
             }
+            tail = patch;
         }
 
         public void extend(final PatchList end)
@@ -397,12 +387,11 @@ import java.util.NoSuchElementException;
 
         public PatchPoint truncate(final long oldPosition)
         {
-            Node prev = null;
-            Node curr = head;
+            PatchPoint prev = null;
+            PatchPoint curr = head;
             while (curr != null)
             {
-                final PatchPoint patch = curr.value;
-                if (patch.oldPosition >= oldPosition)
+                if (curr.oldPosition >= oldPosition)
                 {
                     tail = prev;
                     if (tail == null)
@@ -413,7 +402,7 @@ import java.util.NoSuchElementException;
                     {
                         tail.next = null;
                     }
-                    return patch;
+                    return curr;
                 }
 
                 prev = curr;
@@ -426,7 +415,7 @@ import java.util.NoSuchElementException;
         {
             return new Iterator<PatchPoint>()
             {
-                Node curr = head;
+                PatchPoint curr = head;
 
                 public boolean hasNext()
                 {
@@ -439,7 +428,7 @@ import java.util.NoSuchElementException;
                     {
                         throw new NoSuchElementException();
                     }
-                    final PatchPoint value = curr.value;
+                    final PatchPoint value = curr;
                     curr = curr.next;
                     return value;
                 }
