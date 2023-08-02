@@ -16,6 +16,7 @@
 package com.amazon.ion.impl.bin;
 
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.impl.bin.utf8.Utf8StringEncoderPool;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -40,7 +41,8 @@ public class _PrivateIon_HashTrampoline
                 IonRawBinaryWriter.StreamCloseMode.CLOSE,
                 IonRawBinaryWriter.StreamFlushMode.FLUSH,
                 IonRawBinaryWriter.PreallocationMode.PREALLOCATE_0,
-                false     // force floats to be encoded as binary64
+                false ,   // force floats to be encoded as binary64
+                Utf8StringEncoderPool.getInstance()
         );
     }
 }

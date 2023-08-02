@@ -39,6 +39,8 @@ import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamCloseMode;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
+import com.amazon.ion.impl.bin.utf8.Utf8StringEncoderPool;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
@@ -661,6 +663,7 @@ import java.util.Map;
     private final ImportDescriptor              userCurrentImport;
     private final boolean                       lstAppendEnabled;
     private boolean                             isUserLSTAppend;
+    private final Utf8StringEncoderPool Utf8EncoderPool = Utf8StringEncoderPool.getInstance();
 
     private boolean                             closed;
 
@@ -677,7 +680,8 @@ import java.util.Map;
             StreamCloseMode.NO_CLOSE,
             StreamFlushMode.NO_FLUSH,
             builder.preallocationMode,
-            builder.isFloatBinary32Enabled
+            builder.isFloatBinary32Enabled,
+            Utf8EncoderPool
         );
         this.user = new IonRawBinaryWriter(
             builder.provider,
@@ -687,7 +691,8 @@ import java.util.Map;
             StreamCloseMode.CLOSE,
             StreamFlushMode.FLUSH,
             builder.preallocationMode,
-            builder.isFloatBinary32Enabled
+            builder.isFloatBinary32Enabled,
+            Utf8EncoderPool
         );
 
         this.catalog = builder.catalog;

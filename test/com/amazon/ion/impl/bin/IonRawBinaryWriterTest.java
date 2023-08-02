@@ -46,6 +46,7 @@ import com.amazon.ion.impl.bin.IonBinaryWriterAdapter.Factory;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.PreallocationMode;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamCloseMode;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
+import com.amazon.ion.impl.bin.utf8.Utf8StringEncoderPool;
 import com.amazon.ion.junit.Injected;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
@@ -68,6 +69,7 @@ import org.junit.runner.RunWith;
 public class IonRawBinaryWriterTest extends Assert
 {
     private static IonSystem SYSTEM = IonSystemBuilder.standard().build();
+    private Utf8StringEncoderPool utf8StringEncoderPool = Utf8StringEncoderPool.getInstance();
 
     protected static IonSystem system()
     {
@@ -123,7 +125,8 @@ public class IonRawBinaryWriterTest extends Assert
             StreamCloseMode.NO_CLOSE,
             StreamFlushMode.NO_FLUSH,
             preallocationMode,
-            true
+            true,
+            utf8StringEncoderPool
         );
     }
 

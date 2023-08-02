@@ -124,10 +124,6 @@ import java.util.NoSuchElementException;
 
     private static final byte VARINT_NEG_ZERO   = (byte) 0xC0;
 
-    final Utf8StringEncoder utf8StringEncoder = Utf8StringEncoderPool
-            .getInstance()
-            .getOrCreate();
-
     private static final byte[] makeTypedPreallocatedBytes(final int typeDesc, final int length)
     {
         final byte[] bytes = new byte[length];
@@ -472,6 +468,7 @@ import java.util.NoSuchElementException;
     private final BlockAllocator                allocator;
     private final OutputStream                  out;
     private final StreamCloseMode               streamCloseMode;
+    private final Utf8StringEncoder             utf8StringEncoder;
     private final StreamFlushMode               streamFlushMode;
     private final PreallocationMode             preallocationMode;
     private final boolean                       isFloatBinary32Enabled;
@@ -496,7 +493,8 @@ import java.util.NoSuchElementException;
                                    final StreamCloseMode streamCloseMode,
                                    final StreamFlushMode streamFlushMode,
                                    final PreallocationMode preallocationMode,
-                                   final boolean isFloatBinary32Enabled)
+                                   final boolean isFloatBinary32Enabled,
+                                   final Utf8StringEncoderPool utf8StringEncoderPool)
                                    throws IOException
     {
         super(optimization);
@@ -511,6 +509,7 @@ import java.util.NoSuchElementException;
         this.isFloatBinary32Enabled = isFloatBinary32Enabled;
         this.buffer            = new WriteBuffer(allocator);
         this.patchPoints       = new PatchList();
+        this.utf8StringEncoder = utf8StringEncoderPool.getOrCreate();
         this.containers        = new _Private_RecyclingStack<ContainerInfo>(
             10,
             new _Private_RecyclingStack.ElementFactory<ContainerInfo>() {
@@ -1513,7 +1512,6 @@ import java.util.NoSuchElementException;
         }
         patchPoints.clear();
         buffer.reset();
-
         if (streamFlushMode == StreamFlushMode.FLUSH)
         {
             out.flush();
