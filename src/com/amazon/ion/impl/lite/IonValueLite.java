@@ -77,7 +77,7 @@ abstract class IonValueLite
     protected static final int ELEMENT_SHIFT      = 8; // low 8 bits is flag, upper 24 (or 48 is element id)
 
     // This value was chosen somewhat arbitrarily; it can/should be changed if it is found to be insufficient.
-    private static final int CONTAINER_STACK_INITIAL_CAPACITY = 16;
+    static final int CONTAINER_STACK_INITIAL_CAPACITY = 16;
 
     // 'withCharsetAscii' is only specified for consistency with the behavior of the previous implementation of
     // toString. Technically users are not allowed to rely on a canonical encoding, but in practice they often do.

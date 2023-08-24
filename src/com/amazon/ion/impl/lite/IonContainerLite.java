@@ -77,6 +77,7 @@ abstract class IonContainerLite
     private static class CloneContext {
         IonContainerLite parentOriginal = null;
         IonContainerLite parentCopy = null;
+        IonContext contextCopy = null;
         int childIndex = 0;
     }
 
@@ -88,12 +89,11 @@ abstract class IonContainerLite
 
     abstract IonContainerLite shallowClone(IonContext context);
 
-    // TODO can the context be stored in the CloneContext rather than recomputed for each value?
     private IonContext copyContext(IonContainerLite parent, IonValueLite value) {
         if (parent == null) {
             return ContainerlessContext.wrap(value.getSystem(), value.getContext().getContextSymbolTable());
         } else if (parent instanceof IonDatagramLite) {
-            return TopLevelContext.wrap(value.getAssignedSymbolTable(), (IonDatagramLite) parent);
+            return TopLevelContext.wrap(value.getContext().getContextSymbolTable(), (IonDatagramLite) parent);
         }
         return parent;
     }
@@ -104,20 +104,21 @@ abstract class IonContainerLite
             return shallowClone(copyContext(null, this));
         } else {
             boolean retainingSIDs = false;
-            CloneContext[] stack = new CloneContext[16];
+            CloneContext[] stack = new CloneContext[CONTAINER_STACK_INITIAL_CAPACITY];
             int stackIndex = 0;
             CloneContext cloneContext = new CloneContext();
+            cloneContext.contextCopy = copyContext(null, this);
             stack[stackIndex] = cloneContext;
             IonValueLite original = this;
             IonValueLite copy;
             do {
                 if (!(original instanceof IonContainerLite)) {
-                    copy = original.clone(copyContext(cloneContext.parentCopy, original));
+                    copy = original.clone(cloneContext.contextCopy);
                     copy.copyFieldName(cloneContext.parentCopy, original);
                     cloneContext.parentCopy._children[cloneContext.childIndex++] = copy;
                 } else {
                     IonContainerLite containerOriginal = (IonContainerLite) original;
-                    copy = containerOriginal.shallowClone(copyContext(cloneContext.parentCopy, original));
+                    copy = containerOriginal.shallowClone(cloneContext.contextCopy);
                     copy.copyFieldName(cloneContext.parentCopy, original);
                     if (cloneContext.parentCopy != null) {
                         cloneContext.parentCopy._children[cloneContext.childIndex++] = copy;
@@ -132,10 +133,11 @@ abstract class IonContainerLite
                             stack[stackIndex] = cloneContext;
                         }
                         int childCount = containerOriginal._child_count;
-                        cloneContext.parentOriginal = (IonContainerLite) original;
+                        cloneContext.parentOriginal = containerOriginal;
                         cloneContext.parentCopy = (IonContainerLite) copy;
                         cloneContext.parentCopy._children = new IonValueLite[childCount];
                         cloneContext.parentCopy._child_count = childCount;
+                        cloneContext.contextCopy = copyContext(cloneContext.parentCopy, containerOriginal);
                         cloneContext.childIndex = 0;
                     }
                 }
