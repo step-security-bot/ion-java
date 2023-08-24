@@ -67,13 +67,18 @@ final class IonListLite
     @Override
     IonListLite clone(IonContext parentContext)
     {
-        return new IonListLite(this, parentContext);
+        return (IonListLite) super.clone();
     }
 
     @Override
-    public IonListLite clone()
+    public IonListLite clone() {
+        return (IonListLite) super.clone();
+    }
+
+    @Override
+    public IonListLite shallowClone(IonContext context)
     {
-        return clone(ContainerlessContext.wrap(getSystem()));
+        return new IonListLite(this, context);
     }
 
     @Override

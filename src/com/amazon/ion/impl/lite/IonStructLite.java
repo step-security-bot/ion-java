@@ -53,7 +53,7 @@ final class IonStructLite
 
     private IonStructLite(IonStructLite existing, IonContext context)
     {
-        super(existing, context, true);
+        super(existing, context);
         // field map can be shallow cloned due to it dealing with String and Integer
         // values - both of which are immutable constructs and so safe to retain as references
         this._field_map = null == existing._field_map ? null : new HashMap<String, Integer>(existing._field_map);
@@ -75,7 +75,12 @@ final class IonStructLite
     @Override
     public IonStructLite clone()
     {
-        return clone(ContainerlessContext.wrap(getSystem()));
+        return (IonStructLite) super.clone();
+    }
+
+    @Override
+    IonStructLite shallowClone(IonContext context) {
+        return new IonStructLite(this, context);
     }
 
     @Override

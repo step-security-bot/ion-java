@@ -19,6 +19,7 @@ import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
@@ -59,45 +60,9 @@ abstract class IonContainerLite
         this.ionSystem = context.getSystem();
     }
 
-    IonContainerLite(IonContainerLite existing, IonContext context, boolean isStruct) {
+    IonContainerLite(IonContainerLite existing, IonContext context) {
         super(existing, context);
         this.ionSystem = existing.getSystem();
-        boolean retainingSIDs = false;
-        int childCount = existing._child_count;
-        this._child_count = childCount;
-        // when cloning the children we establish 'this' the cloned outer container as the context
-        if (existing._children != null) {
-            boolean isDatagram = this instanceof IonDatagramLite;
-            this._children = new IonValueLite[childCount];
-            for (int i = 0; i < childCount; i++) {
-                IonValueLite child = existing._children[i];
-                IonContext childContext = isDatagram
-                     ? TopLevelContext.wrap(child.getAssignedSymbolTable(), (IonDatagramLite)this)
-                     : this;
-
-                IonValueLite copy = child.clone(childContext);
-                if (isStruct) {
-                    if(child.getFieldName() == null) {
-                        // when name is null it could be a sid 0 so we need to perform the full symbol token lookup.
-                        // this is expensive so only do it when necessary
-                        // TODO profile `getKnownFieldNameSymbol` to see if we can improve its performance so branching
-                        // is not necessary. https://github.com/amazon-ion/ion-java/issues/140
-                        copy.setFieldNameSymbol(child.getKnownFieldNameSymbol());
-                    }
-                    else {
-                        // if we have a non null name copying it is sufficient
-                        copy.setFieldName(child.getFieldName());
-                    }
-                }
-                this._children[i] = copy;
-                retainingSIDs |= copy._isSymbolIdPresent();
-            }
-            // unfortunately due to the existing behavior in IonValueLite copy-constructor where annotation SID's are
-            // preserved across the copy-constructor IF they have no resolved text it means that encodings could have
-            // been preserved on the child - therefore the cloned children each have to be re-interrogated and the
-            // setting updated IF such a change has occurred.
-            _isSymbolIdPresent(retainingSIDs);
-        }
     }
 
     // See the comment on the `ionSystem` member field for more information.
@@ -109,8 +74,92 @@ abstract class IonContainerLite
     @Override
     public abstract void accept(ValueVisitor visitor) throws Exception;
 
+    private static class CloneContext {
+        IonContainerLite parentOriginal = null;
+        IonContainerLite parentCopy = null;
+        int childIndex = 0;
+    }
+
+    private static CloneContext[] growStack(CloneContext[] stack) {
+        CloneContext[] newStack = new CloneContext[stack.length * 2];
+        System.arraycopy(stack, 0, newStack, 0, stack.length);
+        return newStack;
+    }
+
+    abstract IonContainerLite shallowClone(IonContext context);
+
+    // TODO can the context be stored in the CloneContext rather than recomputed for each value?
+    private IonContext copyContext(IonContainerLite parent, IonValueLite value) {
+        if (parent == null) {
+            return ContainerlessContext.wrap(value.getSystem(), value.getContext().getContextSymbolTable());
+        } else if (parent instanceof IonDatagramLite) {
+            return TopLevelContext.wrap(value.getAssignedSymbolTable(), (IonDatagramLite) parent);
+        }
+        return parent;
+    }
+
     @Override
-    public abstract IonContainer clone();
+    public IonContainer clone() {
+        if (_children == null) {
+            return shallowClone(copyContext(null, this));
+        } else {
+            boolean retainingSIDs = false;
+            CloneContext[] stack = new CloneContext[16];
+            int stackIndex = 0;
+            CloneContext cloneContext = new CloneContext();
+            stack[stackIndex] = cloneContext;
+            IonValueLite original = this;
+            IonValueLite copy;
+            do {
+                if (!(original instanceof IonContainerLite)) {
+                    copy = original.clone(copyContext(cloneContext.parentCopy, original));
+                    copy.copyFieldName(cloneContext.parentCopy, original);
+                    cloneContext.parentCopy._children[cloneContext.childIndex++] = copy;
+                } else {
+                    IonContainerLite containerOriginal = (IonContainerLite) original;
+                    copy = containerOriginal.shallowClone(copyContext(cloneContext.parentCopy, original));
+                    copy.copyFieldName(cloneContext.parentCopy, original);
+                    if (cloneContext.parentCopy != null) {
+                        cloneContext.parentCopy._children[cloneContext.childIndex++] = copy;
+                    }
+                    if (containerOriginal._children != null) {
+                        if (++stackIndex >= stack.length) {
+                            stack = growStack(stack);
+                        }
+                        cloneContext = stack[stackIndex];
+                        if (cloneContext == null) {
+                            cloneContext = new CloneContext();
+                            stack[stackIndex] = cloneContext;
+                        }
+                        int childCount = containerOriginal._child_count;
+                        cloneContext.parentOriginal = (IonContainerLite) original;
+                        cloneContext.parentCopy = (IonContainerLite) copy;
+                        cloneContext.parentCopy._children = new IonValueLite[childCount];
+                        cloneContext.parentCopy._child_count = childCount;
+                        cloneContext.childIndex = 0;
+                    }
+                }
+                retainingSIDs |= copy._isSymbolIdPresent();
+                do {
+                    if (cloneContext.childIndex >= cloneContext.parentOriginal._child_count) {
+                        // This is the end of the container
+                        copy = cloneContext.parentCopy;
+                        cloneContext = stack[--stackIndex];
+                        if (stackIndex == 0) {
+                            // Top-level; done.
+                            // unfortunately due to the existing behavior in IonValueLite copy-constructor where annotation SID's are
+                            // preserved across the copy-constructor IF they have no resolved text it means that encodings could have
+                            // been preserved on the child - therefore the cloned children each have to be re-interrogated and the
+                            // setting updated IF such a change has occurred.
+                            copy._isSymbolIdPresent(retainingSIDs);
+                            return (IonContainerLite) copy;
+                        }
+                    }
+                } while (cloneContext.childIndex >= cloneContext.parentOriginal._child_count);
+                original = cloneContext.parentOriginal._children[cloneContext.childIndex];
+            } while (true);
+        }
+    }
 
 
     public void clear()

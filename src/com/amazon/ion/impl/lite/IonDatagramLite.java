@@ -116,11 +116,14 @@ final class IonDatagramLite
     }
 
     @Override
-    public IonDatagramLite clone()
-    {
-        return new IonDatagramLite(this);
+    public IonDatagramLite clone() {
+        return (IonDatagramLite) super.clone();
     }
 
+    @Override
+    IonDatagramLite shallowClone(IonContext context) {
+        return new IonDatagramLite(this);
+    }
 
     //////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////

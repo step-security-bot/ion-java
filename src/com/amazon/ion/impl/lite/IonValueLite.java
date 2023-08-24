@@ -22,6 +22,7 @@ import static com.amazon.ion.util.Equivalence.ionEquals;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
@@ -387,6 +388,22 @@ abstract class IonValueLite
         // although annotations have been removed from the node, which *may* mean the sub-graph from this Node is
         // now without encodings... the check is expensive for container types (need to check all immediate children)
         // and so we will opt to clear down encoding present in a lazy fashion (e.g. when something actually needs it)
+    }
+
+    final void copyFieldName(IonContainerLite parent, IonValueLite original) {
+        if (parent instanceof IonStruct) {
+            if(original.getFieldName() == null) {
+                // when name is null it could be a sid 0 so we need to perform the full symbol token lookup.
+                // this is expensive so only do it when necessary
+                // TODO profile `getKnownFieldNameSymbol` to see if we can improve its performance so branching
+                // is not necessary. https://github.com/amazon-ion/ion-java/issues/140
+                setFieldNameSymbol(original.getKnownFieldNameSymbol());
+            }
+            else {
+                // if we have a non null name copying it is sufficient
+                setFieldName(original.getFieldName());
+            }
+        }
     }
 
     /**
