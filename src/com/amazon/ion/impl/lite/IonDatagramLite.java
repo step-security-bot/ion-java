@@ -121,7 +121,7 @@ final class IonDatagramLite
     }
 
     @Override
-    IonDatagramLite shallowClone(IonContext context) {
+    IonContainerLite shallowClone(IonContext context) {
         return new IonDatagramLite(this);
     }
 

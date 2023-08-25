@@ -79,7 +79,7 @@ final class IonStructLite
     }
 
     @Override
-    IonStructLite shallowClone(IonContext context) {
+    IonContainerLite shallowClone(IonContext context) {
         return new IonStructLite(this, context);
     }
 
@@ -95,7 +95,7 @@ final class IonStructLite
     {
         int size = (_children == null) ? 0 : _children.length;
 
-        _field_map = new HashMap<String, Integer>(size);
+        _field_map = new HashMap<String, Integer>(size); // TODO avoid unconditional growth
         _field_map_duplicate_count = 0;
 
         int count = get_child_count();

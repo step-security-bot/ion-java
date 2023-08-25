@@ -70,7 +70,7 @@ final class IonSexpLite
     }
 
     @Override
-    public IonSexpLite shallowClone(IonContext context)
+    IonContainerLite shallowClone(IonContext context)
     {
         return new IonSexpLite(this, context);
     }

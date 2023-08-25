@@ -76,7 +76,7 @@ final class IonListLite
     }
 
     @Override
-    public IonListLite shallowClone(IonContext context)
+    IonContainerLite shallowClone(IonContext context)
     {
         return new IonListLite(this, context);
     }
