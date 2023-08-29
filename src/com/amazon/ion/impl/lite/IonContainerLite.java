@@ -20,6 +20,7 @@ import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
@@ -90,14 +91,14 @@ abstract class IonContainerLite
 
     abstract IonContainerLite shallowClone(IonContext context);
 
-    private static void setCloneContext(CloneContext cloneContext, IonContainerLite containerOriginal, IonContainerLite containerCopy, int stackIndex, boolean isDatagram) {
+    private static void setCloneContext(CloneContext cloneContext, IonContainerLite containerOriginal, IonContainerLite containerCopy, boolean isDatagram) {
         int childCount = containerOriginal._child_count;
         cloneContext.parentOriginal = containerOriginal;
         cloneContext.parentCopy = containerCopy;
         containerCopy._children = new IonValueLite[childCount];
         containerCopy._child_count = childCount;
         //cloneContext.contextCopy = copyContext(containerCopy, parentIsDatagram, containerOriginal);
-        if (stackIndex == 1 && isDatagram) {
+        if (isDatagram) {
             /*
             if (topLevelContext == null) {
                 topLevelContext = TopLevelContext.wrap(containerOriginal._context.getContextSymbolTable(), (IonDatagramLite) containerCopy);
@@ -114,21 +115,22 @@ abstract class IonContainerLite
     }
 
     @Override
-    public IonContainer clone() {
+    public IonContainerLite clone() {
+        boolean isDatagram = this instanceof IonDatagramLite;
+        IonContext initialContext = isDatagram ? null : ContainerlessContext.wrap(_context.getSystem(), _context.getContextSymbolTable());
         if (_children == null) {
-            return shallowClone(ContainerlessContext.wrap(_context.getSystem(), _context.getContextSymbolTable()));
+            return shallowClone(initialContext);
         } else {
             boolean retainingSIDs = false;
             CloneContext[] stack = new CloneContext[CONTAINER_STACK_INITIAL_CAPACITY];
             int stackIndex = 0;
             CloneContext cloneContext = new CloneContext();
-            boolean isDatagram = this instanceof IonDatagramLite;
             //IonContext topLevelContext = null;
-            cloneContext.contextCopy = ContainerlessContext.wrap(_context.getSystem(), _context.getContextSymbolTable());
+            cloneContext.contextCopy = initialContext;
             stack[stackIndex] = cloneContext;
             IonValueLite original = this;
             IonValueLite copy;
-            do {
+            while (true) {
                 if (!(original instanceof IonContainerLite)) {
                     copy = original.clone(cloneContext.contextCopy);
                     copy.copyFieldName(cloneContext.parentIsStruct, original);
@@ -150,7 +152,7 @@ abstract class IonContainerLite
                             cloneContext = new CloneContext();
                             stack[stackIndex] = cloneContext;
                         }
-                        setCloneContext(cloneContext, containerOriginal, containerCopy, stackIndex, isDatagram);
+                        setCloneContext(cloneContext, containerOriginal, containerCopy, isDatagram && stackIndex == 1);
                     }
                 }
                 retainingSIDs |= copy._isSymbolIdPresent();
@@ -170,7 +172,7 @@ abstract class IonContainerLite
                     }
                 }
                 original = cloneContext.parentOriginal._children[cloneContext.childIndex];
-            } while (true);
+            }
         }
     }
 

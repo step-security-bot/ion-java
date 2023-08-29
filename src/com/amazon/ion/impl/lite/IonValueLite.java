@@ -390,9 +390,9 @@ abstract class IonValueLite
         // and so we will opt to clear down encoding present in a lazy fashion (e.g. when something actually needs it)
     }
 
-    final void copyFieldName(IonContainerLite parent, IonValueLite original) {
-        if (parent instanceof IonStruct) {
-            if(original.getFieldName() == null) {
+    final void copyFieldName(boolean parentIsStruct, IonValueLite original) {
+        if (parentIsStruct) {
+            if(original._fieldName == null) {
                 // when name is null it could be a sid 0 so we need to perform the full symbol token lookup.
                 // this is expensive so only do it when necessary
                 // TODO profile `getKnownFieldNameSymbol` to see if we can improve its performance so branching
@@ -401,7 +401,7 @@ abstract class IonValueLite
             }
             else {
                 // if we have a non null name copying it is sufficient
-                setFieldName(original.getFieldName());
+                _fieldName = original._fieldName;
             }
         }
     }
