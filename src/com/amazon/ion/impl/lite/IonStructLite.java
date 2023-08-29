@@ -67,12 +67,6 @@ final class IonStructLite
     public int                      _field_map_duplicate_count;
 
     @Override
-    IonStructLite clone(IonContext parentContext)
-    {
-        return new IonStructLite(this, parentContext);
-    }
-
-    @Override
     public IonStructLite clone()
     {
         return (IonStructLite) super.clone();

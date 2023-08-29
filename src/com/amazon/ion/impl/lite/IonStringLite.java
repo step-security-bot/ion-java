@@ -44,7 +44,7 @@ final class IonStringLite
     }
 
     @Override
-    IonStringLite clone(IonContext parentContext)
+    IonStringLite shallowClone(IonContext parentContext)
     {
         return new IonStringLite(this, parentContext);
     }
@@ -52,7 +52,7 @@ final class IonStringLite
     @Override
     public IonStringLite clone()
     {
-        return clone(ContainerlessContext.wrap(getSystem()));
+        return shallowClone(ContainerlessContext.wrap(getSystem()));
     }
 
     @Override

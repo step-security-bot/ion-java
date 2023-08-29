@@ -58,12 +58,6 @@ final class IonSexpLite
     }
 
     @Override
-    IonSexpLite clone(IonContext parentContext)
-    {
-        return new IonSexpLite(this, parentContext);
-    }
-
-    @Override
     public IonSexpLite clone()
     {
         return (IonSexpLite) super.clone();

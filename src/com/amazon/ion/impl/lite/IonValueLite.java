@@ -22,7 +22,6 @@ import static com.amazon.ion.util.Equivalence.ionEquals;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
@@ -302,8 +301,12 @@ abstract class IonValueLite
      * @param context the non-null parent context to use for the cloned entity.
      */
     IonValueLite(IonValueLite existing, IonContext context) {
-        // Symbols are *immutable* therefore a shallow copy is sufficient
-        boolean hasSIDsRetained = false;
+        // as IonValue.clone() mandates that the returned value is mutable, regardless of the
+        // existing 'read only' flag - we force the deep-copy back to being mutable
+        // whilst the clone *should* guarantee symbol context is purged, the annotation behavior existing below
+        // under the TO DO for amazon-ion/ion-java/issues/223 does mean that SID context can be propagated through a clone, therefore
+        // the encoding flag has to reflect this reality
+        this._flags = existing._flags & ~IS_LOCKED & ~IS_SYMBOL_ID_PRESENT;
         if (null == existing._annotations) {
             this._annotations = null;
         } else {
@@ -311,30 +314,23 @@ abstract class IonValueLite
             this._annotations = new SymbolToken[size];
             for (int i = 0; i < size; i++) {
                 SymbolToken existingToken = existing._annotations[i];
-                if (existingToken != null) {
+                //if (existingToken != null) { // TODO why does this work? addTypeAnnotation grows array by double. Check for hashCode too
                     String text = existingToken.getText();
-                    if (text != null) {
-                        this._annotations[i] =
-                            _Private_Utils.newSymbolToken(text, UNKNOWN_SYMBOL_ID);
-                    } else {
+                    int sid = existingToken.getSid();
+                    if (text == null || sid == UNKNOWN_SYMBOL_ID) {
                         // TODO - amazon-ion/ion-java/issues/223 needs consistent handling, should attempt to resolve and if it cant; fail
-                        this._annotations[i] = existing._annotations[i];
-                        hasSIDsRetained |= this._annotations[i].getSid() > UNKNOWN_SYMBOL_ID;
+                        _annotations[i] = existingToken;
+                        if (sid > UNKNOWN_SYMBOL_ID) {
+                            _flags |= IS_SYMBOL_ID_PRESENT;
+                        }
+                    } else {
+                        this._annotations[i] = _Private_Utils.newSymbolToken(text, UNKNOWN_SYMBOL_ID);
                     }
-                }
+                //}
             }
         }
         // We don't copy the field name, that happens in IonStruct's clone
-        this._flags       = existing._flags;
         this._context     = context;
-
-        // as IonValue.clone() mandates that the returned value is mutable, regardless of the
-        // existing 'read only' flag - we force the deep-copy back to being mutable
-        clear_flag(IS_LOCKED);
-        // whilst the clone *should* guarantee symbol context is purged, the annotation behavior existing above
-        // under the TO DO for amazon-ion/ion-java/issues/223 does mean that SID context can be propogated through a clone, therefore
-        // the encoding flag has to reflect this reality
-        _isSymbolIdPresent(hasSIDsRetained);
     }
 
     public abstract void accept(ValueVisitor visitor) throws Exception;
@@ -390,19 +386,17 @@ abstract class IonValueLite
         // and so we will opt to clear down encoding present in a lazy fashion (e.g. when something actually needs it)
     }
 
-    final void copyFieldName(boolean parentIsStruct, IonValueLite original) {
-        if (parentIsStruct) {
-            if(original._fieldName == null) {
-                // when name is null it could be a sid 0 so we need to perform the full symbol token lookup.
-                // this is expensive so only do it when necessary
-                // TODO profile `getKnownFieldNameSymbol` to see if we can improve its performance so branching
-                // is not necessary. https://github.com/amazon-ion/ion-java/issues/140
-                setFieldNameSymbol(original.getKnownFieldNameSymbol());
-            }
-            else {
-                // if we have a non null name copying it is sufficient
-                _fieldName = original._fieldName;
-            }
+    final void copyFieldName(IonValueLite original) {
+        if(original._fieldName == null) {
+            // when name is null it could be a sid 0 so we need to perform the full symbol token lookup.
+            // this is expensive so only do it when necessary
+            // TODO profile `getKnownFieldNameSymbol` to see if we can improve its performance so branching
+            // is not necessary. https://github.com/amazon-ion/ion-java/issues/140
+            setFieldNameSymbol(original.getKnownFieldNameSymbol());
+        }
+        else {
+            // if we have a non null name copying it is sufficient
+            _fieldName = original._fieldName;
         }
     }
 
@@ -410,14 +404,12 @@ abstract class IonValueLite
      * {@inheritDoc}
      * <p>
      * The user can only call this method on the concrete (not abstract)
-     * subclasses of IonValueLite (e.g. IonIntLite). The explicit clone logic
-     * is contained in {@link #clone(IonContext)} which should in turn be implemented by
-     * using a copy-constructor.
+     * subclasses of IonValueLite (e.g. IonIntLite).
      */
     @Override
     public abstract IonValue clone();
 
-    abstract IonValueLite clone(IonContext parentContext);
+    abstract IonValueLite shallowClone(IonContext parentContext);
 
     /**
      * @return the constant hash signature unique to the value's type.

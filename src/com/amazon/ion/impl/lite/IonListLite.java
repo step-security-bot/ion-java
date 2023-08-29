@@ -65,12 +65,6 @@ final class IonListLite
     }
 
     @Override
-    IonListLite clone(IonContext parentContext)
-    {
-        return (IonListLite) super.clone();
-    }
-
-    @Override
     public IonListLite clone() {
         return (IonListLite) super.clone();
     }
