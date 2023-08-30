@@ -69,11 +69,11 @@ final class IonStructLite
     @Override
     public IonStructLite clone()
     {
-        return (IonStructLite) super.clone();
+        return (IonStructLite) deepClone();
     }
 
     @Override
-    IonContainerLite shallowClone(IonContext context) {
+    IonValueLite shallowClone(IonContext context) {
         return new IonStructLite(this, context);
     }
 

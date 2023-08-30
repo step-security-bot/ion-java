@@ -88,8 +88,8 @@ abstract class IonSequenceLite
     //=========================================================================
 
     @Override
-    public IonSequenceLite clone() {
-        return (IonSequenceLite) super.clone();
+    public IonSequence clone() {
+        return (IonSequence) deepClone();
     }
 
     @Override

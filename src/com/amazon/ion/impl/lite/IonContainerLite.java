@@ -16,6 +16,7 @@
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.ContainedValueException;
+import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonValue;
@@ -109,8 +110,7 @@ abstract class IonContainerLite
         cloneContext.childIndex = 0;
     }
 
-    @Override
-    public IonContainerLite clone() {
+    final IonContainerLite deepClone() {
         boolean isDatagram = this instanceof IonDatagramLite;
         IonContext initialContext = isDatagram ? null : ContainerlessContext.wrap(_context.getSystem(), _context.getContextSymbolTable());
         if (_children == null) {
@@ -127,8 +127,8 @@ abstract class IonContainerLite
         IonValueLite copy;
         while (true) {
             if (!(original instanceof IonContainerLite)) {
-                // Note: the following two lines are duplicated on both branches. For reasons that are not clear, doing
-                // this is consistently ~10% faster when cloning streams of scalars.
+                // Note: the following four lines are duplicated on both branches. For reasons that are not clear, doing
+                // this is consistently ~10% faster than using a common code path when cloning streams of scalars.
                 copy = original.shallowClone(cloneContext.contextCopy);
                 if (cloneContext.parentIsStruct) {
                     copy.copyFieldName(original);
@@ -173,6 +173,11 @@ abstract class IonContainerLite
             }
             original = cloneContext.parentOriginal._children[cloneContext.childIndex];
         }
+    }
+
+    @Override
+    public IonContainer clone() {
+        return deepClone();
     }
 
 

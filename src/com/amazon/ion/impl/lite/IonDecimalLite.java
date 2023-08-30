@@ -70,7 +70,7 @@ final class IonDecimalLite
     }
 
     @Override
-    IonDecimalLite shallowClone(IonContext parentContext)
+    IonValueLite shallowClone(IonContext parentContext)
     {
         return new IonDecimalLite(this, parentContext);
     }
@@ -78,7 +78,7 @@ final class IonDecimalLite
     @Override
     public IonDecimalLite clone()
     {
-        return shallowClone(ContainerlessContext.wrap(getSystem()));
+        return (IonDecimalLite) shallowClone(ContainerlessContext.wrap(getSystem()));
     }
 
     @Override

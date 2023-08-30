@@ -50,7 +50,7 @@ final class IonFloatLite
     }
 
     @Override
-    IonFloatLite shallowClone(IonContext context)
+    IonValueLite shallowClone(IonContext context)
     {
         return new IonFloatLite(this, context);
     }
@@ -58,7 +58,7 @@ final class IonFloatLite
     @Override
     public IonFloatLite clone()
     {
-        return shallowClone(ContainerlessContext.wrap(getSystem()));
+        return (IonFloatLite) shallowClone(ContainerlessContext.wrap(getSystem()));
     }
 
     @Override

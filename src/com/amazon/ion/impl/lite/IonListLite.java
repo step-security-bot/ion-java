@@ -66,11 +66,11 @@ final class IonListLite
 
     @Override
     public IonListLite clone() {
-        return (IonListLite) super.clone();
+        return (IonListLite) deepClone();
     }
 
     @Override
-    IonContainerLite shallowClone(IonContext context)
+    IonValueLite shallowClone(IonContext context)
     {
         return new IonListLite(this, context);
     }
