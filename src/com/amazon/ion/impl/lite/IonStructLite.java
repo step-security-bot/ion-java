@@ -19,20 +19,17 @@ import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_CurriedValueFactory;
-import com.amazon.ion.util.Equivalence;
 import com.amazon.ion.UnknownSymbolException;
-import java.io.IOException;
+
 import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -53,15 +50,103 @@ final class IonStructLite
 
     private IonStructLite(IonStructLite existing, IonContext context)
     {
-        super(existing, context);
-        // field map can be shallow cloned due to it dealing with String and Integer
-        // values - both of which are immutable constructs and so safe to retain as references
-        this._field_map = null == existing._field_map ? null : new HashMap<String, Integer>(existing._field_map);
+        super(existing, context); // TODO optimize if existing is readOnly?
+        // The field map is synchronized and shared as a performance optimization. If any modifications are made, the
+        // copy will reconstruct its own field map and stop using the shared one. If the original struct needs to
+        // make a modification, it will convey that the shared map is dirty, and then stop using the shared map.
+        FieldMap sharedFieldMap = (existing._field_map == null || existing._field_map instanceof SharedFieldMap)
+            ? existing._field_map
+            : new SharedFieldMap(existing._field_map.map, existing);
+        this._field_map = sharedFieldMap;
+        existing._field_map = sharedFieldMap;
         this._field_map_duplicate_count = existing._field_map_duplicate_count;
         this.hasNullFieldName = existing.hasNullFieldName;
     }
 
-    private Map<String, Integer> _field_map;
+
+    private static class FieldMap {
+
+        protected final Map<String, Integer> map;
+
+        FieldMap(Map<String, Integer> map) {
+            this.map = map;
+        }
+
+        public Integer get(IonStructLite caller, String key) {
+            return map.get(key);
+        }
+
+        public Integer put(IonStructLite caller, String key, Integer value) {
+            return map.put(key, value);
+        }
+
+        public Integer remove(IonStructLite caller, String key) {
+            return map.remove(key);
+        }
+
+        public Set<Entry<String, Integer>> entrySet(IonStructLite caller) {
+            return map.entrySet();
+        }
+    }
+
+    private static class SharedFieldMap extends FieldMap {
+
+        private final IonStructLite owner;
+        private boolean isDirty = false;
+
+        SharedFieldMap(Map<String, Integer> map, IonStructLite owner) {
+            super(map);
+            this.owner = owner;
+        }
+
+        @Override
+        public synchronized Integer get(IonStructLite caller, String key) {
+            if (isDirty && owner != caller) {
+                caller._field_map = new FieldMap(new HashMap<>(map));
+                return caller._field_map.get(caller, key);
+            }
+            return map.get(key);
+        }
+
+        @Override
+        public synchronized Integer put(IonStructLite caller, String key, Integer value) {
+            if (owner != caller) {
+                caller._field_map = new FieldMap(new HashMap<>(map));
+                return caller._field_map.put(caller, key, value);
+            }
+            isDirty = true;
+            // isDirty is sticky, so there is no need to continue using the shared map after modification.
+            owner._field_map = new FieldMap(map);
+            return map.put(key, value);
+        }
+
+        @Override
+        public synchronized Integer remove(IonStructLite caller, String key) {
+            if (owner != caller) {
+                caller._field_map = new FieldMap(new HashMap<>(map));
+                return caller._field_map.remove(caller, key);
+            }
+            isDirty = true;
+            // isDirty is sticky, so there is no need to continue using the shared map after modification.
+            owner._field_map = new FieldMap(map);
+            return map.remove(key);
+        }
+
+        @Override
+        public synchronized Set<Entry<String, Integer>> entrySet(IonStructLite caller) {
+            // Note: even though this operation does not itself modify the map, since it returns a set view of the
+            // keys, that set is susceptible to concurrent modification. Therefore, the non-owner always returns
+            // its own copy. This method is not, and should not, be called from user-facing, performance-sensitive
+            // code paths.
+            if (owner != caller) {
+                caller._field_map = new FieldMap(new HashMap<>(map));
+                return caller._field_map.entrySet(caller);
+            }
+            return map.entrySet();
+        }
+    }
+
+    private FieldMap _field_map;
     private boolean hasNullFieldName = false;
 
     public int                      _field_map_duplicate_count;
@@ -89,7 +174,7 @@ final class IonStructLite
     {
         int size = (_children == null) ? 0 : _children.length;
 
-        _field_map = new HashMap<String, Integer>(size); // TODO avoid unconditional growth
+        _field_map = new FieldMap(new HashMap<>((int) Math.ceil(size / 0.75f), 0.75f)); // Note: avoids unconditional growth
         _field_map_duplicate_count = 0;
 
         int count = get_child_count();
@@ -97,23 +182,22 @@ final class IonStructLite
             IonValueLite v = get_child(ii);
             SymbolToken fieldNameSymbol = v.getFieldNameSymbol();
             String name = fieldNameSymbol.getText();
-            if (_field_map.get(name) != null) {
+            if (_field_map.get(this, name) != null) {
                 _field_map_duplicate_count++;
             }
-            _field_map.put(name, ii); // this causes the map to have the largest index value stored
+            _field_map.put(this, name, ii); // this causes the map to have the largest index value stored
         }
-        return;
     }
     private void add_field(String fieldName, int newFieldIdx)
     {
-        Integer idx = _field_map.get(fieldName);
+        Integer idx = _field_map.get(this, fieldName);
         if (idx != null) {
             _field_map_duplicate_count++;
             if (idx.intValue() > newFieldIdx) {
                 newFieldIdx = idx.intValue();
             }
         }
-        _field_map.put(fieldName, newFieldIdx);
+        _field_map.put(this, fieldName, newFieldIdx);
     }
     private void remove_field(String fieldName, int lowest_idx, int copies)
     {
@@ -121,15 +205,15 @@ final class IonStructLite
             return;
         }
 
-        Integer field_idx = _field_map.get(fieldName);
+        Integer field_idx = _field_map.get(this, fieldName);
         assert(field_idx != null);
-        _field_map.remove(fieldName);
+        _field_map.remove(this, fieldName);
         _field_map_duplicate_count -= (copies - 1);
     }
 
     private void remove_field_from_field_map(String fieldName, int idx)
     {
-        Integer field_idx = _field_map.get(fieldName);
+        Integer field_idx = _field_map.get(this, fieldName);
         assert(field_idx != null);
 
         if (field_idx.intValue() != idx) {
@@ -146,20 +230,20 @@ final class IonStructLite
 
             if (ii == -1) {
                 // this is the last copy of this key
-                _field_map.remove(fieldName);
+                _field_map.remove(this, fieldName);
             }
             else {
                 // replaces this fields (the one being
                 // removed) array idx in the map with
                 // the preceding duplicates index
-                _field_map.put(fieldName, ii);
+                _field_map.put(this, fieldName, ii);
                 _field_map_duplicate_count--;
             }
         }
         else {
             // since there are not dup's we can just update
             // the map by removing this fieldname
-            _field_map.remove(fieldName);
+            _field_map.remove(this, fieldName);
         }
     }
 
@@ -178,12 +262,12 @@ final class IonStructLite
         for (int ii=removed_idx; ii<get_child_count(); ii++) {
             IonValueLite value = get_child(ii);
             String  field_name = value.getFieldName();
-            Integer map_idx = _field_map.get(field_name);
+            Integer map_idx = _field_map.get(this, field_name);
             if (map_idx.intValue() != ii) {
                 // if this is a field that to the right of
                 // the removed (in process of removing) value
                 // we need to patch the index value
-                _field_map.put(field_name, ii);
+                _field_map.put(this, field_name, ii);
             }
         }
     }
@@ -198,7 +282,7 @@ final class IonStructLite
         }
 
         out.println("   dups: "+_field_map_duplicate_count);
-        Iterator<Entry<String, Integer>> it = _field_map.entrySet().iterator();
+        Iterator<Entry<String, Integer>> it = _field_map.entrySet(this).iterator();
         out.print("   map: [");
         boolean first = true;
         while (it.hasNext()) {
@@ -219,7 +303,7 @@ final class IonStructLite
             return null;
         }
         String error = "";
-        Iterator<Entry<String, Integer>> it = _field_map.entrySet().iterator();
+        Iterator<Entry<String, Integer>> it = _field_map.entrySet(this).iterator();
         while (it.hasNext()) {
             Entry<String, Integer> e = it.next();
             int idx = e.getValue().intValue();
@@ -373,7 +457,7 @@ final class IonStructLite
             // nothing to see here, move along
         }
         else if (_field_map != null) {
-            Integer idx = _field_map.get(fieldName);
+            Integer idx = _field_map.get(this, fieldName);
             if (idx != null) {
                 return idx.intValue();
             }
@@ -454,8 +538,8 @@ final class IonStructLite
 
         IonValueLite concrete = (IonValueLite) value;
 
-        _add(fieldName, concrete);
         concrete.setFieldName(fieldName);
+        _add(fieldName, concrete);
     }
 
     public void add(SymbolToken fieldName, IonValue child)
@@ -528,7 +612,7 @@ final class IonStructLite
             // we have a map and no duplicates so the index
             // (aka map) is all we need to find the only
             // value associated with fieldName, if there is one
-            Integer idx = _field_map.get(fieldName);
+            Integer idx = _field_map.get(this, fieldName);
             if (idx != null) {
                 lowestRemovedIndex = idx.intValue();
                 remove_field_from_field_map(fieldName, lowestRemovedIndex);

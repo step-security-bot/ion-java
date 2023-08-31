@@ -777,7 +777,7 @@ abstract class IonValueLite
 
     final void setFieldName(String name)
     {
-        assert getContainer() instanceof IonStructLite;
+        //assert getContainer() instanceof IonStructLite;
         // We can never change a field name once it's set.
         assert _fieldId == UNKNOWN_SYMBOL_ID && _fieldName == null;
         _fieldName = name;
