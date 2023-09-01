@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -97,6 +98,10 @@ final class IonStructLite
         SharedFieldMap(Map<String, Integer> map, IonStructLite owner) {
             super(map);
             this.owner = owner;
+        }
+
+        public synchronized FieldMap copyAndClaim() {
+            return new FieldMap(new HashMap<>(map));
         }
 
         @Override
@@ -664,6 +669,15 @@ final class IonStructLite
         if (value != null) {
             add(fieldName, value);
         }
+    }
+
+    @Override
+    public ListIterator<IonValue> listIterator(int i) {
+        if (_field_map instanceof SharedFieldMap && ((((SharedFieldMap) _field_map).owner != this))) {
+            // Protect against concurrent modification of the shared field map by proactively
+            _field_map = ((SharedFieldMap) _field_map).copyAndClaim();
+        }
+        return super.listIterator(i);
     }
 
     @Override

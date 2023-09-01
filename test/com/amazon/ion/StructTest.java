@@ -23,8 +23,16 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -1370,14 +1378,54 @@ public class StructTest
     static final int COMMAND_MAX          = 14;
 
     @Test
-    public void testRandomChanges()
-    {
-        IonSystem           sys = system();
-        IonStruct            s1 = sys.newEmptyStruct();
+    public void testRandomChanges() {
+        IonSystem sys = system();
+        IonStruct s1 = sys.newEmptyStruct();
         ArrayList<TestField> s2 = new ArrayList<TestField>();
-
         long seed = System.currentTimeMillis() | System.nanoTime();
         Random r = new java.util.Random(seed);
+        testRandomChanges(sys, s1, s2, seed, r);
+    }
+
+    @Test
+    public void testRandomConcurrentChangesAfterClone() throws Exception {
+        IonSystem sys = system();
+        long seed1 = System.currentTimeMillis() | System.nanoTime();
+        long seed2 = seed1 / 19;
+        for (int i = 0; i < 100; i++) {
+            IonStruct struct1 = sys.newEmptyStruct();
+            ArrayList<TestField> structFields1 = new ArrayList<>();
+            for (int j = 0; j < 10; j++) {
+                TestField field = make_unique(struct1);
+                struct1.add(field._fieldName, field._value);
+                structFields1.add(field);
+            }
+            IonStruct struct2 = struct1.clone();
+            ArrayList<TestField> structFields2 = clone_array_list(structFields1, struct1, struct2);
+            ExecutorService pool = Executors.newFixedThreadPool(2);
+            CyclicBarrier gate = new CyclicBarrier(2);
+            Future<?> task1 = pool.submit(() ->{
+                try {
+                    gate.await();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                testRandomChanges(sys, struct1, structFields1, seed1, new Random(seed1));
+            });
+            Future<?> task2 = pool.submit(() ->{
+                try {
+                    gate.await();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                testRandomChanges(sys, struct2, structFields2, seed2, new Random(seed2));
+            });
+            task1.get();
+            task2.get();
+        }
+    }
+
+    private void testRandomChanges(IonSystem sys, IonStruct s1, ArrayList<TestField> s2, long seed, Random r) {
         TestField field;
 
         if (_debug_print_flag) {
